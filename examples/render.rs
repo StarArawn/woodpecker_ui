@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use style_helpers::FromLength;
 use woodpecker_ui::prelude::*;
 
 #[derive(Component, Clone)]
@@ -41,7 +40,7 @@ fn startup(
                 .with_size(taffy::Size::from_lengths(64.0, 64.0))
                 .with_position(taffy::Position::Relative),
             SpriteBundle {
-                texture: asset_server.load("woodpecker.png"),
+                texture: asset_server.load("woodpecker.jpg"),
                 ..Default::default()
             },
         ));
@@ -53,7 +52,7 @@ fn startup(
             ..Default::default()
         })
         .insert(SpriteBundle {
-            texture: asset_server.load("woodpecker.png"),
+            texture: asset_server.load("woodpecker.jpg"),
             ..Default::default()
         })
         .id();
