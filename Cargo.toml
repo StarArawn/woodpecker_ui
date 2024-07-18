@@ -1,0 +1,11 @@
+[package]
+name = "woodpecker_ui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy = "0.14"
+bevy-trait-query = { git = "https://github.com/RobWalt/bevy-trait-query", rev = "215b9068e8457d96ddcd4c8efa9605ba0f8feda5" }
+bevy-inspector-egui = "0.25"
+taffy = { version = "0.5", features = ["flexbox", "grid"] }
+bevy_vello = "0.5"
