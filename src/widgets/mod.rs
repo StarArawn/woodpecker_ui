@@ -19,7 +19,6 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
             .register_widget::<Element>()
             .add_widget_systems(Element::get_name(), element::update, element::render)
             .register_widget::<WButton>()
-            .add_widget_systems(WButton::get_name(), button::update, button::render)
             .register_widget::<Clip>()
             .add_widget_systems(Clip::get_name(), clip::update, clip::render);
     }

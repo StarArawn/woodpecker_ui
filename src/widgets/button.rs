@@ -76,7 +76,15 @@ impl Default for WButtonBundle {
 pub struct WButton {
     pub hovering: bool,
 }
-impl Widget for WButton {}
+impl Widget for WButton {
+    fn update() -> impl System<In = (), Out = bool> {
+        IntoSystem::into_system(update)
+    }
+
+    fn render() -> impl System<In = (), Out = ()> {
+        IntoSystem::into_system(render)
+    }
+}
 
 pub fn update(
     entity: Res<CurrentWidget>,

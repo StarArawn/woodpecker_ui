@@ -105,6 +105,14 @@ pub trait WidgetRegisterExt {
 impl WidgetRegisterExt for App {
     fn register_widget<T: Component + Widget>(&mut self) -> &mut Self {
         self.register_component_as::<dyn Widget, T>();
+        let mut context = self
+            .world_mut()
+            .get_resource_or_insert_with::<WoodpeckerContext>(|| WoodpeckerContext::default());
+        context.add_widget_systems_non_into(
+            T::get_name(),
+            Box::new(T::update()),
+            Box::new(T::render()),
+        );
         self
     }
 

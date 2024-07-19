@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use bevy::{
     prelude::*,
     utils::{HashMap, HashSet},
@@ -15,7 +17,26 @@ pub trait Widget {
     fn get_name_local(&self) -> String {
         std::any::type_name::<Self>().into()
     }
+
+    fn update() -> impl System<In = (), Out = bool>
+    where
+        Self: Sized,
+    {
+        IntoSystem::into_system(default_update)
+    }
+
+    fn render() -> impl System<In = (), Out = ()>
+    where
+        Self: Sized,
+    {
+        IntoSystem::into_system(default_render)
+    }
 }
+
+fn default_update() -> bool {
+    false
+}
+fn default_render() {}
 
 type WidgetSystems = HashMap<
     String,
@@ -41,6 +62,17 @@ impl WoodpeckerContext {
     ) {
         let update_system = Box::new(IntoSystem::into_system(update));
         let render_system = Box::new(IntoSystem::into_system(render));
+        self.widgets
+            .insert(widget_name.clone(), (update_system, render_system));
+        self.uninitialized_systems.insert(widget_name);
+    }
+
+    pub(crate) fn add_widget_systems_non_into(
+        &mut self,
+        widget_name: String,
+        update_system: Box<dyn System<In = (), Out = bool>>,
+        render_system: Box<dyn System<In = (), Out = ()>>,
+    ) {
         self.widgets
             .insert(widget_name.clone(), (update_system, render_system));
         self.uninitialized_systems.insert(widget_name);
