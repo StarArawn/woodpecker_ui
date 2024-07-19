@@ -10,6 +10,7 @@ use crate::{context::Widget, prelude::WidgetMapper, CurrentWidget, ParentWidget}
 /// [`WidgetChildren::process`] is called.
 #[derive(Component, Default, Clone)]
 pub struct WidgetChildren {
+    prev_children: Vec<String>,
     children: Vec<(
         String,
         Arc<dyn Fn(&mut World, &mut WidgetMapper, ParentWidget, usize) + Sync + Send>,
@@ -18,10 +19,22 @@ pub struct WidgetChildren {
 }
 
 impl WidgetChildren {
+    /// Builder pattern for adding children when you initially create the component.
+    pub fn with_child<T: Widget>(mut self, bundle: impl Bundle + Clone) -> Self {
+        self.add::<T>(bundle);
+        self
+    }
+
+    /// Clears out all children.
+    pub fn clear(&mut self) {
+        self.children.clear();
+        self.parent_widget = None;
+    }
+
     /// Add a new widget to the list of children. The widget should be a bevy bundle and T should implement widget.
     ///
     /// Note: Make sure to call [`WidgetChildren::process`] in the render system of the parent
-    /// otherwise the entities will not be spawned!
+    /// otherwise the entities will not be spawned! This will NOT spawn the bundles.
     pub fn add<T: Widget>(&mut self, bundle: impl Bundle + Clone) {
         let widget_name = T::get_name();
         self.children.push((
@@ -44,6 +57,15 @@ impl WidgetChildren {
         ));
     }
 
+    /// Lets you know if the children have changed between now and when they were last rendered.
+    pub fn children_changed(&self) -> bool {
+        self.children.iter().map(|(n, _)| n).collect::<Vec<_>>()
+            != self.prev_children.iter().collect::<Vec<_>>()
+    }
+
+    /// Attaches the children to a parent widget.
+    /// Note: This doesn't actually spawn the children
+    /// that occurs when the parent widget finishes rendering.
     pub fn process(&mut self, parent_widget: ParentWidget) {
         self.parent_widget = Some(parent_widget);
     }
@@ -59,5 +81,10 @@ impl WidgetChildren {
         });
         world.remove_resource::<CurrentWidget>();
         self.parent_widget = None;
+        self.prev_children = self
+            .children
+            .iter()
+            .map(|(n, _)| n.clone())
+            .collect::<Vec<_>>()
     }
 }

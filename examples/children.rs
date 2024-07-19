@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use woodpecker_ui::prelude::*;
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct FooWidget;
 impl Widget for FooWidget {}
 
@@ -35,13 +35,13 @@ fn foo_render(mut commands: Commands, entity: Res<CurrentWidget>) {
     commands.entity(**entity).insert(foo_children);
 }
 
-#[derive(Bundle, Default)]
+#[derive(Bundle, Default, Clone)]
 pub struct BarWidgetBundle {
     pub bar_widget: BarWidget,
     pub children: WidgetChildren,
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Clone)]
 pub struct BarWidget;
 impl Widget for BarWidget {}
 
@@ -60,7 +60,7 @@ fn bar_render(entity: Res<CurrentWidget>, mut query: Query<&mut WidgetChildren>)
     children.process(entity.as_parent());
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct BazWidget {
     pub value: f32,
 }

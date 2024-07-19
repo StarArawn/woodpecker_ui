@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::component::Tick, prelude::*, utils::HashMap};
 use bevy_trait_query::One;
 use std::collections::BTreeSet;
 
@@ -13,6 +13,7 @@ pub(crate) fn system(world: &mut World) {
 
     // Ordering is important so lets use a BTreeSet!
     let mut re_render_list = BTreeSet::default();
+    let mut new_ticks = HashMap::new();
 
     // STEP 1: Run update systems and mark widgets as needing to be re-rendered
     // Note: re-rendering means to re-build the sub-tree at X point in the tree.
@@ -26,14 +27,20 @@ pub(crate) fn system(world: &mut World) {
         .map(|(e, _)| e)
         .collect::<Vec<_>>()
     {
-        update_widgets(world, widget_entity, &mut context, &mut re_render_list);
+        update_widgets(
+            world,
+            widget_entity,
+            &mut context,
+            &mut re_render_list,
+            &mut new_ticks,
+        );
     }
 
     let mut removed_list = BTreeSet::default();
 
     // STEP 2: Run render systems which should spawn new widgets.
     for widget_entity in re_render_list.iter() {
-        info!("re-rendering: {}", widget_entity);
+        trace!("re-rendering: {}", widget_entity);
         // Skip removed widgets.
         if removed_list.contains(widget_entity) {
             continue;
@@ -58,7 +65,11 @@ pub(crate) fn system(world: &mut World) {
 
         // Run the render function and apply changes to the bevy world.
         world.insert_resource(CurrentWidget(*widget_entity));
+        let old_tick = render.get_last_run();
         render.run((), world);
+        let new_tick = render.get_last_run();
+        new_ticks.insert(widget_name.clone(), new_tick);
+        render.set_last_run(old_tick);
         render.apply_deferred(world);
         world.remove_resource::<CurrentWidget>();
 
@@ -101,6 +112,18 @@ pub(crate) fn system(world: &mut World) {
         }
     }
 
+    // Step 5: Restore system ticks
+    let tick = world.read_change_tick();
+    for (key, system) in context.widgets.iter_mut() {
+        if let Some(new_tick) = new_ticks.get(key) {
+            system.0.set_last_run(*new_tick);
+            system.1.set_last_run(*new_tick);
+        } else {
+            system.0.set_last_run(tick);
+            system.1.set_last_run(tick);
+        }
+    }
+
     world.insert_resource(context);
 }
 
@@ -110,6 +133,7 @@ fn update_widgets(
     widget_entity: Entity,
     context: &mut WoodpeckerContext,
     re_render_list: &mut BTreeSet<Entity>,
+    new_ticks: &mut HashMap<String, Tick>,
 ) {
     let mut widget_query = world.query::<One<&dyn Widget>>();
     let Ok(widget) = widget_query.get(world, widget_entity) else {
@@ -117,8 +141,9 @@ fn update_widgets(
         return;
     };
 
-    let is_uninitialized = context.get_uninitialized(widget.get_name_local());
-    let Some(update) = context.get_update_system(widget.get_name_local()) else {
+    let local_name = widget.get_name_local();
+    let is_uninitialized = context.get_uninitialized(local_name.clone());
+    let Some(update) = context.get_update_system(local_name.clone()) else {
         error!("Woodpecker UI: Please register widgets and their systems!");
         return;
     };
@@ -128,6 +153,7 @@ fn update_widgets(
     }
 
     world.insert_resource(CurrentWidget(widget_entity));
+    let old_tick = update.get_last_run();
     if update.run((), world) {
         update.apply_deferred(world);
         re_render_list.insert(widget_entity);
@@ -135,6 +161,9 @@ fn update_widgets(
         let children = get_all_children(world, widget_entity);
         re_render_list.extend(children);
     }
+    let new_tick = update.get_last_run();
+    new_ticks.insert(local_name, new_tick);
+    update.set_last_run(old_tick);
     world.remove_resource::<CurrentWidget>();
 }
 

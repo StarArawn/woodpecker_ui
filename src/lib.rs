@@ -1,5 +1,7 @@
 use bevy::prelude::*;
+use bevy_mod_picking::prelude::EventListenerPlugin;
 use bevy_trait_query::RegisterExt;
+use bevy_vello::VelloPlugin;
 use context::{Widget, WoodpeckerContext};
 use entity_mapping::WidgetMapper;
 use layout::WoodpeckerLayoutPlugin;
@@ -8,7 +10,11 @@ use widgets::WoodpeckerUIWidgetPlugin;
 mod children;
 mod context;
 mod entity_mapping;
+mod focus;
+mod keyboard_input;
 mod layout;
+mod picking_backend;
+mod render;
 mod runner;
 mod widgets;
 
@@ -17,10 +23,14 @@ pub mod prelude {
     pub use crate::children::WidgetChildren;
     pub use crate::context::*;
     pub use crate::entity_mapping::*;
+    pub use crate::focus::*;
+    pub use crate::keyboard_input::WidgetKeyboardEvent;
     pub use crate::layout::WoodpeckerStyle;
+    pub use crate::render::WidgetRender;
     pub use crate::widgets::*;
     pub use crate::{CurrentWidget, ParentWidget};
     pub use crate::{WidgetRegisterExt, WoodpeckerUIPlugin};
+    pub use bevy_vello::prelude::*;
     pub use taffy::*;
 }
 
@@ -52,10 +62,26 @@ pub struct WoodpeckerUIPlugin;
 impl Plugin for WoodpeckerUIPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(WoodpeckerLayoutPlugin)
+            .add_plugins(VelloPlugin)
             .add_plugins(WoodpeckerUIWidgetPlugin)
+            .add_plugins(EventListenerPlugin::<focus::WidgetFocus>::default())
+            .add_plugins(EventListenerPlugin::<focus::WidgetBlur>::default())
+            .add_plugins(EventListenerPlugin::<keyboard_input::WidgetKeyboardEvent>::default())
+            .insert_resource(focus::CurrentFocus::new(Entity::PLACEHOLDER))
             .init_resource::<WoodpeckerContext>()
             .init_resource::<WidgetMapper>()
-            .add_systems(Update, runner::system);
+            .add_systems(
+                Update,
+                (
+                    runner::system,
+                    focus::CurrentFocus::click_focus,
+                    keyboard_input::runner,
+                ),
+            )
+            .add_systems(
+                Update,
+                picking_backend::system.after(crate::layout::system::run),
+            );
     }
 }
 

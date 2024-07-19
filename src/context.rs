@@ -55,7 +55,8 @@ impl WoodpeckerContext {
 
     /// Gets the root entity
     pub fn get_root_widget(&self) -> Entity {
-        self.root_widget.expect("You must set a root entity!")
+        self.root_widget
+            .expect("Woodpecker UI: No root node found when requesting a root widget!")
     }
 
     pub(crate) fn get_update_system(

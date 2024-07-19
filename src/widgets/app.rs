@@ -4,6 +4,7 @@ use crate::{
     CurrentWidget,
 };
 use bevy::{prelude::*, window::PrimaryWindow};
+use taffy::LengthPercentageAuto;
 
 /// The Woodpecker UI App widget bundle.
 /// Typically this should be the root widget.
@@ -64,7 +65,7 @@ pub fn render(
 
     *styles = WoodpeckerStyle::new()
         .with_display(taffy::Display::Flex)
-        .with_min_size(taffy::Size::from_lengths(window.width(), window.height()));
+        .with_size(taffy::Size::from_lengths(window.width(), window.height()));
 
     children.process(entity.as_parent());
 }

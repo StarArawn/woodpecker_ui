@@ -1,8 +1,8 @@
 mod measure;
-mod system;
+pub(crate) mod system;
 
 use bevy::{prelude::*, utils::EntityHashMap};
-use measure::{LayoutMeasure, Measure as _};
+use measure::LayoutMeasure;
 use taffy::{Size, TaffyTree};
 
 #[derive(Component, Deref, DerefMut, Default, Debug, Clone)]
@@ -164,7 +164,6 @@ impl UiLayout {
     /// If no associated Taffy node exists a new Taffy node is inserted into the Taffy layout.
     pub fn upsert_node(
         &mut self,
-        parent_entity: Option<Entity>,
         entity: Entity,
         style: &WoodpeckerStyle,
         mut new_node_context: Option<LayoutMeasure>,
@@ -183,20 +182,6 @@ impl UiLayout {
             }
         });
 
-        if let Some(parent_entity) = parent_entity.as_ref() {
-            if let Some(parent_id) = self.entity_to_taffy.get(parent_entity) {
-                let mut should_add = true;
-                if let Ok(children) = taffy.children(*parent_id) {
-                    if children.iter().any(|id| *id == taffy_node_id) {
-                        should_add = false;
-                    }
-                }
-                if should_add {
-                    taffy.add_child(*parent_id, taffy_node_id).unwrap();
-                }
-            }
-        }
-
         if !added {
             // let has_measure = if new_node_context.is_some() {
             //     taffy
@@ -211,8 +196,16 @@ impl UiLayout {
         }
     }
 
+    pub fn add_children(&mut self, entity: Entity, children: &Children) {
+        let node_id = self.entity_to_taffy.get(&entity).unwrap();
+        let children = children
+            .iter()
+            .map(|child| *self.entity_to_taffy.get(child).unwrap())
+            .collect::<Vec<_>>();
+        self.taffy.set_children(*node_id, &children).unwrap();
+    }
+
     /// Get the layout geometry for the taffy node corresponding to the ui node [`Entity`].
-    /// Does not compute the layout geometry, `compute_window_layouts` should be run before using this function.
     pub fn get_layout(&self, entity: Entity) -> Option<&taffy::Layout> {
         if let Some(taffy_node) = self.entity_to_taffy.get(&entity) {
             self.taffy.layout(*taffy_node).ok()
@@ -227,39 +220,49 @@ with UI components as a child of an entity without UI components, results may be
 
     pub fn compute(&mut self, root_node: Entity, root_node_size: Vec2) {
         let Some(root_id) = self.entity_to_taffy.get(&root_node) else {
-            warn!("Woodpecker UI: No root node found when doing layout work!");
             return;
         };
         self.taffy
-            .compute_layout_with_measure(
+            .compute_layout(
                 *root_id,
+                // Size::max_content(),
                 Size {
                     width: taffy::AvailableSpace::Definite(root_node_size.x),
                     height: taffy::AvailableSpace::Definite(root_node_size.y),
                 },
-                |known_dimensions: taffy::Size<Option<f32>>,
-                 available_space: taffy::Size<taffy::AvailableSpace>,
-                 _node_id: taffy::NodeId,
-                 context: Option<&mut LayoutMeasure>,
-                 style: &taffy::Style|
-                 -> taffy::Size<f32> {
-                    context
-                        .map(|ctx| {
-                            let size = ctx.measure(
-                                known_dimensions.width,
-                                known_dimensions.height,
-                                available_space.width,
-                                available_space.height,
-                                style,
-                            );
-                            taffy::Size {
-                                width: size.x,
-                                height: size.y,
-                            }
-                        })
-                        .unwrap_or(taffy::Size::ZERO)
-                },
             )
             .unwrap();
+        // self.taffy.print_tree(*root_id);
+        // self.taffy
+        //     .compute_layout_with_measure(
+        //         *root_id,
+        //         Size {
+        //             width: taffy::AvailableSpace::Definite(root_node_size.x),
+        //             height: taffy::AvailableSpace::Definite(root_node_size.y),
+        //         },
+        //         |known_dimensions: taffy::Size<Option<f32>>,
+        //          available_space: taffy::Size<taffy::AvailableSpace>,
+        //          _node_id: taffy::NodeId,
+        //          context: Option<&mut LayoutMeasure>,
+        //          style: &taffy::Style|
+        //          -> taffy::Size<f32> {
+        //             context
+        //                 .map(|ctx| {
+        //                     let size = ctx.measure(
+        //                         known_dimensions.width,
+        //                         known_dimensions.height,
+        //                         available_space.width,
+        //                         available_space.height,
+        //                         style,
+        //                     );
+        //                     taffy::Size {
+        //                         width: size.x,
+        //                         height: size.y,
+        //                     }
+        //                 })
+        //                 .unwrap_or(taffy::Size::ZERO)
+        //         },
+        //     )
+        //     .unwrap();
     }
 }
