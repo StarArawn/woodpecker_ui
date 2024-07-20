@@ -116,10 +116,10 @@ pub fn render(
     };
 
     if button.hovering {
-        *styles = button_styles.hovered.1.clone();
+        *styles = button_styles.hovered.1;
         widget_render.set_color(button_styles.hovered.0);
     } else {
-        *styles = button_styles.normal.1.clone();
+        *styles = button_styles.normal.1;
         widget_render.set_color(button_styles.normal.0);
     }
 

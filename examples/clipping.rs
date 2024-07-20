@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy_mod_picking::{debug::DebugPickingMode, DefaultPickingPlugins};
-use style_helpers::FromPercent;
 use woodpecker_ui::prelude::*;
 
 fn main() {
@@ -23,31 +22,34 @@ fn startup(
     let root = commands
         .spawn((WoodpeckerAppBundle {
             children: WidgetChildren::default().with_child::<Clip>((ClipBundle {
-                styles: WoodpeckerStyle::new()
-                    .with_size(taffy::Size::from_lengths(150.0, 100.0)),
+                styles: WoodpeckerStyle {
+                    width: 150.0.into(),
+                    height: 100.0.into(),
+                    ..Default::default()
+                },
                 widget_render: WidgetRender::Layer {
                     border_radius: kurbo::RoundedRectRadii::from_single_radius(50.0)
                 },
                 children: WidgetChildren::default().with_child::<Element>((
                 ElementBundle {
-                    styles: WoodpeckerStyle::new()
-                        .with_size(taffy::Size {
-                            width: Dimension::from_percent(1.0),
-                            height: Dimension::from_percent(1.0),
-                        }),
+                    styles: WoodpeckerStyle {
+                        width: Units::Percentage(100.0),
+                        height: Units::Percentage(100.0),
+                        ..Default::default()
+                        },
                         children: WidgetChildren::default().with_child::<Element>((
                             ElementBundle {
-                                styles: WoodpeckerStyle::new()
-                                    .with_size(taffy::Size {
-                                        width: Dimension::from_percent(1.0),
-                                        height: Dimension::from_percent(1.0),
-                                    })
-                                    .with_margin(taffy::Rect {
-                                        left: LengthPercentageAuto::Length(10.0),
-                                        right: LengthPercentageAuto::Length(10.0),
-                                        top: LengthPercentageAuto::Length(10.0),
-                                        bottom: LengthPercentageAuto::Length(10.0),
-                                    }),
+                                styles: WoodpeckerStyle {
+                                    width: Units::Percentage(100.0),
+                                    height: Units::Percentage(100.0),
+                                    margin: Edge {
+                                        left: 10.0.into(),
+                                        right: 10.0.into(),
+                                        top: 10.0.into(),
+                                        bottom: 10.0.into(),
+                                    },
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
                             WidgetRender::Text {

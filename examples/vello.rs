@@ -48,10 +48,12 @@ fn vello_render(
                 ),
             },
             VelloWidget::default(),
-            WoodpeckerStyle::new()
-                .with_display(taffy::Display::Flex)
-                .with_size(taffy::prelude::length(100.0))
-                .with_margin(taffy::prelude::length(50.0)),
+            WoodpeckerStyle {
+                width: 100.0.into(),
+                height: 100.0.into(),
+                margin: Edge::all(50.0.into()),
+                ..Default::default()
+            },
             SpatialBundle::default(),
             PickableBundle::default(),
             Focusable,
@@ -112,15 +114,14 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
             ),
         },
         VelloWidget::default(),
-        WoodpeckerStyle::new()
-            .with_display(taffy::Display::Flex)
-            .with_align_content(Some(taffy::AlignContent::SpaceEvenly))
-            .with_justify_content(Some(taffy::JustifyContent::SpaceEvenly))
-            .with_margin(taffy::prelude::length(50.0))
-            .with_size(taffy::Size {
-                width: taffy::prelude::Dimension::Percent(1.0),
-                height: taffy::prelude::Dimension::Percent(1.0),
-            }),
+        WoodpeckerStyle {
+            align_content: Some(WidgetAlignContent::SpaceEvenly),
+            justify_content: Some(WidgetAlignContent::SpaceEvenly),
+            margin: Edge::all(50.0.into()),
+            width: Units::Percentage(100.0),
+            height: Units::Percentage(100.0),
+            ..Default::default()
+        },
         SpatialBundle::default(),
         WidgetChildren::default(),
     ));

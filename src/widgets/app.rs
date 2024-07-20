@@ -1,6 +1,6 @@
 use crate::{
     children::WidgetChildren,
-    prelude::{Widget, WoodpeckerStyle},
+    prelude::{Units, Widget, WoodpeckerStyle},
     CurrentWidget,
 };
 use bevy::{prelude::*, window::PrimaryWindow};
@@ -62,9 +62,11 @@ pub fn render(
         return;
     };
 
-    *styles = WoodpeckerStyle::new()
-        .with_display(taffy::Display::Flex)
-        .with_size(taffy::Size::from_lengths(window.width(), window.height()));
+    *styles = WoodpeckerStyle {
+        width: Units::Pixels(window.width()),
+        height: Units::Pixels(window.height()),
+        ..Default::default()
+    };
 
     children.process(entity.as_parent());
 }

@@ -12,9 +12,9 @@ mod units;
 // A struct used to define the look of a widget
 ///
 /// All fields are `pub`, so you can simply define your styles.
-#[derive(Component, Reflect, Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Component, Reflect, Debug, Clone, Copy, PartialEq)]
 #[reflect(Component)]
-pub struct WStyle {
+pub struct WoodpeckerStyle {
     /************************ Layout ************************/
     /// The height of this widget
     pub height: Units,
@@ -179,7 +179,79 @@ pub struct WStyle {
     pub opacity: f32,
 }
 
-impl Into<taffy::Style> for WStyle {
+impl Default for WoodpeckerStyle {
+    fn default() -> Self {
+        WoodpeckerStyle::DEFAULT
+    }
+}
+
+impl WoodpeckerStyle {
+    pub const DEFAULT: WoodpeckerStyle = WoodpeckerStyle {
+        width: Units::Auto,
+        height: Units::Auto,
+        max_height: Units::Auto,
+        max_width: Units::Auto,
+        min_height: Units::Auto,
+        min_width: Units::Auto,
+        padding: Edge {
+            left: Units::Pixels(0.0),
+            right: Units::Pixels(0.0),
+            top: Units::Pixels(0.0),
+            bottom: Units::Pixels(0.0),
+        },
+        display: WidgetDisplay::Flex,
+        overflow: WidgetOverflow::Visible,
+        position: WidgetPosition::Relative,
+        left: Units::Pixels(0.0),
+        right: Units::Pixels(0.0),
+        top: Units::Pixels(0.0),
+        bottom: Units::Pixels(0.0),
+        margin: Edge {
+            left: Units::Pixels(0.0),
+            right: Units::Pixels(0.0),
+            top: Units::Pixels(0.0),
+            bottom: Units::Pixels(0.0),
+        },
+        align_items: None,
+        align_self: None,
+        justify_items: None,
+        justify_self: None,
+        align_content: None,
+        justify_content: None,
+        gap: (Units::Pixels(0.0), Units::Pixels(0.0)),
+        flex_direction: WidgetFlexDirection::Row,
+        flex_wrap: WidgetFlexWrap::NoWrap,
+        flex_basis: Units::Auto,
+        flex_grow: 0.0,
+        flex_shrink: 1.0,
+        background_color: Color::WHITE,
+        border_color: Color::WHITE,
+        border_radius: Corner {
+            top_left: Units::Pixels(0.0),
+            top_right: Units::Pixels(0.0),
+            bottom_left: Units::Pixels(0.0),
+            bottom_right: Units::Pixels(0.0),
+        },
+        border: Edge {
+            left: Units::Pixels(0.0),
+            right: Units::Pixels(0.0),
+            top: Units::Pixels(0.0),
+            bottom: Units::Pixels(0.0),
+        },
+        color: Color::WHITE,
+        font_size: 18.0,
+        line_height: 18.0,
+        opacity: 1.0,
+    };
+}
+
+impl Into<taffy::Style> for &WoodpeckerStyle {
+    fn into(self) -> taffy::Style {
+        (*self).into()
+    }
+}
+
+impl Into<taffy::Style> for WoodpeckerStyle {
     fn into(self) -> taffy::Style {
         taffy::Style {
             display: self.display.into(),

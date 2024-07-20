@@ -120,7 +120,7 @@ impl Into<taffy::LengthPercentageAuto> for super::Units {
         match self {
             super::Units::Pixels(pixels) => taffy::LengthPercentageAuto::Length(pixels),
             super::Units::Percentage(percentage) => {
-                taffy::LengthPercentageAuto::Percent(percentage)
+                taffy::LengthPercentageAuto::Percent(percentage / 100.0)
             }
             super::Units::Auto => taffy::LengthPercentageAuto::Auto,
         }

@@ -26,7 +26,6 @@ pub mod prelude {
     pub use crate::entity_mapping::*;
     pub use crate::focus::*;
     pub use crate::keyboard_input::WidgetKeyboardEvent;
-    pub use crate::layout::WoodpeckerStyle;
     pub use crate::render::WidgetRender;
     pub use crate::styles::*;
     pub use crate::widgets::*;
