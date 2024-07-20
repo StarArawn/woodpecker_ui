@@ -223,7 +223,7 @@ impl WidgetRender {
                             color.blue as f64,
                             color.alpha as f64,
                         )))
-                        .draw(vello::peniko::Fill::EvenOdd, line.glyphs.into_iter());
+                        .draw(vello::peniko::Fill::NonZero, line.glyphs.into_iter());
                     prev_line_width += line.width as f64;
                 }
             }
