@@ -179,7 +179,7 @@ fn startup(
                         calc_output.0 = result.to_string();
                     }
                 } else {
-                    calc_output.0 += button.into();
+                    calc_output.0 += button;
                 }
             }),
         ));
