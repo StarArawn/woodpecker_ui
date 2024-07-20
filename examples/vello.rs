@@ -18,7 +18,6 @@ fn vello_update(entity: Res<CurrentWidget>, query: Query<Entity, Changed<VelloWi
     query.contains(**entity)
 }
 
-// Nothing to do..
 fn vello_render(
     entity: Res<CurrentWidget>,
     mut query: Query<(&VelloWidget, &mut WidgetRender)>,
@@ -39,10 +38,6 @@ fn vello_render(
         }
         return;
     };
-
-    // IMPORTANT: Clear out children..
-    // Todo: Just automatically do this..
-    children.clear();
 
     for _ in 0..5 {
         children.add::<VelloWidget>((

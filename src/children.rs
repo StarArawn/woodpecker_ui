@@ -11,6 +11,10 @@ use crate::{context::Widget, prelude::WidgetMapper, CurrentWidget, ParentWidget}
 #[derive(Component, Default, Clone)]
 pub struct WidgetChildren {
     prev_children: Vec<String>,
+    children_queue: Vec<(
+        String,
+        Arc<dyn Fn(&mut World, &mut WidgetMapper, ParentWidget, usize) + Sync + Send>,
+    )>,
     children: Vec<(
         String,
         Arc<dyn Fn(&mut World, &mut WidgetMapper, ParentWidget, usize) + Sync + Send>,
@@ -37,7 +41,7 @@ impl WidgetChildren {
     /// otherwise the entities will not be spawned! This will NOT spawn the bundles.
     pub fn add<T: Widget>(&mut self, bundle: impl Bundle + Clone) {
         let widget_name = T::get_name();
-        self.children.push((
+        self.children_queue.push((
             T::get_name(),
             Arc::new(
                 move |world: &mut World,
@@ -61,6 +65,12 @@ impl WidgetChildren {
     pub fn children_changed(&self) -> bool {
         self.children.iter().map(|(n, _)| n).collect::<Vec<_>>()
             != self.prev_children.iter().collect::<Vec<_>>()
+            || self
+                .children_queue
+                .iter()
+                .map(|(n, _)| n)
+                .collect::<Vec<_>>()
+                != self.prev_children.iter().collect::<Vec<_>>()
     }
 
     /// Attaches the children to a parent widget.
@@ -74,6 +84,11 @@ impl WidgetChildren {
         let Some(parent_widget) = self.parent_widget else {
             return;
         };
+
+        if self.children_queue.len() > 0 {
+            self.children = self.children_queue.drain(..).collect::<Vec<_>>();
+        }
+
         world.resource_scope(|world: &mut World, mut widget_mapper: Mut<WidgetMapper>| {
             for (i, (_, child)) in self.children.iter().enumerate() {
                 child(world, &mut widget_mapper, parent_widget, i);
