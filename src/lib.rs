@@ -3,12 +3,14 @@ use bevy_mod_picking::prelude::EventListenerPlugin;
 use bevy_trait_query::RegisterExt;
 use bevy_vello::{CoordinateSpace, VelloPlugin, VelloSceneBundle};
 use context::{Widget, WoodpeckerContext};
+use context_helper::ContextHelper;
 use entity_mapping::WidgetMapper;
 use layout::WoodpeckerLayoutPlugin;
 use widgets::WoodpeckerUIWidgetPlugin;
 
 mod children;
 mod context;
+mod context_helper;
 mod entity_mapping;
 mod focus;
 mod keyboard_input;
@@ -69,6 +71,7 @@ impl Plugin for WoodpeckerUIPlugin {
             .add_plugins(EventListenerPlugin::<focus::WidgetBlur>::default())
             .add_plugins(EventListenerPlugin::<keyboard_input::WidgetKeyboardEvent>::default())
             .insert_resource(focus::CurrentFocus::new(Entity::PLACEHOLDER))
+            .init_resource::<ContextHelper>()
             .init_resource::<WoodpeckerContext>()
             .init_resource::<WidgetMapper>()
             .add_systems(
@@ -77,6 +80,7 @@ impl Plugin for WoodpeckerUIPlugin {
                     runner::system,
                     focus::CurrentFocus::click_focus,
                     keyboard_input::runner,
+                    context_helper::ContextHelper::update_context_helper,
                 )
                     .run_if(has_root()),
             )
