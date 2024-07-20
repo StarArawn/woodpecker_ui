@@ -4,6 +4,7 @@ use crate::{
     CurrentWidget,
 };
 use bevy::prelude::*;
+use bevy_vello::vello::kurbo;
 use taffy::style_helpers::FromPercent;
 
 /// A generic element widget used for layouts.
@@ -34,7 +35,9 @@ impl Default for ClipBundle {
             }),
             transform: Default::default(),
             global_transform: Default::default(),
-            widget_render: WidgetRender::Layer {},
+            widget_render: WidgetRender::Layer {
+                border_radius: kurbo::RoundedRectRadii::from_single_radius(0.0),
+            },
         }
     }
 }

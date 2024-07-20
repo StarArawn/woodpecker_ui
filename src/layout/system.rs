@@ -92,14 +92,13 @@ fn traverse_render_tree(
     current_node: Entity,
 ) {
     let Ok((entity, _, _, parent, children)) = query.get_mut(current_node) else {
-        vello_scene.pop_layer();
         return;
     };
     let Some(layout) = ui_layout.get_layout(entity).cloned() else {
-        vello_scene.pop_layer();
         return;
     };
 
+    let mut did_layer = false;
     if let Ok(widget_render) = widget_render.get(entity) {
         let mut layout = layout.clone();
         if let Some(parent_layout) = parent.map(|parent| {
@@ -111,12 +110,14 @@ fn traverse_render_tree(
             layout.location.x += parent_layout.location.x;
             layout.location.y += parent_layout.location.y;
         }
-        widget_render.render(vello_scene, &layout, &font_assets);
+        did_layer = widget_render.render(vello_scene, &layout, &font_assets);
         cached_layout.insert(entity, layout);
     }
 
     let Some(children) = children.map(|c| c.iter().map(|c| *c).collect::<Vec<_>>()) else {
-        vello_scene.pop_layer();
+        if did_layer {
+            vello_scene.pop_layer();
+        }
         return;
     };
 
@@ -131,7 +132,9 @@ fn traverse_render_tree(
             *child,
         );
     }
-    vello_scene.pop_layer();
+    if did_layer {
+        vello_scene.pop_layer();
+    }
 }
 
 fn traverse_upsert_node(

@@ -36,7 +36,9 @@ pub enum WidgetRender {
     Custom {
         render: WidgetRenderCustom,
     },
-    Layer {},
+    Layer {
+        border_radius: kurbo::RoundedRectRadii,
+    },
 }
 
 impl WidgetRender {
@@ -54,7 +56,8 @@ impl WidgetRender {
         vello_scene: &mut VelloScene,
         layout: &taffy::Layout,
         font_assets: &Assets<VelloFont>,
-    ) {
+    ) -> bool {
+        let mut did_layer = false;
         let location_x = layout.location.x;
         let location_y = layout.location.y;
         let size_x = layout.size.width;
@@ -95,7 +98,7 @@ impl WidgetRender {
             } => {
                 let Some(font_asset) = font_assets.get(font) else {
                     error!("Woodpecker UI: Missing font for text: {}!", content);
-                    return;
+                    return false;
                 };
                 let font =
                     FontRef::new(font_asset.font.data.data()).expect("Vello font creation error");
@@ -227,25 +230,27 @@ impl WidgetRender {
             WidgetRender::Custom { render } => {
                 render.render(vello_scene, layout);
             }
-            WidgetRender::Layer {} => {
+            WidgetRender::Layer { border_radius } => {
                 let mask_blend = vello::peniko::BlendMode::new(
                     vello::peniko::Mix::Normal,
                     vello::peniko::Compose::SrcOver,
                 );
                 vello_scene.push_layer(
                     mask_blend,
-                    1.0,
+                    0.25,
                     Affine::default(),
                     &kurbo::RoundedRect::new(
                         location_x as f64,
                         location_y as f64,
                         location_x as f64 + size_x as f64,
                         location_y as f64 + size_y as f64,
-                        RoundedRectRadii::from_single_radius(0.0),
+                        *border_radius,
                     ),
                 );
+                did_layer = true;
             }
         }
+        did_layer
     }
 }
 

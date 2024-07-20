@@ -5,7 +5,25 @@ use woodpecker_ui::prelude::*;
 
 #[derive(Component, Clone)]
 pub struct FooWidget;
-impl Widget for FooWidget {}
+impl Widget for FooWidget {
+    // These are optional trait implementaions for passing in systems.
+    // The `register_widget` function can see these and automatically
+    // add the widget systems. Optionally you can also use:
+    // `app.add_widget_systems` if desired.
+    fn update() -> impl System<In = (), Out = bool>
+    where
+        Self: Sized,
+    {
+        IntoSystem::into_system(foo_update)
+    }
+
+    fn render() -> impl System<In = (), Out = ()>
+    where
+        Self: Sized,
+    {
+        IntoSystem::into_system(foo_render)
+    }
+}
 
 fn foo_update(entity: Res<CurrentWidget>, query: Query<Entity, Changed<FooWidget>>) -> bool {
     query.contains(**entity)
@@ -44,7 +62,21 @@ pub struct BarWidgetBundle {
 
 #[derive(Component, Default, Clone)]
 pub struct BarWidget;
-impl Widget for BarWidget {}
+impl Widget for BarWidget {
+    fn update() -> impl System<In = (), Out = bool>
+    where
+        Self: Sized,
+    {
+        IntoSystem::into_system(bar_update)
+    }
+
+    fn render() -> impl System<In = (), Out = ()>
+    where
+        Self: Sized,
+    {
+        IntoSystem::into_system(bar_render)
+    }
+}
 
 fn bar_update(entity: Res<CurrentWidget>, query: Query<Entity, Changed<BarWidget>>) -> bool {
     query.contains(**entity)
@@ -65,7 +97,21 @@ fn bar_render(entity: Res<CurrentWidget>, mut query: Query<&mut WidgetChildren>)
 pub struct BazWidget {
     pub value: f32,
 }
-impl Widget for BazWidget {}
+impl Widget for BazWidget {
+    fn update() -> impl System<In = (), Out = bool>
+    where
+        Self: Sized,
+    {
+        IntoSystem::into_system(baz_update)
+    }
+
+    fn render() -> impl System<In = (), Out = ()>
+    where
+        Self: Sized,
+    {
+        IntoSystem::into_system(baz_render)
+    }
+}
 
 fn baz_update(entity: Res<CurrentWidget>, query: Query<Entity, Changed<BazWidget>>) -> bool {
     query.contains(**entity)
@@ -88,9 +134,6 @@ fn main() {
         .register_widget::<BarWidget>()
         .register_widget::<BazWidget>()
         .add_systems(Startup, startup)
-        .add_widget_systems(FooWidget::get_name(), foo_update, foo_render)
-        .add_widget_systems(BarWidget::get_name(), bar_update, bar_render)
-        .add_widget_systems(BazWidget::get_name(), baz_update, baz_render)
         .run();
 }
 

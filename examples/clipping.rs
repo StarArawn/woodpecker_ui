@@ -22,11 +22,19 @@ fn startup(
 
     let root = commands
         .spawn((WoodpeckerAppBundle {
-            children: WidgetChildren::default().with_child::<Element>((
+            children: WidgetChildren::default().with_child::<Clip>((ClipBundle {
+                styles: WoodpeckerStyle::new()
+                    .with_size(taffy::Size::from_lengths(150.0, 100.0)),
+                widget_render: WidgetRender::Layer {
+                    border_radius: kurbo::RoundedRectRadii::from_single_radius(50.0)
+                },
+                children: WidgetChildren::default().with_child::<Element>((
                 ElementBundle {
                     styles: WoodpeckerStyle::new()
-                        .with_size(taffy::Size::from_lengths(150.0, 100.0)),
-                    children: WidgetChildren::default().with_child::<Clip>((ClipBundle {
+                        .with_size(taffy::Size {
+                            width: Dimension::from_percent(1.0),
+                            height: Dimension::from_percent(1.0),
+                        }),
                         children: WidgetChildren::default().with_child::<Element>((
                             ElementBundle {
                                 styles: WoodpeckerStyle::new()
@@ -52,12 +60,13 @@ fn startup(
                             },
                         )),
                         ..Default::default()
-                    },)),
+                    },
+                    WidgetRender::Quad {
+                        color: Srgba::RED.into(),
+                        border_radius: kurbo::RoundedRectRadii::from_single_radius(50.0),
+                    },
+                )),
                     ..Default::default()
-                },
-                WidgetRender::Quad {
-                    color: Srgba::RED.into(),
-                    border_radius: kurbo::RoundedRectRadii::from_single_radius(0.0),
                 },
             )),
             ..Default::default()
