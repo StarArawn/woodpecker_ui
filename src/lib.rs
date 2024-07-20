@@ -121,7 +121,7 @@ impl WidgetRegisterExt for App {
         self.register_component_as::<dyn Widget, T>();
         let mut context = self
             .world_mut()
-            .get_resource_or_insert_with::<WoodpeckerContext>(|| WoodpeckerContext::default());
+            .get_resource_or_insert_with::<WoodpeckerContext>(WoodpeckerContext::default);
         context.add_widget_systems_non_into(
             T::get_name(),
             Box::new(T::update()),
@@ -138,7 +138,7 @@ impl WidgetRegisterExt for App {
     ) -> &mut Self {
         let mut context = self
             .world_mut()
-            .get_resource_or_insert_with::<WoodpeckerContext>(|| WoodpeckerContext::default());
+            .get_resource_or_insert_with::<WoodpeckerContext>(WoodpeckerContext::default);
         context.add_widget_system(widget_name, update, render);
         self
     }

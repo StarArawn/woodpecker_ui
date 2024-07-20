@@ -4,7 +4,6 @@ use crate::{
     CurrentWidget,
 };
 use bevy::prelude::*;
-use bevy_vello::vello::kurbo;
 
 /// A generic element widget used for layouts.
 #[derive(Bundle, Clone)]
@@ -15,10 +14,6 @@ pub struct ClipBundle {
     pub children: WidgetChildren,
     /// The widget styles,
     pub styles: WoodpeckerStyle,
-    /// Transform component
-    pub transform: Transform,
-    /// Global Transform component
-    pub global_transform: GlobalTransform,
     /// Widget render
     pub widget_render: WidgetRender,
 }
@@ -33,11 +28,7 @@ impl Default for ClipBundle {
                 height: Units::Percentage(100.0),
                 ..Default::default()
             },
-            transform: Default::default(),
-            global_transform: Default::default(),
-            widget_render: WidgetRender::Layer {
-                border_radius: kurbo::RoundedRectRadii::from_single_radius(0.0),
-            },
+            widget_render: WidgetRender::Layer,
         }
     }
 }

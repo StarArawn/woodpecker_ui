@@ -15,20 +15,16 @@ use bevy_vello::{
     VelloScene,
 };
 
+use crate::prelude::WoodpeckerStyle;
+
 pub(crate) const VARIATIONS: &[(&str, f32)] = &[];
 
 #[derive(Component, Clone)]
 pub enum WidgetRender {
-    Quad {
-        // TODO: Move this stuff to styles..
-        color: Color,
-        border_radius: RoundedRectRadii,
-    },
+    Quad,
     Text {
         // TODO: Move some of this to styles..
         font: Handle<VelloFont>,
-        size: f32,
-        color: Color,
         alignment: VelloTextAlignment,
         content: String,
         word_wrap: bool,
@@ -36,26 +32,16 @@ pub enum WidgetRender {
     Custom {
         render: WidgetRenderCustom,
     },
-    Layer {
-        border_radius: kurbo::RoundedRectRadii,
-    },
+    Layer,
 }
 
 impl WidgetRender {
-    pub fn set_color(&mut self, new_color: Color) {
-        match self {
-            WidgetRender::Quad { color, .. } => {
-                *color = new_color;
-            }
-            _ => {}
-        }
-    }
-
     pub(crate) fn render(
         &self,
         vello_scene: &mut VelloScene,
         layout: &taffy::Layout,
         font_assets: &Assets<VelloFont>,
+        widget_style: &WoodpeckerStyle,
     ) -> bool {
         let mut did_layer = false;
         let location_x = layout.location.x;
@@ -64,11 +50,8 @@ impl WidgetRender {
         let size_y = layout.size.height;
 
         match self {
-            WidgetRender::Quad {
-                color,
-                border_radius,
-            } => {
-                let color = color.to_linear();
+            WidgetRender::Quad => {
+                let color = widget_style.background_color.to_srgba();
                 vello_scene.fill(
                     peniko::Fill::NonZero,
                     kurbo::Affine::default(),
@@ -84,14 +67,17 @@ impl WidgetRender {
                         location_y as f64,
                         location_x as f64 + size_x as f64,
                         location_y as f64 + size_y as f64,
-                        *border_radius,
+                        RoundedRectRadii::new(
+                            widget_style.border_radius.top_left.value_or(0.0) as f64,
+                            widget_style.border_radius.top_right.value_or(0.0) as f64,
+                            widget_style.border_radius.bottom_right.value_or(0.0) as f64,
+                            widget_style.border_radius.bottom_left.value_or(0.0) as f64,
+                        ),
                     ),
                 );
             }
             WidgetRender::Text {
                 font,
-                size,
-                color,
                 content,
                 alignment,
                 word_wrap,
@@ -103,7 +89,7 @@ impl WidgetRender {
                 let font =
                     FontRef::new(font_asset.font.data.data()).expect("Vello font creation error");
 
-                let font_size = vello::skrifa::instance::Size::new(*size);
+                let font_size = vello::skrifa::instance::Size::new(widget_style.font_size);
                 let charmap = font.charmap();
                 let axes = font.axes();
                 let var_loc = axes.location(VARIATIONS);
@@ -211,10 +197,10 @@ impl WidgetRender {
                         }
                     }
 
-                    let color = color.to_srgba();
+                    let color = widget_style.color.to_srgba();
                     vello_scene
                         .draw_glyphs(&font_asset.font)
-                        .font_size(*size)
+                        .font_size(widget_style.font_size)
                         .transform(transform)
                         .normalized_coords(var_loc.coords())
                         .brush(&Brush::Solid(vello::peniko::Color::rgba(
@@ -230,21 +216,26 @@ impl WidgetRender {
             WidgetRender::Custom { render } => {
                 render.render(vello_scene, layout);
             }
-            WidgetRender::Layer { border_radius } => {
+            WidgetRender::Layer => {
                 let mask_blend = vello::peniko::BlendMode::new(
                     vello::peniko::Mix::Normal,
                     vello::peniko::Compose::SrcOver,
                 );
                 vello_scene.push_layer(
                     mask_blend,
-                    0.25,
+                    widget_style.opacity,
                     Affine::default(),
                     &kurbo::RoundedRect::new(
                         location_x as f64,
                         location_y as f64,
                         location_x as f64 + size_x as f64,
                         location_y as f64 + size_y as f64,
-                        *border_radius,
+                        RoundedRectRadii::new(
+                            widget_style.border_radius.top_left.value_or(0.0) as f64,
+                            widget_style.border_radius.top_right.value_or(0.0) as f64,
+                            widget_style.border_radius.bottom_right.value_or(0.0) as f64,
+                            widget_style.border_radius.bottom_left.value_or(0.0) as f64,
+                        ),
                     ),
                 );
                 did_layer = true;

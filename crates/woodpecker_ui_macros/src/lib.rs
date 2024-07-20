@@ -25,17 +25,17 @@ The `systems` attribute is the only supported argument
             let split = system_names.split(',').collect::<Vec<_>>();
             systems.0 = Some(
                 split
-                    .get(0)
+                    .first()
                     .expect(ATTR_ERROR_MESSAGE)
                     .to_string()
-                    .replace(" ", ""),
+                    .replace(' ', ""),
             );
             systems.1 = Some(
                 split
                     .get(1)
                     .expect(ATTR_ERROR_MESSAGE)
                     .to_string()
-                    .replace(" ", ""),
+                    .replace(' ', ""),
             );
         }
     }

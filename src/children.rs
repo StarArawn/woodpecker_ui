@@ -65,12 +65,6 @@ impl WidgetChildren {
     pub fn children_changed(&self) -> bool {
         self.children.iter().map(|(n, _)| n).collect::<Vec<_>>()
             != self.prev_children.iter().collect::<Vec<_>>()
-            || self
-                .children_queue
-                .iter()
-                .map(|(n, _)| n)
-                .collect::<Vec<_>>()
-                != self.prev_children.iter().collect::<Vec<_>>()
     }
 
     /// Attaches the children to a parent widget.
@@ -85,7 +79,7 @@ impl WidgetChildren {
             return;
         };
 
-        if self.children_queue.len() > 0 {
+        if !self.children_queue.is_empty() {
             self.children = self.children_queue.drain(..).collect::<Vec<_>>();
         }
 

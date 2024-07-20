@@ -25,16 +25,17 @@ fn startup(
                 styles: WoodpeckerStyle {
                     width: 150.0.into(),
                     height: 100.0.into(),
+                    border_radius: Corner::all(50.0.into()),
+                    opacity: 0.15,
                     ..Default::default()
-                },
-                widget_render: WidgetRender::Layer {
-                    border_radius: kurbo::RoundedRectRadii::from_single_radius(50.0)
                 },
                 children: WidgetChildren::default().with_child::<Element>((
                 ElementBundle {
                     styles: WoodpeckerStyle {
                         width: Units::Percentage(100.0),
                         height: Units::Percentage(100.0),
+                        border_radius: Corner::all(50.0.into()),
+                        background_color: Srgba::RED.into(),
                         ..Default::default()
                         },
                         children: WidgetChildren::default().with_child::<Element>((
@@ -48,14 +49,13 @@ fn startup(
                                         top: 10.0.into(),
                                         bottom: 10.0.into(),
                                     },
+                                    font_size: 20.0,
                                     ..Default::default()
                                 },
                                 ..Default::default()
                             },
                             WidgetRender::Text {
                                 font: asset_server.load("Poppins/Poppins-Regular.ttf"),
-                                size: 20.0,
-                                color: Color::WHITE,
                                 alignment: VelloTextAlignment::TopLeft,
                                 content: "Hello World! I am Woodpecker UI! This text is way too long and thus it clips out of the bottom of our quad.".into(),
                                 word_wrap: true,
@@ -63,10 +63,7 @@ fn startup(
                         )),
                         ..Default::default()
                     },
-                    WidgetRender::Quad {
-                        color: Srgba::RED.into(),
-                        border_radius: kurbo::RoundedRectRadii::from_single_radius(50.0),
-                    },
+                    WidgetRender::Quad
                 )),
                     ..Default::default()
                 },

@@ -13,8 +13,8 @@ use bevy_mod_picking::{
 
 #[derive(Component, Default, Clone)]
 pub struct ButtonStyles {
-    pub normal: (Color, WoodpeckerStyle), // TODO: Add color to styles..
-    pub hovered: (Color, WoodpeckerStyle), // TODO: Add color to styles..
+    pub normal: WoodpeckerStyle,
+    pub hovered: WoodpeckerStyle,
 }
 
 /// A generic button widget used for easy buttons!
@@ -30,10 +30,6 @@ pub struct WButtonBundle {
     pub styles: WoodpeckerStyle,
     /// The button styles
     pub button_styles: ButtonStyles,
-    /// Transform component
-    pub transform: Transform,
-    /// Global Transform component
-    pub global_transform: GlobalTransform,
     /// Provides overrides for picking behavior.
     pub pickable: Pickable,
     /// Tracks entity interaction state.
@@ -50,14 +46,9 @@ impl Default for WButtonBundle {
     fn default() -> Self {
         Self {
             app: Default::default(),
-            render: WidgetRender::Quad {
-                color: Color::BLACK,
-                border_radius: bevy_vello::vello::kurbo::RoundedRectRadii::from_single_radius(10.0),
-            },
+            render: WidgetRender::Quad,
             children: Default::default(),
             styles: Default::default(),
-            transform: Default::default(),
-            global_transform: Default::default(),
             pickable: Default::default(),
             interaction: Default::default(),
             on_over: On::<Pointer<Over>>::listener_component_mut::<WButton>(|_, button| {
@@ -72,23 +63,15 @@ impl Default for WButtonBundle {
 }
 
 /// The Woodpecker UI Button
-#[derive(Component, Default, Clone)]
+#[derive(Component, Widget, Default, Clone)]
+#[widget_systems(update, render)]
 pub struct WButton {
     pub hovering: bool,
-}
-impl Widget for WButton {
-    fn update() -> impl System<In = (), Out = bool> {
-        IntoSystem::into_system(update)
-    }
-
-    fn render() -> impl System<In = (), Out = ()> {
-        IntoSystem::into_system(render)
-    }
 }
 
 pub fn update(
     entity: Res<CurrentWidget>,
-    query: Query<Entity, Or<(Changed<WButton>, Changed<WoodpeckerStyle>)>>,
+    query: Query<Entity, Or<(Changed<WButton>, Changed<ButtonStyles>)>>,
     children_query: Query<&WidgetChildren>,
 ) -> bool {
     query.contains(**entity)
@@ -106,21 +89,16 @@ pub fn render(
         &mut WoodpeckerStyle,
         &ButtonStyles,
         &mut WidgetChildren,
-        &mut WidgetRender,
     )>,
 ) {
-    let Ok((button, mut styles, button_styles, mut children, mut widget_render)) =
-        query.get_mut(**entity)
-    else {
+    let Ok((button, mut styles, button_styles, mut children)) = query.get_mut(**entity) else {
         return;
     };
 
     if button.hovering {
-        *styles = button_styles.hovered.1;
-        widget_render.set_color(button_styles.hovered.0);
+        *styles = button_styles.hovered;
     } else {
-        *styles = button_styles.normal.1;
-        widget_render.set_color(button_styles.normal.0);
+        *styles = button_styles.normal;
     }
 
     children.process(entity.as_parent());

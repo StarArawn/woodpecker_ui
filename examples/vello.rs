@@ -20,10 +20,10 @@ fn vello_update(entity: Res<CurrentWidget>, query: Query<Entity, Changed<VelloWi
 
 fn vello_render(
     entity: Res<CurrentWidget>,
-    mut query: Query<(&VelloWidget, &mut WidgetRender)>,
+    mut query: Query<(&VelloWidget, &mut WoodpeckerStyle)>,
     mut children_query: Query<&mut WidgetChildren>,
 ) {
-    let Ok((widget, mut widget_render)) = query.get_mut(**entity) else {
+    let Ok((widget, mut styles)) = query.get_mut(**entity) else {
         return;
     };
 
@@ -32,29 +32,25 @@ fn vello_render(
     let Ok(mut children) = children else {
         // Only change colors for widgets without children.
         match (widget.hovered, widget.focused) {
-            (false, true) => widget_render.set_color(Color::srgba(1.0, 0.0, 1.0, 1.0)),
-            (true, false) => widget_render.set_color(Color::srgba(0.0, 1.0, 0.0, 1.0)),
-            _ => widget_render.set_color(Color::srgba(1.0, 0.0, 0.0, 1.0)),
+            (false, true) => styles.background_color = Color::srgba(1.0, 0.0, 1.0, 1.0),
+            (true, false) => styles.background_color = Color::srgba(0.0, 1.0, 0.0, 1.0),
+            _ => styles.background_color = Color::srgba(1.0, 0.0, 0.0, 1.0),
         }
         return;
     };
 
     for _ in 0..5 {
         children.add::<VelloWidget>((
-            WidgetRender::Quad {
-                color: Color::srgba(1.0, 0.0, 0.0, 1.0),
-                border_radius: woodpecker_ui::prelude::kurbo::RoundedRectRadii::new(
-                    10.0, 10.0, 0.0, 10.0,
-                ),
-            },
+            WidgetRender::Quad,
             VelloWidget::default(),
             WoodpeckerStyle {
                 width: 100.0.into(),
                 height: 100.0.into(),
                 margin: Edge::all(50.0.into()),
+                background_color: Color::srgba(1.0, 0.0, 0.0, 1.0),
+                border_radius: Corner::new(10.0.into(), 10.0.into(), 0.0.into(), 10.0.into()),
                 ..Default::default()
             },
-            SpatialBundle::default(),
             PickableBundle::default(),
             Focusable,
             On::<Pointer<Over>>::listener_component_mut::<VelloWidget>(|_, vello_widget| {
@@ -107,12 +103,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     let mut root_children = WidgetChildren::default();
 
     root_children.add::<VelloWidget>((
-        WidgetRender::Quad {
-            color: Color::srgba(0.0, 0.0, 1.0, 1.0),
-            border_radius: woodpecker_ui::prelude::kurbo::RoundedRectRadii::from_single_radius(
-                50.0,
-            ),
-        },
+        WidgetRender::Quad,
         VelloWidget::default(),
         WoodpeckerStyle {
             align_content: Some(WidgetAlignContent::SpaceEvenly),
@@ -120,9 +111,10 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
             margin: Edge::all(50.0.into()),
             width: Units::Percentage(100.0),
             height: Units::Percentage(100.0),
+            background_color: Color::srgba(0.0, 0.0, 1.0, 1.0),
+            border_radius: Corner::all(50.0.into()),
             ..Default::default()
         },
-        SpatialBundle::default(),
         WidgetChildren::default(),
     ));
 

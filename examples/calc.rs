@@ -5,7 +5,6 @@ use bevy_mod_picking::{
     DefaultPickingPlugins,
 };
 use calc::Context;
-use taffy::style_helpers::{FromLength, FromPercent};
 use woodpecker_ui::prelude::*;
 
 const FONT_SIZE: f32 = 60.0;
@@ -37,6 +36,16 @@ fn main() {
 }
 
 pub const BUTTON_STYLES: WoodpeckerStyle = WoodpeckerStyle {
+    background_color: Color::Srgba(Srgba::rgb(0.871, 0.192, 0.38)),
+    width: Units::Pixels(BUTTON_SIZE),
+    height: Units::Pixels(BUTTON_SIZE),
+    justify_content: Some(WidgetAlignContent::Center),
+    align_content: Some(WidgetAlignContent::Center),
+    ..WoodpeckerStyle::DEFAULT
+};
+
+pub const BUTTON_STYLES_HOVER: WoodpeckerStyle = WoodpeckerStyle {
+    background_color: Color::Srgba(Srgba::rgb(0.702, 0.0, 0.2)),
     width: Units::Pixels(BUTTON_SIZE),
     height: Units::Pixels(BUTTON_SIZE),
     justify_content: Some(WidgetAlignContent::Center),
@@ -57,8 +66,8 @@ fn startup(
     buttons.add::<WButton>((
         WButtonBundle {
             button_styles: ButtonStyles {
-                normal: (Srgba::hex("DE3161").unwrap().into(), BUTTON_STYLES),
-                hovered: (Srgba::hex("b30033").unwrap().into(), BUTTON_STYLES),
+                normal: BUTTON_STYLES,
+                hovered: BUTTON_STYLES_HOVER,
             },
             children: WidgetChildren::default().with_child::<Element>((
                 ElementBundle {
@@ -70,14 +79,14 @@ fn startup(
                             top: (FONT_SIZE / 2.0).into(),
                             ..Default::default()
                         },
+                        font_size: FONT_SIZE,
+                        color: Color::WHITE,
                         ..Default::default()
                     },
                     ..Default::default()
                 },
                 WidgetRender::Text {
                     font: asset_server.load("Poppins/Poppins-Regular.ttf"),
-                    size: FONT_SIZE,
-                    color: Color::WHITE,
                     alignment: VelloTextAlignment::TopLeft,
                     content: "C".into(),
                     word_wrap: true,
@@ -98,12 +107,13 @@ fn startup(
                 height: BUTTON_SIZE.into(),
                 justify_content: Some(WidgetAlignContent::FlexStart),
                 align_content: Some(WidgetAlignContent::Center),
+                background_color: Srgba::hex("DE3161").unwrap().into(),
+                border_radius: Corner::all(Units::Pixels(5.0)),
                 ..Default::default()
             },
             children: WidgetChildren::default().with_child::<Clip>(ClipBundle {
                 children: WidgetChildren::default().with_child::<Output>((
                     Output,
-                    SpatialBundle::default(),
                     WoodpeckerStyle {
                         width: (BUTTON_SIZE * 3. + GAP * 2.).into(),
                         height: FONT_SIZE.into(),
@@ -113,12 +123,12 @@ fn startup(
                             right: 0.0.into(),
                             bottom: 0.0.into(),
                         },
+                        font_size: FONT_SIZE,
+                        color: Color::WHITE,
                         ..Default::default()
                     },
                     WidgetRender::Text {
                         font: asset_server.load("Poppins/Poppins-Regular.ttf"),
-                        size: FONT_SIZE,
-                        color: Color::WHITE,
                         alignment: VelloTextAlignment::TopLeft,
                         content: "".into(),
                         word_wrap: false,
@@ -128,18 +138,15 @@ fn startup(
             }),
             ..Default::default()
         },
-        WidgetRender::Quad {
-            color: Srgba::hex("DE3161").unwrap().into(),
-            border_radius: kurbo::RoundedRectRadii::from_single_radius(5.0),
-        },
+        WidgetRender::Quad,
     ));
 
     for button in get_buttons() {
         buttons.add::<WButton>((
             WButtonBundle {
                 button_styles: ButtonStyles {
-                    normal: (Srgba::hex("DE3161").unwrap().into(), BUTTON_STYLES),
-                    hovered: (Srgba::hex("b30033").unwrap().into(), BUTTON_STYLES),
+                    normal: BUTTON_STYLES,
+                    hovered: BUTTON_STYLES_HOVER,
                 },
                 children: WidgetChildren::default().with_child::<Element>((
                     ElementBundle {
@@ -151,14 +158,14 @@ fn startup(
                                 top: (FONT_SIZE / 2.0).into(),
                                 ..Default::default()
                             },
+                            font_size: FONT_SIZE,
+                            color: Color::WHITE,
                             ..Default::default()
                         },
                         ..Default::default()
                     },
                     WidgetRender::Text {
                         font: asset_server.load("Poppins/Poppins-Regular.ttf"),
-                        size: FONT_SIZE,
-                        color: Color::WHITE,
                         alignment: VelloTextAlignment::TopLeft,
                         content: button.into(),
                         word_wrap: true,
@@ -197,6 +204,8 @@ fn startup(
                 children: WidgetChildren::default().with_child::<Element>((
                     ElementBundle {
                         styles: WoodpeckerStyle {
+                            background_color: Srgba::hex("FF007F").unwrap().into(),
+                            border_radius: Corner::all(Units::Pixels(5.0)),
                             width: WIDTH.into(),
                             height: HEIGHT.into(),
                             gap: (GAP.into(), GAP.into()),
@@ -208,10 +217,7 @@ fn startup(
                         children: buttons,
                         ..Default::default()
                     },
-                    WidgetRender::Quad {
-                        color: Srgba::hex("FF007F").unwrap().into(),
-                        border_radius: kurbo::RoundedRectRadii::from_single_radius(5.0),
-                    },
+                    WidgetRender::Quad,
                 )),
                 ..Default::default()
             }),

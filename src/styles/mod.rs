@@ -245,52 +245,52 @@ impl WoodpeckerStyle {
     };
 }
 
-impl Into<taffy::Style> for &WoodpeckerStyle {
-    fn into(self) -> taffy::Style {
-        (*self).into()
+impl From<&WoodpeckerStyle> for taffy::Style {
+    fn from(val: &WoodpeckerStyle) -> taffy::Style {
+        (*val).into()
     }
 }
 
-impl Into<taffy::Style> for WoodpeckerStyle {
-    fn into(self) -> taffy::Style {
+impl From<WoodpeckerStyle> for taffy::Style {
+    fn from(val: WoodpeckerStyle) -> taffy::Style {
         taffy::Style {
-            display: self.display.into(),
+            display: val.display.into(),
             overflow: taffy::Point {
-                x: self.overflow.into(),
-                y: self.overflow.into(),
+                x: val.overflow.into(),
+                y: val.overflow.into(),
             },
-            position: self.position.into(),
-            inset: Edge::new(self.top, self.right, self.bottom, self.left).into(),
+            position: val.position.into(),
+            inset: Edge::new(val.top, val.right, val.bottom, val.left).into(),
             size: taffy::Size {
-                width: self.width.into(),
-                height: self.height.into(),
+                width: val.width.into(),
+                height: val.height.into(),
             },
             min_size: taffy::Size {
-                width: self.min_width.into(),
-                height: self.min_height.into(),
+                width: val.min_width.into(),
+                height: val.min_height.into(),
             },
             max_size: taffy::Size {
-                width: self.max_width.into(),
-                height: self.max_height.into(),
+                width: val.max_width.into(),
+                height: val.max_height.into(),
             },
-            margin: self.margin.into(),
-            padding: self.padding.into(),
-            border: self.border.into(),
-            align_items: self.align_items.map(|i| i.into()),
-            align_self: self.align_self.map(|i| i.into()),
-            justify_items: self.justify_items.map(|i| i.into()),
-            justify_self: self.justify_self.map(|i| i.into()),
-            align_content: self.align_content.map(|i| i.into()),
-            justify_content: self.justify_content.map(|i| i.into()),
+            margin: val.margin.into(),
+            padding: val.padding.into(),
+            border: val.border.into(),
+            align_items: val.align_items.map(|i| i.into()),
+            align_self: val.align_self.map(|i| i.into()),
+            justify_items: val.justify_items.map(|i| i.into()),
+            justify_self: val.justify_self.map(|i| i.into()),
+            align_content: val.align_content.map(|i| i.into()),
+            justify_content: val.justify_content.map(|i| i.into()),
             gap: taffy::Size {
-                width: self.gap.0.into(),
-                height: self.gap.1.into(),
+                width: val.gap.0.into(),
+                height: val.gap.1.into(),
             },
-            flex_direction: self.flex_direction.into(),
-            flex_wrap: self.flex_wrap.into(),
-            flex_basis: self.flex_basis.into(),
-            flex_grow: self.flex_grow.into(),
-            flex_shrink: self.flex_shrink.into(),
+            flex_direction: val.flex_direction.into(),
+            flex_wrap: val.flex_wrap.into(),
+            flex_basis: val.flex_basis.into(),
+            flex_grow: val.flex_grow,
+            flex_shrink: val.flex_shrink,
             ..Default::default()
         }
     }

@@ -14,10 +14,6 @@ pub struct ElementBundle {
     pub children: WidgetChildren,
     /// The widget styles,
     pub styles: WoodpeckerStyle,
-    /// Transform component
-    pub transform: Transform,
-    /// Global Transform component
-    pub global_transform: GlobalTransform,
 }
 
 /// The Woodpecker UI Element

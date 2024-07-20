@@ -77,7 +77,7 @@ pub(crate) fn system(world: &mut World) {
         if let Some(mut children) = world
             .entity_mut(*widget_entity)
             .get::<WidgetChildren>()
-            .map(|wc| wc.clone())
+            .cloned()
         {
             children.process_world(world);
             world.entity_mut(*widget_entity).insert(children);
@@ -173,7 +173,7 @@ fn get_all_children(world: &mut World, parent_entity: Entity) -> Vec<Entity> {
     let Ok(bevy_children) = world
         .query::<&Children>()
         .get(world, parent_entity)
-        .map(|c| c.iter().map(|e| *e).collect::<Vec<_>>())
+        .map(|c| c.iter().copied().collect::<Vec<_>>())
     else {
         return vec![];
     };

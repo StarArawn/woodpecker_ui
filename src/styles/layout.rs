@@ -19,9 +19,9 @@ pub enum WidgetDisplay {
     None,
 }
 
-impl Into<taffy::Display> for WidgetDisplay {
-    fn into(self) -> taffy::Display {
-        match self {
+impl From<WidgetDisplay> for taffy::Display {
+    fn from(val: WidgetDisplay) -> taffy::Display {
+        match val {
             WidgetDisplay::Block => taffy::Display::Block,
             WidgetDisplay::Flex => taffy::Display::Flex,
             WidgetDisplay::Grid => taffy::Display::Grid,
@@ -61,9 +61,9 @@ pub enum WidgetOverflow {
     Scroll,
 }
 
-impl Into<taffy::Overflow> for WidgetOverflow {
-    fn into(self) -> taffy::Overflow {
-        match self {
+impl From<WidgetOverflow> for taffy::Overflow {
+    fn from(val: WidgetOverflow) -> taffy::Overflow {
+        match val {
             WidgetOverflow::Visible => taffy::Overflow::Visible,
             WidgetOverflow::Clip => taffy::Overflow::Clip,
             WidgetOverflow::Hidden => taffy::Overflow::Hidden,
@@ -96,18 +96,18 @@ pub enum WidgetPosition {
     Absolute,
 }
 
-impl Into<taffy::Position> for WidgetPosition {
-    fn into(self) -> taffy::Position {
-        match self {
+impl From<WidgetPosition> for taffy::Position {
+    fn from(val: WidgetPosition) -> taffy::Position {
+        match val {
             WidgetPosition::Relative => taffy::Position::Relative,
             WidgetPosition::Absolute => taffy::Position::Absolute,
         }
     }
 }
 
-impl Into<taffy::Dimension> for super::Units {
-    fn into(self) -> taffy::Dimension {
-        match self {
+impl From<super::Units> for taffy::Dimension {
+    fn from(val: super::Units) -> taffy::Dimension {
+        match val {
             super::Units::Pixels(pixels) => taffy::Dimension::Length(pixels),
             super::Units::Percentage(percentage) => taffy::Dimension::Percent(percentage),
             super::Units::Auto => taffy::Dimension::Auto,
@@ -115,9 +115,9 @@ impl Into<taffy::Dimension> for super::Units {
     }
 }
 
-impl Into<taffy::LengthPercentageAuto> for super::Units {
-    fn into(self) -> taffy::LengthPercentageAuto {
-        match self {
+impl From<super::Units> for taffy::LengthPercentageAuto {
+    fn from(val: super::Units) -> taffy::LengthPercentageAuto {
+        match val {
             super::Units::Pixels(pixels) => taffy::LengthPercentageAuto::Length(pixels),
             super::Units::Percentage(percentage) => {
                 taffy::LengthPercentageAuto::Percent(percentage / 100.0)
@@ -127,9 +127,9 @@ impl Into<taffy::LengthPercentageAuto> for super::Units {
     }
 }
 
-impl Into<taffy::LengthPercentage> for super::Units {
-    fn into(self) -> taffy::LengthPercentage {
-        match self {
+impl From<super::Units> for taffy::LengthPercentage {
+    fn from(val: super::Units) -> taffy::LengthPercentage {
+        match val {
             super::Units::Pixels(pixels) => taffy::LengthPercentage::Length(pixels),
             super::Units::Percentage(percentage) => taffy::LengthPercentage::Percent(percentage),
             super::Units::Auto => taffy::LengthPercentage::Percent(1.0),
@@ -137,24 +137,24 @@ impl Into<taffy::LengthPercentage> for super::Units {
     }
 }
 
-impl Into<taffy::Rect<taffy::LengthPercentageAuto>> for super::Edge {
-    fn into(self) -> taffy::Rect<taffy::LengthPercentageAuto> {
+impl From<super::Edge> for taffy::Rect<taffy::LengthPercentageAuto> {
+    fn from(val: super::Edge) -> taffy::Rect<taffy::LengthPercentageAuto> {
         taffy::Rect {
-            left: self.left.into(),
-            right: self.right.into(),
-            top: self.top.into(),
-            bottom: self.bottom.into(),
+            left: val.left.into(),
+            right: val.right.into(),
+            top: val.top.into(),
+            bottom: val.bottom.into(),
         }
     }
 }
 
-impl Into<taffy::Rect<taffy::LengthPercentage>> for super::Edge {
-    fn into(self) -> taffy::Rect<taffy::LengthPercentage> {
+impl From<super::Edge> for taffy::Rect<taffy::LengthPercentage> {
+    fn from(val: super::Edge) -> taffy::Rect<taffy::LengthPercentage> {
         taffy::Rect {
-            left: self.left.into(),
-            right: self.right.into(),
-            top: self.top.into(),
-            bottom: self.bottom.into(),
+            left: val.left.into(),
+            right: val.right.into(),
+            top: val.top.into(),
+            bottom: val.bottom.into(),
         }
     }
 }
@@ -189,9 +189,9 @@ pub enum WidgetAlignItems {
     Stretch,
 }
 
-impl Into<taffy::AlignItems> for WidgetAlignItems {
-    fn into(self) -> taffy::AlignItems {
-        match self {
+impl From<WidgetAlignItems> for taffy::AlignItems {
+    fn from(val: WidgetAlignItems) -> taffy::AlignItems {
+        match val {
             WidgetAlignItems::Start => taffy::AlignItems::Start,
             WidgetAlignItems::End => taffy::AlignItems::End,
             WidgetAlignItems::FlexStart => taffy::AlignItems::FlexStart,
@@ -248,9 +248,9 @@ pub enum WidgetAlignContent {
     SpaceAround,
 }
 
-impl Into<taffy::AlignContent> for WidgetAlignContent {
-    fn into(self) -> taffy::AlignContent {
-        match self {
+impl From<WidgetAlignContent> for taffy::AlignContent {
+    fn from(val: WidgetAlignContent) -> taffy::AlignContent {
+        match val {
             WidgetAlignContent::Start => taffy::AlignContent::Start,
             WidgetAlignContent::End => taffy::AlignContent::End,
             WidgetAlignContent::FlexStart => taffy::AlignContent::FlexStart,
@@ -316,9 +316,9 @@ pub enum WidgetFlexDirection {
     ColumnReverse,
 }
 
-impl Into<taffy::FlexDirection> for WidgetFlexDirection {
-    fn into(self) -> taffy::FlexDirection {
-        match self {
+impl From<WidgetFlexDirection> for taffy::FlexDirection {
+    fn from(val: WidgetFlexDirection) -> taffy::FlexDirection {
+        match val {
             WidgetFlexDirection::Row => taffy::FlexDirection::Row,
             WidgetFlexDirection::Column => taffy::FlexDirection::Column,
             WidgetFlexDirection::RowReverse => taffy::FlexDirection::RowReverse,
@@ -343,9 +343,9 @@ pub enum WidgetFlexWrap {
     WrapReverse,
 }
 
-impl Into<taffy::FlexWrap> for WidgetFlexWrap {
-    fn into(self) -> taffy::FlexWrap {
-        match self {
+impl From<WidgetFlexWrap> for taffy::FlexWrap {
+    fn from(val: WidgetFlexWrap) -> taffy::FlexWrap {
+        match val {
             WidgetFlexWrap::NoWrap => taffy::FlexWrap::NoWrap,
             WidgetFlexWrap::Wrap => taffy::FlexWrap::Wrap,
             WidgetFlexWrap::WrapReverse => taffy::FlexWrap::WrapReverse,
