@@ -17,9 +17,9 @@ pub struct ElementBundle {
 }
 
 /// The Woodpecker UI Element
-#[derive(Component, Default, Clone)]
+#[derive(Component, Widget, Default, Clone)]
+#[widget_systems(update, render)]
 pub struct Element {}
-impl Widget for Element {}
 
 pub fn update(
     entity: Res<CurrentWidget>,

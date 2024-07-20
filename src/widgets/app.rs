@@ -18,9 +18,9 @@ pub struct WoodpeckerAppBundle {
 }
 
 /// The Woodpecker UI App component
-#[derive(Component, Default, Clone)]
+#[derive(Component, Widget, Default, Clone)]
+#[widget_systems(update, render)]
 pub struct WoodpeckerApp {}
-impl Widget for WoodpeckerApp {}
 
 pub fn update(
     mut prev_size: Local<Vec2>,
