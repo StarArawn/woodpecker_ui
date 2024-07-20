@@ -16,6 +16,7 @@ mod layout;
 mod picking_backend;
 mod render;
 mod runner;
+mod styles;
 mod widgets;
 
 /// A module that exports all publicly exposed types.
@@ -25,13 +26,13 @@ pub mod prelude {
     pub use crate::entity_mapping::*;
     pub use crate::focus::*;
     pub use crate::keyboard_input::WidgetKeyboardEvent;
-    pub use crate::layout::WoodpeckerStyle;
     pub use crate::render::WidgetRender;
+    pub use crate::styles::*;
     pub use crate::widgets::*;
     pub use crate::{CurrentWidget, ParentWidget};
     pub use crate::{WidgetRegisterExt, WoodpeckerUIPlugin};
     pub use bevy_vello::prelude::*;
-    pub use taffy::*;
+    pub use woodpecker_ui_macros::*;
 }
 
 /// Wraps an entity and lets woodpecker know its a parent.
@@ -120,7 +121,7 @@ impl WidgetRegisterExt for App {
         self.register_component_as::<dyn Widget, T>();
         let mut context = self
             .world_mut()
-            .get_resource_or_insert_with::<WoodpeckerContext>(|| WoodpeckerContext::default());
+            .get_resource_or_insert_with::<WoodpeckerContext>(WoodpeckerContext::default);
         context.add_widget_systems_non_into(
             T::get_name(),
             Box::new(T::update()),
@@ -137,8 +138,23 @@ impl WidgetRegisterExt for App {
     ) -> &mut Self {
         let mut context = self
             .world_mut()
-            .get_resource_or_insert_with::<WoodpeckerContext>(|| WoodpeckerContext::default());
+            .get_resource_or_insert_with::<WoodpeckerContext>(WoodpeckerContext::default);
         context.add_widget_system(widget_name, update, render);
         self
     }
+}
+
+mod test_proc_macro {
+    use crate::prelude::Widget;
+    #[derive(Widget)]
+    #[widget_systems(update, render)]
+    pub struct MyStruct {}
+
+    fn update() -> bool {
+        false
+    }
+    fn render() {}
+
+    #[test]
+    fn test_widget_macro() {}
 }

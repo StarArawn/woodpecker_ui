@@ -40,11 +40,11 @@ impl Measure for LayoutMeasure {
     ) -> Vec2 {
         match self {
             LayoutMeasure::ContentSize => {
-                let width = width.unwrap_or_else(|| match available_width {
+                let width = width.unwrap_or(match available_width {
                     AvailableSpace::Definite(width) => width,
                     _ => 0.0,
                 });
-                let height = height.unwrap_or_else(|| match available_height {
+                let height = height.unwrap_or(match available_height {
                     AvailableSpace::Definite(height) => height,
                     _ => 0.0,
                 });

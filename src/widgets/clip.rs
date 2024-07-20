@@ -1,11 +1,9 @@
 use crate::{
     children::WidgetChildren,
-    prelude::{Widget, WidgetRender, WoodpeckerStyle},
+    prelude::{Units, Widget, WidgetRender, WoodpeckerStyle},
     CurrentWidget,
 };
 use bevy::prelude::*;
-use bevy_vello::vello::kurbo;
-use taffy::style_helpers::FromPercent;
 
 /// A generic element widget used for layouts.
 #[derive(Bundle, Clone)]
@@ -16,10 +14,6 @@ pub struct ClipBundle {
     pub children: WidgetChildren,
     /// The widget styles,
     pub styles: WoodpeckerStyle,
-    /// Transform component
-    pub transform: Transform,
-    /// Global Transform component
-    pub global_transform: GlobalTransform,
     /// Widget render
     pub widget_render: WidgetRender,
 }
@@ -29,15 +23,12 @@ impl Default for ClipBundle {
         Self {
             app: Default::default(),
             children: Default::default(),
-            styles: WoodpeckerStyle::new().with_size(taffy::Size {
-                width: taffy::Dimension::from_percent(1.0),
-                height: taffy::Dimension::from_percent(1.0),
-            }),
-            transform: Default::default(),
-            global_transform: Default::default(),
-            widget_render: WidgetRender::Layer {
-                border_radius: kurbo::RoundedRectRadii::from_single_radius(0.0),
+            styles: WoodpeckerStyle {
+                width: Units::Percentage(100.0),
+                height: Units::Percentage(100.0),
+                ..Default::default()
             },
+            widget_render: WidgetRender::Layer,
         }
     }
 }

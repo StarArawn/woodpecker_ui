@@ -1,10 +1,9 @@
 use crate::{
     children::WidgetChildren,
-    prelude::{Widget, WoodpeckerStyle},
+    prelude::{Units, Widget, WoodpeckerStyle},
     CurrentWidget,
 };
 use bevy::{prelude::*, window::PrimaryWindow};
-use taffy::LengthPercentageAuto;
 
 /// The Woodpecker UI App widget bundle.
 /// Typically this should be the root widget.
@@ -16,10 +15,6 @@ pub struct WoodpeckerAppBundle {
     pub children: WidgetChildren,
     /// The widget styles,
     pub styles: WoodpeckerStyle,
-    /// Transform component
-    pub transform: Transform,
-    /// Global Transform component
-    pub global_transform: GlobalTransform,
 }
 
 /// The Woodpecker UI App component
@@ -63,9 +58,11 @@ pub fn render(
         return;
     };
 
-    *styles = WoodpeckerStyle::new()
-        .with_display(taffy::Display::Flex)
-        .with_size(taffy::Size::from_lengths(window.width(), window.height()));
+    *styles = WoodpeckerStyle {
+        width: Units::Pixels(window.width()),
+        height: Units::Pixels(window.height()),
+        ..*styles
+    };
 
     children.process(entity.as_parent());
 }

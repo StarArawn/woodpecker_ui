@@ -20,11 +20,13 @@ impl CurrentFocus {
         self.0 = entity;
     }
 
+    #[allow(dead_code)]
     pub(crate) fn find_next_focus() {
         // TODO: Write system to find next focused object
         todo!();
     }
 
+    #[allow(dead_code)]
     pub(crate) fn find_prev_focus() {
         // TODO: Write system to find prev focused object
         todo!();

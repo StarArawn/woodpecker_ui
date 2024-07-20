@@ -45,12 +45,10 @@ pub(crate) fn run(
         ui_layout.add_children(entity, children);
     }
 
-    let Ok((width, height)) = query.get(root_node).map(|(_, _, style, _, _)| {
-        (
-            style.0.size.width.into_option().unwrap_or(0.0),
-            style.0.size.height.into_option().unwrap_or(0.0),
-        )
-    }) else {
+    let Ok((width, height)) = query
+        .get(root_node)
+        .map(|(_, _, style, _, _)| (style.width.value_or(1.0), style.height.value_or(1.0)))
+    else {
         return;
     };
 
@@ -91,7 +89,7 @@ fn traverse_render_tree(
     ui_layout: &UiLayout,
     current_node: Entity,
 ) {
-    let Ok((entity, _, _, parent, children)) = query.get_mut(current_node) else {
+    let Ok((entity, _, styles, parent, children)) = query.get_mut(current_node) else {
         return;
     };
     let Some(layout) = ui_layout.get_layout(entity).cloned() else {
@@ -100,21 +98,21 @@ fn traverse_render_tree(
 
     let mut did_layer = false;
     if let Ok(widget_render) = widget_render.get(entity) {
-        let mut layout = layout.clone();
+        let mut layout = layout;
         if let Some(parent_layout) = parent.map(|parent| {
             cached_layout
                 .get(&parent.get())
-                .map(|l| *l)
+                .copied()
                 .unwrap_or_else(|| *ui_layout.get_layout(parent.get()).unwrap())
         }) {
             layout.location.x += parent_layout.location.x;
             layout.location.y += parent_layout.location.y;
         }
-        did_layer = widget_render.render(vello_scene, &layout, &font_assets);
+        did_layer = widget_render.render(vello_scene, &layout, font_assets, styles);
         cached_layout.insert(entity, layout);
     }
 
-    let Some(children) = children.map(|c| c.iter().map(|c| *c).collect::<Vec<_>>()) else {
+    let Some(children) = children.map(|c| c.iter().copied().collect::<Vec<_>>()) else {
         if did_layer {
             vello_scene.pop_layer();
         }

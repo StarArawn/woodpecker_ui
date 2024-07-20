@@ -5,138 +5,7 @@ use bevy::{prelude::*, utils::EntityHashMap};
 use measure::LayoutMeasure;
 use taffy::{Size, TaffyTree};
 
-use crate::has_root;
-
-#[derive(Component, Deref, DerefMut, Default, Debug, Clone)]
-pub struct WoodpeckerStyle(taffy::Style);
-
-impl WoodpeckerStyle {
-    pub fn new() -> Self {
-        Self(taffy::Style::DEFAULT)
-    }
-
-    pub fn with_display(mut self, display: taffy::Display) -> Self {
-        self.display = display;
-        self
-    }
-
-    pub fn with_overflow(mut self, overflow: taffy::Point<taffy::Overflow>) -> Self {
-        self.overflow = overflow;
-        self
-    }
-
-    pub fn with_scrollbar_width(mut self, scrollbar_width: f32) -> Self {
-        self.scrollbar_width = scrollbar_width;
-        self
-    }
-
-    pub fn with_position(mut self, position: taffy::Position) -> Self {
-        self.position = position;
-        self
-    }
-
-    pub fn with_inset(mut self, inset: taffy::Rect<taffy::LengthPercentageAuto>) -> Self {
-        self.inset = inset;
-        self
-    }
-
-    pub fn with_size(mut self, size: taffy::Size<taffy::Dimension>) -> Self {
-        self.size = size;
-        self
-    }
-
-    pub fn with_min_size(mut self, min_size: taffy::Size<taffy::Dimension>) -> Self {
-        self.min_size = min_size;
-        self
-    }
-
-    pub fn with_max_size(mut self, max_size: taffy::Size<taffy::Dimension>) -> Self {
-        self.max_size = max_size;
-        self
-    }
-
-    pub fn with_aspect_ratio(mut self, aspect_ratio: Option<f32>) -> Self {
-        self.aspect_ratio = aspect_ratio;
-        self
-    }
-
-    pub fn with_margin(mut self, margin: taffy::Rect<taffy::LengthPercentageAuto>) -> Self {
-        self.margin = margin;
-        self
-    }
-
-    pub fn with_padding(mut self, padding: taffy::Rect<taffy::LengthPercentage>) -> Self {
-        self.padding = padding;
-        self
-    }
-
-    pub fn with_border(mut self, border: taffy::Rect<taffy::LengthPercentage>) -> Self {
-        self.border = border;
-        self
-    }
-
-    pub fn with_align_items(mut self, align_items: Option<taffy::AlignItems>) -> Self {
-        self.align_items = align_items;
-        self
-    }
-
-    pub fn with_align_self(mut self, align_self: Option<taffy::AlignSelf>) -> Self {
-        self.align_self = align_self;
-        self
-    }
-
-    pub fn with_justify_items(mut self, justify_items: Option<taffy::AlignItems>) -> Self {
-        self.justify_items = justify_items;
-        self
-    }
-
-    pub fn with_justify_self(mut self, justify_self: Option<taffy::AlignSelf>) -> Self {
-        self.justify_self = justify_self;
-        self
-    }
-
-    pub fn with_align_content(mut self, align_content: Option<taffy::AlignContent>) -> Self {
-        self.align_content = align_content;
-        self
-    }
-
-    pub fn with_justify_content(mut self, justify_content: Option<taffy::JustifyContent>) -> Self {
-        self.justify_content = justify_content;
-        self
-    }
-
-    pub fn with_gap(mut self, gap: taffy::Size<taffy::LengthPercentage>) -> Self {
-        self.gap = gap;
-        self
-    }
-
-    pub fn with_flex_direction(mut self, flex_direction: taffy::FlexDirection) -> Self {
-        self.flex_direction = flex_direction;
-        self
-    }
-
-    pub fn with_flex_wrap(mut self, flex_wrap: taffy::FlexWrap) -> Self {
-        self.flex_wrap = flex_wrap;
-        self
-    }
-
-    pub fn with_flex_basis(mut self, flex_basis: taffy::Dimension) -> Self {
-        self.flex_basis = flex_basis;
-        self
-    }
-
-    pub fn with_flex_grow(mut self, flex_grow: f32) -> Self {
-        self.flex_grow = flex_grow;
-        self
-    }
-
-    pub fn with_flex_shrink(mut self, flex_shrink: f32) -> Self {
-        self.flex_shrink = flex_shrink;
-        self
-    }
-
-    // TODO: Expose grid stuff.
-}
+use crate::{has_root, prelude::WoodpeckerStyle};
 
 pub struct WoodpeckerLayoutPlugin;
 impl Plugin for WoodpeckerLayoutPlugin {
@@ -178,11 +47,9 @@ impl UiLayout {
         let taffy_node_id = *self.entity_to_taffy.entry(entity).or_insert_with(|| {
             added = true;
             if let Some(measure) = new_node_context.take() {
-                taffy
-                    .new_leaf_with_context(style.0.clone(), measure)
-                    .unwrap()
+                taffy.new_leaf_with_context(style.into(), measure).unwrap()
             } else {
-                taffy.new_leaf(style.0.clone()).unwrap()
+                taffy.new_leaf(style.into()).unwrap()
             }
         });
 
@@ -196,7 +63,7 @@ impl UiLayout {
             //     taffy.get_node_context(taffy_node_id).is_some()
             // };
 
-            taffy.set_style(taffy_node_id, style.0.clone()).unwrap();
+            taffy.set_style(taffy_node_id, style.into()).unwrap();
         }
     }
 

@@ -5,7 +5,6 @@ use bevy_mod_picking::{
     DefaultPickingPlugins,
 };
 use calc::Context;
-use style_helpers::{FromLength, FromPercent};
 use woodpecker_ui::prelude::*;
 
 const FONT_SIZE: f32 = 60.0;
@@ -36,6 +35,24 @@ fn main() {
         .run();
 }
 
+pub const BUTTON_STYLES: WoodpeckerStyle = WoodpeckerStyle {
+    background_color: Color::Srgba(Srgba::rgb(0.871, 0.192, 0.38)),
+    width: Units::Pixels(BUTTON_SIZE),
+    height: Units::Pixels(BUTTON_SIZE),
+    justify_content: Some(WidgetAlignContent::Center),
+    align_content: Some(WidgetAlignContent::Center),
+    ..WoodpeckerStyle::DEFAULT
+};
+
+pub const BUTTON_STYLES_HOVER: WoodpeckerStyle = WoodpeckerStyle {
+    background_color: Color::Srgba(Srgba::rgb(0.702, 0.0, 0.2)),
+    width: Units::Pixels(BUTTON_SIZE),
+    height: Units::Pixels(BUTTON_SIZE),
+    justify_content: Some(WidgetAlignContent::Center),
+    align_content: Some(WidgetAlignContent::Center),
+    ..WoodpeckerStyle::DEFAULT
+};
+
 fn startup(
     mut commands: Commands,
     mut ui_context: ResMut<WoodpeckerContext>,
@@ -49,37 +66,27 @@ fn startup(
     buttons.add::<WButton>((
         WButtonBundle {
             button_styles: ButtonStyles {
-                normal: (
-                    Srgba::hex("DE3161").unwrap().into(),
-                    WoodpeckerStyle::new()
-                        .with_size(Size::from_lengths(BUTTON_SIZE, BUTTON_SIZE))
-                        .with_justify_content(Some(taffy::AlignContent::Center))
-                        .with_align_content(Some(taffy::AlignContent::Center)),
-                ),
-                hovered: (
-                    Srgba::hex("b30033").unwrap().into(),
-                    WoodpeckerStyle::new()
-                        .with_size(Size::from_lengths(BUTTON_SIZE, BUTTON_SIZE))
-                        .with_justify_content(Some(taffy::AlignContent::Center))
-                        .with_align_content(Some(taffy::AlignContent::Center)),
-                ),
+                normal: BUTTON_STYLES,
+                hovered: BUTTON_STYLES_HOVER,
             },
             children: WidgetChildren::default().with_child::<Element>((
                 ElementBundle {
-                    styles: WoodpeckerStyle::new()
-                        .with_size(Size::from_lengths(FONT_SIZE, FONT_SIZE))
-                        .with_margin(taffy::Rect {
-                            left: LengthPercentageAuto::from_length(FONT_SIZE / 2.0),
-                            top: LengthPercentageAuto::from_length(FONT_SIZE / 2.0),
-                            right: LengthPercentageAuto::from_length(0.0),
-                            bottom: LengthPercentageAuto::from_length(0.0),
-                        }),
+                    styles: WoodpeckerStyle {
+                        width: FONT_SIZE.into(),
+                        height: FONT_SIZE.into(),
+                        margin: Edge {
+                            left: (FONT_SIZE / 2.0).into(),
+                            top: (FONT_SIZE / 2.0).into(),
+                            ..Default::default()
+                        },
+                        font_size: FONT_SIZE,
+                        color: Color::WHITE,
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
                 WidgetRender::Text {
                     font: asset_server.load("Poppins/Poppins-Regular.ttf"),
-                    size: FONT_SIZE,
-                    color: Color::WHITE,
                     alignment: VelloTextAlignment::TopLeft,
                     content: "C".into(),
                     word_wrap: true,
@@ -95,26 +102,33 @@ fn startup(
     // Text box
     buttons.add::<Element>((
         ElementBundle {
-            styles: WoodpeckerStyle::new()
-                .with_size(Size::from_lengths(BUTTON_SIZE * 3. + GAP * 2., BUTTON_SIZE))
-                .with_justify_content(Some(taffy::AlignContent::FlexStart))
-                .with_align_content(Some(taffy::AlignContent::Center)),
+            styles: WoodpeckerStyle {
+                width: (BUTTON_SIZE * 3. + GAP * 2.).into(),
+                height: BUTTON_SIZE.into(),
+                justify_content: Some(WidgetAlignContent::FlexStart),
+                align_content: Some(WidgetAlignContent::Center),
+                background_color: Srgba::hex("DE3161").unwrap().into(),
+                border_radius: Corner::all(Units::Pixels(5.0)),
+                ..Default::default()
+            },
             children: WidgetChildren::default().with_child::<Clip>(ClipBundle {
                 children: WidgetChildren::default().with_child::<Output>((
                     Output,
-                    SpatialBundle::default(),
-                    WoodpeckerStyle::new()
-                        .with_size(Size::from_lengths(BUTTON_SIZE * 3. + GAP * 2., FONT_SIZE))
-                        .with_margin(taffy::Rect {
-                            left: LengthPercentageAuto::from_length(15.0),
-                            top: LengthPercentageAuto::from_length(FONT_SIZE / 2.0),
-                            right: LengthPercentageAuto::from_length(0.0),
-                            bottom: LengthPercentageAuto::from_length(0.0),
-                        }),
+                    WoodpeckerStyle {
+                        width: (BUTTON_SIZE * 3. + GAP * 2.).into(),
+                        height: FONT_SIZE.into(),
+                        margin: Edge {
+                            left: 15.0.into(),
+                            top: (FONT_SIZE / 2.0).into(),
+                            right: 0.0.into(),
+                            bottom: 0.0.into(),
+                        },
+                        font_size: FONT_SIZE,
+                        color: Color::WHITE,
+                        ..Default::default()
+                    },
                     WidgetRender::Text {
                         font: asset_server.load("Poppins/Poppins-Regular.ttf"),
-                        size: FONT_SIZE,
-                        color: Color::WHITE,
                         alignment: VelloTextAlignment::TopLeft,
                         content: "".into(),
                         word_wrap: false,
@@ -124,47 +138,34 @@ fn startup(
             }),
             ..Default::default()
         },
-        WidgetRender::Quad {
-            color: Srgba::hex("DE3161").unwrap().into(),
-            border_radius: kurbo::RoundedRectRadii::from_single_radius(5.0),
-        },
+        WidgetRender::Quad,
     ));
 
     for button in get_buttons() {
         buttons.add::<WButton>((
             WButtonBundle {
                 button_styles: ButtonStyles {
-                    normal: (
-                        Srgba::hex("DE3161").unwrap().into(),
-                        WoodpeckerStyle::new()
-                            .with_size(Size::from_lengths(BUTTON_SIZE, BUTTON_SIZE))
-                            .with_justify_content(Some(taffy::AlignContent::Center))
-                            .with_align_content(Some(taffy::AlignContent::Center)),
-                    ),
-                    hovered: (
-                        Srgba::hex("b30033").unwrap().into(),
-                        WoodpeckerStyle::new()
-                            .with_size(Size::from_lengths(BUTTON_SIZE, BUTTON_SIZE))
-                            .with_justify_content(Some(taffy::AlignContent::Center))
-                            .with_align_content(Some(taffy::AlignContent::Center)),
-                    ),
+                    normal: BUTTON_STYLES,
+                    hovered: BUTTON_STYLES_HOVER,
                 },
                 children: WidgetChildren::default().with_child::<Element>((
                     ElementBundle {
-                        styles: WoodpeckerStyle::new()
-                            .with_size(Size::from_lengths(FONT_SIZE, FONT_SIZE))
-                            .with_margin(taffy::Rect {
-                                left: LengthPercentageAuto::from_length(FONT_SIZE / 2.0),
-                                top: LengthPercentageAuto::from_length(FONT_SIZE / 2.0),
-                                right: LengthPercentageAuto::from_length(0.0),
-                                bottom: LengthPercentageAuto::from_length(0.0),
-                            }),
+                        styles: WoodpeckerStyle {
+                            width: FONT_SIZE.into(),
+                            height: FONT_SIZE.into(),
+                            margin: Edge {
+                                left: (FONT_SIZE / 2.0).into(),
+                                top: (FONT_SIZE / 2.0).into(),
+                                ..Default::default()
+                            },
+                            font_size: FONT_SIZE,
+                            color: Color::WHITE,
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
                     WidgetRender::Text {
                         font: asset_server.load("Poppins/Poppins-Regular.ttf"),
-                        size: FONT_SIZE,
-                        color: Color::WHITE,
                         alignment: VelloTextAlignment::TopLeft,
                         content: button.into(),
                         word_wrap: true,
@@ -178,7 +179,7 @@ fn startup(
                         calc_output.0 = result.to_string();
                     }
                 } else {
-                    calc_output.0 += button.into();
+                    calc_output.0 += button;
                 }
             }),
         ));
@@ -187,37 +188,36 @@ fn startup(
     let root = commands
         .spawn(WoodpeckerAppBundle {
             children: WidgetChildren::default().with_child::<Element>(ElementBundle {
-                styles: WoodpeckerStyle::new()
-                    .with_size(taffy::Size {
-                        width: Dimension::from_percent(1.0),
-                        height: Dimension::from_percent(1.0),
-                    })
-                    .with_justify_content(Some(taffy::AlignContent::Center))
-                    .with_align_content(Some(taffy::AlignContent::Center))
-                    .with_padding(taffy::Rect {
-                        left: LengthPercentage::Length(0.0),
-                        right: LengthPercentage::Length(0.0),
-                        top: LengthPercentage::Length(25.0),
-                        bottom: LengthPercentage::Length(0.0),
-                    }),
+                styles: WoodpeckerStyle {
+                    width: Units::Percentage(100.0),
+                    height: Units::Percentage(100.0),
+                    justify_content: Some(WidgetAlignContent::Center),
+                    align_content: Some(WidgetAlignContent::Center),
+                    padding: Edge {
+                        left: 0.0.into(),
+                        right: 0.0.into(),
+                        top: 25.0.into(),
+                        bottom: 0.0.into(),
+                    },
+                    ..Default::default()
+                },
                 children: WidgetChildren::default().with_child::<Element>((
                     ElementBundle {
-                        styles: WoodpeckerStyle::new()
-                            .with_size(Size::from_lengths(WIDTH, HEIGHT))
-                            .with_gap(taffy::Size {
-                                width: LengthPercentage::from_length(GAP),
-                                height: LengthPercentage::from_length(GAP),
-                            })
-                            .with_justify_content(Some(taffy::AlignContent::Center))
-                            .with_align_content(Some(taffy::AlignContent::Center))
-                            .with_flex_wrap(taffy::FlexWrap::Wrap),
+                        styles: WoodpeckerStyle {
+                            background_color: Srgba::hex("FF007F").unwrap().into(),
+                            border_radius: Corner::all(Units::Pixels(5.0)),
+                            width: WIDTH.into(),
+                            height: HEIGHT.into(),
+                            gap: (GAP.into(), GAP.into()),
+                            justify_content: Some(WidgetAlignContent::Center),
+                            align_content: Some(WidgetAlignContent::Center),
+                            flex_wrap: WidgetFlexWrap::Wrap,
+                            ..Default::default()
+                        },
                         children: buttons,
                         ..Default::default()
                     },
-                    WidgetRender::Quad {
-                        color: Srgba::hex("FF007F").unwrap().into(),
-                        border_radius: kurbo::RoundedRectRadii::from_single_radius(5.0),
-                    },
+                    WidgetRender::Quad,
                 )),
                 ..Default::default()
             }),

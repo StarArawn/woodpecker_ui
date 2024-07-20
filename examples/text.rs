@@ -22,12 +22,15 @@ fn startup(
     let root = commands
         .spawn((
             WoodpeckerAppBundle {
+                styles: WoodpeckerStyle {
+                    font_size: 50.0,
+                    color: Srgba::RED.into(),
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             WidgetRender::Text {
                 font: asset_server.load("Poppins/Poppins-Regular.ttf"),
-                size: 20.0,
-                color: Color::WHITE,
                 alignment: VelloTextAlignment::TopLeft,
                 content: "Hello World! I am Woodpecker UI!".into(),
                 word_wrap: false,
