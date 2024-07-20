@@ -46,11 +46,7 @@ pub const BUTTON_STYLES: WoodpeckerStyle = WoodpeckerStyle {
 
 pub const BUTTON_STYLES_HOVER: WoodpeckerStyle = WoodpeckerStyle {
     background_color: Color::Srgba(Srgba::rgb(0.702, 0.0, 0.2)),
-    width: Units::Pixels(BUTTON_SIZE),
-    height: Units::Pixels(BUTTON_SIZE),
-    justify_content: Some(WidgetAlignContent::Center),
-    align_content: Some(WidgetAlignContent::Center),
-    ..WoodpeckerStyle::DEFAULT
+    ..BUTTON_STYLES
 };
 
 fn startup(

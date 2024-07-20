@@ -7,12 +7,12 @@ use bevy_mod_picking::{
 };
 use woodpecker_ui::prelude::*;
 
-#[derive(Component, Debug, Clone, Default, PartialEq)]
+#[derive(Component, Widget, Default, Clone, PartialEq)]
+#[widget_systems(vello_update, vello_render)]
 pub struct VelloWidget {
     focused: bool,
     hovered: bool,
 }
-impl Widget for VelloWidget {}
 
 fn vello_update(entity: Res<CurrentWidget>, query: Query<Entity, Changed<VelloWidget>>) -> bool {
     query.contains(**entity)
@@ -87,7 +87,6 @@ fn main() {
         .insert_resource(DebugPickingMode::Normal)
         .register_widget::<VelloWidget>()
         .add_systems(Startup, startup)
-        .add_widget_systems(VelloWidget::get_name(), vello_update, vello_render)
         .run();
 }
 
