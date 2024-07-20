@@ -5,7 +5,7 @@ use bevy_mod_picking::{
     DefaultPickingPlugins,
 };
 use calc::Context;
-use style_helpers::{FromLength, FromPercent};
+use taffy::style_helpers::{FromLength, FromPercent};
 use woodpecker_ui::prelude::*;
 
 const FONT_SIZE: f32 = 60.0;
@@ -52,14 +52,14 @@ fn startup(
                 normal: (
                     Srgba::hex("DE3161").unwrap().into(),
                     WoodpeckerStyle::new()
-                        .with_size(Size::from_lengths(BUTTON_SIZE, BUTTON_SIZE))
+                        .with_size(taffy::Size::from_lengths(BUTTON_SIZE, BUTTON_SIZE))
                         .with_justify_content(Some(taffy::AlignContent::Center))
                         .with_align_content(Some(taffy::AlignContent::Center)),
                 ),
                 hovered: (
                     Srgba::hex("b30033").unwrap().into(),
                     WoodpeckerStyle::new()
-                        .with_size(Size::from_lengths(BUTTON_SIZE, BUTTON_SIZE))
+                        .with_size(taffy::Size::from_lengths(BUTTON_SIZE, BUTTON_SIZE))
                         .with_justify_content(Some(taffy::AlignContent::Center))
                         .with_align_content(Some(taffy::AlignContent::Center)),
                 ),
@@ -67,12 +67,12 @@ fn startup(
             children: WidgetChildren::default().with_child::<Element>((
                 ElementBundle {
                     styles: WoodpeckerStyle::new()
-                        .with_size(Size::from_lengths(FONT_SIZE, FONT_SIZE))
+                        .with_size(taffy::Size::from_lengths(FONT_SIZE, FONT_SIZE))
                         .with_margin(taffy::Rect {
-                            left: LengthPercentageAuto::from_length(FONT_SIZE / 2.0),
-                            top: LengthPercentageAuto::from_length(FONT_SIZE / 2.0),
-                            right: LengthPercentageAuto::from_length(0.0),
-                            bottom: LengthPercentageAuto::from_length(0.0),
+                            left: taffy::LengthPercentageAuto::from_length(FONT_SIZE / 2.0),
+                            top: taffy::LengthPercentageAuto::from_length(FONT_SIZE / 2.0),
+                            right: taffy::LengthPercentageAuto::from_length(0.0),
+                            bottom: taffy::LengthPercentageAuto::from_length(0.0),
                         }),
                     ..Default::default()
                 },
@@ -96,7 +96,10 @@ fn startup(
     buttons.add::<Element>((
         ElementBundle {
             styles: WoodpeckerStyle::new()
-                .with_size(Size::from_lengths(BUTTON_SIZE * 3. + GAP * 2., BUTTON_SIZE))
+                .with_size(taffy::Size::from_lengths(
+                    BUTTON_SIZE * 3. + GAP * 2.,
+                    BUTTON_SIZE,
+                ))
                 .with_justify_content(Some(taffy::AlignContent::FlexStart))
                 .with_align_content(Some(taffy::AlignContent::Center)),
             children: WidgetChildren::default().with_child::<Clip>(ClipBundle {
@@ -104,12 +107,15 @@ fn startup(
                     Output,
                     SpatialBundle::default(),
                     WoodpeckerStyle::new()
-                        .with_size(Size::from_lengths(BUTTON_SIZE * 3. + GAP * 2., FONT_SIZE))
+                        .with_size(taffy::Size::from_lengths(
+                            BUTTON_SIZE * 3. + GAP * 2.,
+                            FONT_SIZE,
+                        ))
                         .with_margin(taffy::Rect {
-                            left: LengthPercentageAuto::from_length(15.0),
-                            top: LengthPercentageAuto::from_length(FONT_SIZE / 2.0),
-                            right: LengthPercentageAuto::from_length(0.0),
-                            bottom: LengthPercentageAuto::from_length(0.0),
+                            left: taffy::LengthPercentageAuto::from_length(15.0),
+                            top: taffy::LengthPercentageAuto::from_length(FONT_SIZE / 2.0),
+                            right: taffy::LengthPercentageAuto::from_length(0.0),
+                            bottom: taffy::LengthPercentageAuto::from_length(0.0),
                         }),
                     WidgetRender::Text {
                         font: asset_server.load("Poppins/Poppins-Regular.ttf"),
@@ -137,14 +143,14 @@ fn startup(
                     normal: (
                         Srgba::hex("DE3161").unwrap().into(),
                         WoodpeckerStyle::new()
-                            .with_size(Size::from_lengths(BUTTON_SIZE, BUTTON_SIZE))
+                            .with_size(taffy::Size::from_lengths(BUTTON_SIZE, BUTTON_SIZE))
                             .with_justify_content(Some(taffy::AlignContent::Center))
                             .with_align_content(Some(taffy::AlignContent::Center)),
                     ),
                     hovered: (
                         Srgba::hex("b30033").unwrap().into(),
                         WoodpeckerStyle::new()
-                            .with_size(Size::from_lengths(BUTTON_SIZE, BUTTON_SIZE))
+                            .with_size(taffy::Size::from_lengths(BUTTON_SIZE, BUTTON_SIZE))
                             .with_justify_content(Some(taffy::AlignContent::Center))
                             .with_align_content(Some(taffy::AlignContent::Center)),
                     ),
@@ -152,12 +158,12 @@ fn startup(
                 children: WidgetChildren::default().with_child::<Element>((
                     ElementBundle {
                         styles: WoodpeckerStyle::new()
-                            .with_size(Size::from_lengths(FONT_SIZE, FONT_SIZE))
+                            .with_size(taffy::Size::from_lengths(FONT_SIZE, FONT_SIZE))
                             .with_margin(taffy::Rect {
-                                left: LengthPercentageAuto::from_length(FONT_SIZE / 2.0),
-                                top: LengthPercentageAuto::from_length(FONT_SIZE / 2.0),
-                                right: LengthPercentageAuto::from_length(0.0),
-                                bottom: LengthPercentageAuto::from_length(0.0),
+                                left: taffy::LengthPercentageAuto::from_length(FONT_SIZE / 2.0),
+                                top: taffy::LengthPercentageAuto::from_length(FONT_SIZE / 2.0),
+                                right: taffy::LengthPercentageAuto::from_length(0.0),
+                                bottom: taffy::LengthPercentageAuto::from_length(0.0),
                             }),
                         ..Default::default()
                     },
@@ -189,24 +195,24 @@ fn startup(
             children: WidgetChildren::default().with_child::<Element>(ElementBundle {
                 styles: WoodpeckerStyle::new()
                     .with_size(taffy::Size {
-                        width: Dimension::from_percent(1.0),
-                        height: Dimension::from_percent(1.0),
+                        width: taffy::Dimension::from_percent(1.0),
+                        height: taffy::Dimension::from_percent(1.0),
                     })
                     .with_justify_content(Some(taffy::AlignContent::Center))
                     .with_align_content(Some(taffy::AlignContent::Center))
                     .with_padding(taffy::Rect {
-                        left: LengthPercentage::Length(0.0),
-                        right: LengthPercentage::Length(0.0),
-                        top: LengthPercentage::Length(25.0),
-                        bottom: LengthPercentage::Length(0.0),
+                        left: taffy::LengthPercentage::Length(0.0),
+                        right: taffy::LengthPercentage::Length(0.0),
+                        top: taffy::LengthPercentage::Length(25.0),
+                        bottom: taffy::LengthPercentage::Length(0.0),
                     }),
                 children: WidgetChildren::default().with_child::<Element>((
                     ElementBundle {
                         styles: WoodpeckerStyle::new()
-                            .with_size(Size::from_lengths(WIDTH, HEIGHT))
+                            .with_size(taffy::Size::from_lengths(WIDTH, HEIGHT))
                             .with_gap(taffy::Size {
-                                width: LengthPercentage::from_length(GAP),
-                                height: LengthPercentage::from_length(GAP),
+                                width: taffy::LengthPercentage::from_length(GAP),
+                                height: taffy::LengthPercentage::from_length(GAP),
                             })
                             .with_justify_content(Some(taffy::AlignContent::Center))
                             .with_align_content(Some(taffy::AlignContent::Center))

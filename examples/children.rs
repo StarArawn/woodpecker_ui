@@ -3,27 +3,12 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_mod_picking::DefaultPickingPlugins;
 use woodpecker_ui::prelude::*;
 
-#[derive(Component, Clone)]
+// We can derive widget here and pass in our systems
+// passing in the widget_systems is optional and if we don't pass
+// them in we need to call `app.add_widget_systems`!
+#[derive(Component, Widget, Clone)]
+#[widget_systems(foo_update, foo_render)]
 pub struct FooWidget;
-impl Widget for FooWidget {
-    // These are optional trait implementaions for passing in systems.
-    // The `register_widget` function can see these and automatically
-    // add the widget systems. Optionally you can also use:
-    // `app.add_widget_systems` if desired.
-    fn update() -> impl System<In = (), Out = bool>
-    where
-        Self: Sized,
-    {
-        IntoSystem::into_system(foo_update)
-    }
-
-    fn render() -> impl System<In = (), Out = ()>
-    where
-        Self: Sized,
-    {
-        IntoSystem::into_system(foo_render)
-    }
-}
 
 fn foo_update(entity: Res<CurrentWidget>, query: Query<Entity, Changed<FooWidget>>) -> bool {
     query.contains(**entity)
@@ -60,23 +45,9 @@ pub struct BarWidgetBundle {
     pub children: WidgetChildren,
 }
 
-#[derive(Component, Default, Clone)]
+#[derive(Component, Widget, Default, Clone)]
+#[widget_systems(bar_update, bar_render)]
 pub struct BarWidget;
-impl Widget for BarWidget {
-    fn update() -> impl System<In = (), Out = bool>
-    where
-        Self: Sized,
-    {
-        IntoSystem::into_system(bar_update)
-    }
-
-    fn render() -> impl System<In = (), Out = ()>
-    where
-        Self: Sized,
-    {
-        IntoSystem::into_system(bar_render)
-    }
-}
 
 fn bar_update(entity: Res<CurrentWidget>, query: Query<Entity, Changed<BarWidget>>) -> bool {
     query.contains(**entity)
@@ -93,24 +64,10 @@ fn bar_render(entity: Res<CurrentWidget>, mut query: Query<&mut WidgetChildren>)
     children.process(entity.as_parent());
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Widget, Default, Clone)]
+#[widget_systems(baz_update, baz_render)]
 pub struct BazWidget {
     pub value: f32,
-}
-impl Widget for BazWidget {
-    fn update() -> impl System<In = (), Out = bool>
-    where
-        Self: Sized,
-    {
-        IntoSystem::into_system(baz_update)
-    }
-
-    fn render() -> impl System<In = (), Out = ()>
-    where
-        Self: Sized,
-    {
-        IntoSystem::into_system(baz_render)
-    }
 }
 
 fn baz_update(entity: Res<CurrentWidget>, query: Query<Entity, Changed<BazWidget>>) -> bool {

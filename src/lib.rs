@@ -33,6 +33,7 @@ pub mod prelude {
     pub use crate::{CurrentWidget, ParentWidget};
     pub use crate::{WidgetRegisterExt, WoodpeckerUIPlugin};
     pub use bevy_vello::prelude::*;
+    pub use woodpecker_ui_macros::*;
 }
 
 /// Wraps an entity and lets woodpecker know its a parent.
@@ -142,4 +143,19 @@ impl WidgetRegisterExt for App {
         context.add_widget_system(widget_name, update, render);
         self
     }
+}
+
+mod test_proc_macro {
+    use crate::prelude::Widget;
+    #[derive(Widget)]
+    #[widget_systems(update, render)]
+    pub struct MyStruct {}
+
+    fn update() -> bool {
+        false
+    }
+    fn render() {}
+
+    #[test]
+    fn test_widget_macro() {}
 }

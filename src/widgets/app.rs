@@ -4,7 +4,6 @@ use crate::{
     CurrentWidget,
 };
 use bevy::{prelude::*, window::PrimaryWindow};
-use taffy::LengthPercentageAuto;
 
 /// The Woodpecker UI App widget bundle.
 /// Typically this should be the root widget.
