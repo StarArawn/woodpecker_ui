@@ -5,6 +5,8 @@ use bevy::{prelude::*, utils::EntityHashMap};
 use measure::LayoutMeasure;
 use taffy::{Size, TaffyTree};
 
+use crate::has_root;
+
 #[derive(Component, Deref, DerefMut, Default, Debug, Clone)]
 pub struct WoodpeckerStyle(taffy::Style);
 
@@ -139,8 +141,10 @@ impl WoodpeckerStyle {
 pub struct WoodpeckerLayoutPlugin;
 impl Plugin for WoodpeckerLayoutPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<UiLayout>()
-            .add_systems(Update, system::run.after(crate::runner::system));
+        app.init_resource::<UiLayout>().add_systems(
+            Update,
+            system::run.after(crate::runner::system).run_if(has_root()),
+        );
     }
 }
 
