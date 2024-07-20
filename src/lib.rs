@@ -16,6 +16,7 @@ mod layout;
 mod picking_backend;
 mod render;
 mod runner;
+mod styles;
 mod widgets;
 
 /// A module that exports all publicly exposed types.
@@ -27,11 +28,11 @@ pub mod prelude {
     pub use crate::keyboard_input::WidgetKeyboardEvent;
     pub use crate::layout::WoodpeckerStyle;
     pub use crate::render::WidgetRender;
+    pub use crate::styles::*;
     pub use crate::widgets::*;
     pub use crate::{CurrentWidget, ParentWidget};
     pub use crate::{WidgetRegisterExt, WoodpeckerUIPlugin};
     pub use bevy_vello::prelude::*;
-    pub use taffy::*;
 }
 
 /// Wraps an entity and lets woodpecker know its a parent.
