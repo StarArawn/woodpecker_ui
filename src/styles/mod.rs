@@ -11,10 +11,8 @@ mod units;
 
 // A struct used to define the look of a widget
 ///
-/// # Example
-///
 /// All fields are `pub`, so you can simply define your styles.
-#[derive(Component, Reflect, Debug, Default, Clone, PartialEq)]
+#[derive(Component, Reflect, Debug, Default, Clone, Copy, PartialEq)]
 #[reflect(Component)]
 pub struct WStyle {
     /************************ Layout ************************/
