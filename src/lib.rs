@@ -76,7 +76,8 @@ impl Plugin for WoodpeckerUIPlugin {
                     runner::system,
                     focus::CurrentFocus::click_focus,
                     keyboard_input::runner,
-                ),
+                )
+                    .run_if(has_root()),
             )
             .add_systems(
                 Update,
@@ -84,6 +85,10 @@ impl Plugin for WoodpeckerUIPlugin {
             )
             .add_systems(Startup, startup);
     }
+}
+
+fn has_root() -> impl Condition<(), ()> {
+    IntoSystem::into_system(|context: Res<WoodpeckerContext>| context.root_widget.is_some())
 }
 
 fn startup(mut commands: Commands) {
