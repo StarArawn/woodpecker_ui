@@ -100,10 +100,6 @@ fn main() {
 
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     commands.spawn(Camera2dBundle::default());
-    commands.spawn(VelloSceneBundle {
-        coordinate_space: CoordinateSpace::ScreenSpace,
-        ..Default::default()
-    });
 
     let root = commands
         .spawn((WoodpeckerAppBundle {

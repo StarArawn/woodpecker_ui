@@ -42,10 +42,6 @@ fn startup(
     asset_server: Res<AssetServer>,
 ) {
     commands.spawn(Camera2dBundle::default());
-    commands.spawn(VelloSceneBundle {
-        coordinate_space: CoordinateSpace::ScreenSpace,
-        ..Default::default()
-    });
 
     let mut buttons = WidgetChildren::default();
 

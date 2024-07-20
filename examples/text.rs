@@ -18,10 +18,6 @@ fn startup(
     asset_server: Res<AssetServer>,
 ) {
     commands.spawn(Camera2dBundle::default());
-    commands.spawn(VelloSceneBundle {
-        coordinate_space: CoordinateSpace::ScreenSpace,
-        ..Default::default()
-    });
 
     let root = commands
         .spawn((
@@ -34,6 +30,7 @@ fn startup(
                 color: Color::WHITE,
                 alignment: VelloTextAlignment::TopLeft,
                 content: "Hello World! I am Woodpecker UI!".into(),
+                word_wrap: false,
             },
         ))
         .id();

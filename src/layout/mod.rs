@@ -197,6 +197,9 @@ impl UiLayout {
     }
 
     pub fn add_children(&mut self, entity: Entity, children: &Children) {
+        if !self.entity_to_taffy.contains_key(&entity) {
+            return;
+        }
         let node_id = self.entity_to_taffy.get(&entity).unwrap();
         let children = children
             .iter()

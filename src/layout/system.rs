@@ -45,15 +45,14 @@ pub(crate) fn run(
         ui_layout.add_children(entity, children);
     }
 
-    let (width, height) = query
-        .get(root_node)
-        .map(|(_, _, style, _, _)| {
-            (
-                style.0.size.width.into_option().unwrap_or(0.0),
-                style.0.size.height.into_option().unwrap_or(0.0),
-            )
-        })
-        .unwrap();
+    let Ok((width, height)) = query.get(root_node).map(|(_, _, style, _, _)| {
+        (
+            style.0.size.width.into_option().unwrap_or(0.0),
+            style.0.size.height.into_option().unwrap_or(0.0),
+        )
+    }) else {
+        return;
+    };
 
     ui_layout.compute(root_node, Vec2::new(width, height));
 

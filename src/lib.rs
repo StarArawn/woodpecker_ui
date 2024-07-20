@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_mod_picking::prelude::EventListenerPlugin;
 use bevy_trait_query::RegisterExt;
-use bevy_vello::VelloPlugin;
+use bevy_vello::{CoordinateSpace, VelloPlugin, VelloSceneBundle};
 use context::{Widget, WoodpeckerContext};
 use entity_mapping::WidgetMapper;
 use layout::WoodpeckerLayoutPlugin;
@@ -81,8 +81,16 @@ impl Plugin for WoodpeckerUIPlugin {
             .add_systems(
                 Update,
                 picking_backend::system.after(crate::layout::system::run),
-            );
+            )
+            .add_systems(Startup, startup);
     }
+}
+
+fn startup(mut commands: Commands) {
+    commands.spawn(VelloSceneBundle {
+        coordinate_space: CoordinateSpace::ScreenSpace,
+        ..Default::default()
+    });
 }
 
 pub trait WidgetRegisterExt {

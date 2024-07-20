@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_mod_picking::DefaultPickingPlugins;
 use woodpecker_ui::prelude::*;
 
 #[derive(Component, Clone)]
@@ -82,6 +83,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin)
         .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(DefaultPickingPlugins)
         .register_widget::<FooWidget>()
         .register_widget::<BarWidget>()
         .register_widget::<BazWidget>()
