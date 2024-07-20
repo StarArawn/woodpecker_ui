@@ -669,6 +669,7 @@ dependencies = [
 [[package]]
 name = "bevy_eventlistener"
 version = "0.8.0"
+source = "git+https://github.com/StarArawn/bevy_eventlistener?branch=main#0a5432f87d021272b5aa93d90c05337c3a32643a"
 dependencies = [
  "bevy_app",
  "bevy_ecs",
@@ -680,6 +681,7 @@ dependencies = [
 [[package]]
 name = "bevy_eventlistener_derive"
 version = "0.8.0"
+source = "git+https://github.com/StarArawn/bevy_eventlistener?branch=main#0a5432f87d021272b5aa93d90c05337c3a32643a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -889,6 +891,7 @@ dependencies = [
 [[package]]
 name = "bevy_mod_picking"
 version = "0.20.1"
+source = "git+https://github.com/StarArawn/bevy_mod_picking?branch=main#70d6c33d7ea9b97a66cbf98e875593c935bb6c95"
 dependencies = [
  "bevy_app",
  "bevy_color",
@@ -964,6 +967,7 @@ dependencies = [
 [[package]]
 name = "bevy_picking_core"
 version = "0.20.0"
+source = "git+https://github.com/StarArawn/bevy_mod_picking?branch=main#70d6c33d7ea9b97a66cbf98e875593c935bb6c95"
 dependencies = [
  "bevy_app",
  "bevy_derive",
@@ -981,6 +985,7 @@ dependencies = [
 [[package]]
 name = "bevy_picking_highlight"
 version = "0.20.0"
+source = "git+https://github.com/StarArawn/bevy_mod_picking?branch=main#70d6c33d7ea9b97a66cbf98e875593c935bb6c95"
 dependencies = [
  "bevy_app",
  "bevy_asset",
@@ -997,6 +1002,7 @@ dependencies = [
 [[package]]
 name = "bevy_picking_input"
 version = "0.20.0"
+source = "git+https://github.com/StarArawn/bevy_mod_picking?branch=main#70d6c33d7ea9b97a66cbf98e875593c935bb6c95"
 dependencies = [
  "bevy_app",
  "bevy_ecs",
@@ -1014,6 +1020,7 @@ dependencies = [
 [[package]]
 name = "bevy_picking_raycast"
 version = "0.20.0"
+source = "git+https://github.com/StarArawn/bevy_mod_picking?branch=main#70d6c33d7ea9b97a66cbf98e875593c935bb6c95"
 dependencies = [
  "bevy_app",
  "bevy_ecs",
@@ -1028,6 +1035,7 @@ dependencies = [
 [[package]]
 name = "bevy_picking_selection"
 version = "0.20.0"
+source = "git+https://github.com/StarArawn/bevy_mod_picking?branch=main#70d6c33d7ea9b97a66cbf98e875593c935bb6c95"
 dependencies = [
  "bevy_app",
  "bevy_ecs",
@@ -1041,6 +1049,7 @@ dependencies = [
 [[package]]
 name = "bevy_picking_sprite"
 version = "0.20.0"
+source = "git+https://github.com/StarArawn/bevy_mod_picking?branch=main#70d6c33d7ea9b97a66cbf98e875593c935bb6c95"
 dependencies = [
  "bevy_app",
  "bevy_asset",
@@ -1056,6 +1065,7 @@ dependencies = [
 [[package]]
 name = "bevy_picking_ui"
 version = "0.20.0"
+source = "git+https://github.com/StarArawn/bevy_mod_picking?branch=main#70d6c33d7ea9b97a66cbf98e875593c935bb6c95"
 dependencies = [
  "bevy_app",
  "bevy_ecs",

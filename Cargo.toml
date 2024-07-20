@@ -10,8 +10,12 @@ bevy-trait-query = { git = "https://github.com/RobWalt/bevy-trait-query", rev = 
 bevy-inspector-egui = "0.25"
 taffy = { version = "0.5", features = ["flexbox", "grid"] }
 bevy_vello = "0.5"
-bevy_mod_picking = { path = "../bevy_mod_picking" }                                                                          #{ version = "0.20" }
+bevy_mod_picking = "0.20"
 smol_str = { version = "0.2", default-features = false }
 
 [dev-dependencies]
 calc = { version = "0.4.0", default-features = false }
+
+[patch.crates-io]
+bevy_mod_picking = { git = "https://github.com/StarArawn/bevy_mod_picking", branch = "main" }
+bevy_eventlistener = { git = "https://github.com/StarArawn/bevy_eventlistener", branch = "main" }
