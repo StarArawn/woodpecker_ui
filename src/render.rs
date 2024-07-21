@@ -9,7 +9,7 @@ use bevy_vello::{
             skrifa::{FontRef, MetadataProvider},
             Glyph,
         },
-        kurbo::{self, Affine, RoundedRectRadii},
+        kurbo::{self, Affine, Point, RoundedRectRadii, Stroke},
         peniko::{self, Brush},
     },
     VelloScene,
@@ -47,14 +47,27 @@ impl WidgetRender {
         widget_style: &WoodpeckerStyle,
     ) -> bool {
         let mut did_layer = false;
-        let location_x = layout.location.x;
-        let location_y = layout.location.y;
-        let size_x = layout.size.width;
-        let size_y = layout.size.height;
+        let location_x = layout.location.x + layout.border.left;
+        let location_y = layout.location.y + layout.border.top;
+        let size_x = layout.size.width - layout.border.right;
+        let size_y = layout.size.height - layout.border.bottom;
 
         match self {
             WidgetRender::Quad => {
                 let color = widget_style.background_color.to_srgba();
+                let border_color = widget_style.border_color.to_srgba();
+                let rect = kurbo::RoundedRect::new(
+                    location_x as f64,
+                    location_y as f64,
+                    location_x as f64 + size_x as f64,
+                    location_y as f64 + size_y as f64,
+                    RoundedRectRadii::new(
+                        widget_style.border_radius.top_left.value_or(0.0) as f64,
+                        widget_style.border_radius.top_right.value_or(0.0) as f64,
+                        widget_style.border_radius.bottom_right.value_or(0.0) as f64,
+                        widget_style.border_radius.bottom_left.value_or(0.0) as f64,
+                    ),
+                );
                 vello_scene.fill(
                     peniko::Fill::NonZero,
                     kurbo::Affine::default(),
@@ -65,19 +78,31 @@ impl WidgetRender {
                         color.alpha as f64,
                     ),
                     None,
-                    &kurbo::RoundedRect::new(
-                        location_x as f64,
-                        location_y as f64,
-                        location_x as f64 + size_x as f64,
-                        location_y as f64 + size_y as f64,
-                        RoundedRectRadii::new(
-                            widget_style.border_radius.top_left.value_or(0.0) as f64,
-                            widget_style.border_radius.top_right.value_or(0.0) as f64,
-                            widget_style.border_radius.bottom_right.value_or(0.0) as f64,
-                            widget_style.border_radius.bottom_left.value_or(0.0) as f64,
-                        ),
-                    ),
+                    &rect,
                 );
+                if layout.border.left > 0.0 {
+                    vello_scene.stroke(
+                        &Stroke::new(layout.border.left as f64),
+                        kurbo::Affine::default(),
+                        peniko::Color::rgba(
+                            border_color.red as f64,
+                            border_color.green as f64,
+                            border_color.blue as f64,
+                            border_color.alpha as f64,
+                        ),
+                        None,
+                        &kurbo::Line::new(
+                            Point {
+                                x: layout.location.x as f64 + (layout.border.left) as f64,
+                                y: layout.location.y as f64,
+                            },
+                            Point {
+                                x: layout.location.x as f64 + (layout.border.left) as f64,
+                                y: layout.location.y as f64 + layout.size.height as f64,
+                            },
+                        ),
+                    );
+                }
             }
             WidgetRender::Text {
                 content,
@@ -98,7 +123,12 @@ impl WidgetRender {
                 let axes = font.axes();
                 let var_loc = axes.location(VARIATIONS);
                 let metrics = font.metrics(font_size, &var_loc);
-                let line_height = metrics.ascent - metrics.descent + metrics.leading;
+                let line_height = if widget_style.line_height > 0.0 {
+                    // TODO: Make this an Option..
+                    widget_style.line_height
+                } else {
+                    metrics.ascent - metrics.descent + metrics.leading
+                };
                 let glyph_metrics = font.glyph_metrics(font_size, &var_loc);
 
                 let avaliable_space = layout.size.width;
@@ -169,7 +199,11 @@ impl WidgetRender {
 
                     // Alignment settings
                     let width = width as f64;
-                    let height = (metrics.cap_height.unwrap_or(line_height) + pen_y) as f64;
+                    let height = (if widget_style.line_height > 0.0 {
+                        line_height
+                    } else {
+                        metrics.cap_height.unwrap_or(line_height)
+                    } + pen_y) as f64;
                     match alignment {
                         VelloTextAlignment::TopLeft => {
                             transform *= vello::kurbo::Affine::translate((0.0, height));

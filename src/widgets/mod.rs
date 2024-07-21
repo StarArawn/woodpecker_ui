@@ -21,6 +21,7 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
             .register_widget::<Element>()
             .register_widget::<WButton>()
             .register_widget::<Clip>()
-            .register_widget::<TextBox>();
+            .register_widget::<TextBox>()
+            .add_systems(Update, text_box::cursor_animation_system);
     }
 }

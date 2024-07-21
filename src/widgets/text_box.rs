@@ -4,7 +4,9 @@ use crate::{
     children::WidgetChildren,
     focus::{Focusable, WidgetBlur, WidgetFocus},
     keyboard_input::WidgetKeyboardButtonEvent,
-    prelude::{Widget, WidgetKeyboardCharEvent, WidgetRender, WoodpeckerStyle},
+    prelude::{
+        Edge, Widget, WidgetKeyboardCharEvent, WidgetPosition, WidgetRender, WoodpeckerStyle,
+    },
     CurrentWidget, DefaultFont,
 };
 use bevy::prelude::*;
@@ -28,24 +30,23 @@ pub struct TextboxStyles {
 
 impl Default for TextboxStyles {
     fn default() -> Self {
+        let shared = WoodpeckerStyle {
+            background_color: Srgba::new(0.160, 0.172, 0.235, 1.0).into(),
+            width: 150.0.into(),
+            height: 26.0.into(),
+            border_color: Srgba::new(0.360, 0.380, 0.474, 1.0).into(),
+            border: Edge::new(0.0, 0.0, 0.0, 2.0),
+            padding: Edge::new(0.0, 5.0, 0.0, 5.0),
+            font_size: 14.0,
+            line_height: 26.0,
+            ..Default::default()
+        };
         Self {
-            normal: WoodpeckerStyle {
-                background_color: Srgba::new(0.160, 0.172, 0.235, 1.0).into(),
-                width: 150.0.into(),
-                height: 50.0.into(),
-                ..Default::default()
-            },
-            hovered: WoodpeckerStyle {
-                background_color: Srgba::new(0.160, 0.172, 0.235, 1.0).into(),
-                width: 150.0.into(),
-                height: 50.0.into(),
-                ..Default::default()
-            },
+            normal: WoodpeckerStyle { ..shared.clone() },
+            hovered: WoodpeckerStyle { ..shared.clone() },
             focused: WoodpeckerStyle {
-                background_color: Srgba::new(0.160, 0.172, 0.235, 1.0).into(),
-                width: 150.0.into(),
-                height: 50.0.into(),
-                ..Default::default()
+                border_color: Srgba::new(0.933, 0.745, 0.745, 1.0).into(),
+                ..shared.clone()
             },
         }
     }
@@ -163,17 +164,19 @@ impl Default for TextBoxBundle {
                             let cursor_pos = state.cursor_position;
                             let font = get_font(&font_assets, &styles, &default_font);
 
-                            let char_pos: usize = state.graphemes[0..cursor_pos - 1]
-                                .iter()
-                                .map(|g| g.len())
-                                .sum();
-                            state.current_value.remove(char_pos);
-                            state.cursor_position -= 1;
+                            if !state.current_value.is_empty() && cursor_pos != 0 {
+                                let char_pos: usize = state.graphemes[0..cursor_pos - 1]
+                                    .iter()
+                                    .map(|g| g.len())
+                                    .sum();
+                                state.current_value.remove(char_pos);
+                                state.cursor_position -= 1;
 
-                            // Update graphemes
-                            set_graphemes(&mut state);
+                                // Update graphemes
+                                set_graphemes(&mut state);
 
-                            set_new_cursor_position(&mut state, &font, styles.font_size);
+                                set_new_cursor_position(&mut state, &font, styles.font_size);
+                            }
                         }
                     }
                 },
@@ -247,17 +250,43 @@ pub fn render(
         *style = styles.normal.clone();
     }
 
-    children.add::<Clip>(ClipBundle {
-        children: WidgetChildren::default().with_child::<Element>((
-            ElementBundle {
+    let cursor_styles = WoodpeckerStyle {
+        background_color: Srgba::new(0.933, 0.745, 0.745, 1.0).into(),
+        position: WidgetPosition::Absolute,
+        top: 5.0.into(),
+        left: text_box.cursor_x.into(),
+        width: 2.0.into(),
+        height: (26.0 - 10.0).into(),
+        ..Default::default()
+    };
+
+    let mut clip_children = WidgetChildren::default().with_child::<Element>((
+        ElementBundle {
+            styles: WoodpeckerStyle {
+                font_size: style.font_size,
                 ..Default::default()
             },
-            WidgetRender::Text {
-                alignment: bevy_vello::text::VelloTextAlignment::TopLeft,
-                content: text_box.current_value.clone(),
-                word_wrap: false,
+            ..Default::default()
+        },
+        WidgetRender::Text {
+            alignment: bevy_vello::text::VelloTextAlignment::TopLeft,
+            content: text_box.current_value.clone(),
+            word_wrap: false,
+        },
+    ));
+
+    if text_box.cursor_visible {
+        clip_children.add::<Element>((
+            ElementBundle {
+                styles: cursor_styles,
+                ..Default::default()
             },
-        )),
+            WidgetRender::Quad,
+        ));
+    }
+
+    children.add::<Clip>(ClipBundle {
+        children: clip_children,
         ..Default::default()
     });
 
