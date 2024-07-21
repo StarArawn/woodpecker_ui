@@ -176,7 +176,7 @@ pub struct WoodpeckerStyle {
     pub font_size: f32,
     /// The layout method for children of this widget
     /// The line height for this widget, in pixels
-    pub line_height: f32,
+    pub line_height: Option<f32>,
     /// The opacity of the widget and it's children
     /// Note: This will spawn a new UI render layer so use sparingly.
     pub opacity: f32,
@@ -243,7 +243,7 @@ impl WoodpeckerStyle {
         },
         color: Color::WHITE,
         font_size: 18.0,
-        line_height: 18.0,
+        line_height: None,
         opacity: 1.0,
         font: None,
     };
@@ -281,7 +281,6 @@ impl WoodpeckerStyle {
 
         new_styles.font_size = lerp(self.font_size, b.font_size, x);
         new_styles.height = lerp_units(self.height, b.height, x);
-        new_styles.line_height = lerp(self.line_height, b.line_height, x);
         new_styles.max_height = lerp_units(self.max_height, b.max_height, x);
         new_styles.max_width = lerp_units(self.max_width, b.max_width, x);
         new_styles.min_height = lerp_units(self.min_height, b.min_height, x);

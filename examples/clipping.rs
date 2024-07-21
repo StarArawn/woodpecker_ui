@@ -12,11 +12,7 @@ fn main() {
         .run();
 }
 
-fn startup(
-    mut commands: Commands,
-    mut ui_context: ResMut<WoodpeckerContext>,
-    asset_server: Res<AssetServer>,
-) {
+fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     commands.spawn(Camera2dBundle::default());
 
     let root = commands
@@ -55,7 +51,6 @@ fn startup(
                                 ..Default::default()
                             },
                             WidgetRender::Text {
-                                font: asset_server.load("Poppins/Poppins-Regular.ttf"),
                                 alignment: VelloTextAlignment::TopLeft,
                                 content: "Hello World! I am Woodpecker UI! This text is way too long and thus it clips out of the bottom of our quad.".into(),
                                 word_wrap: true,

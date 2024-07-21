@@ -4,9 +4,7 @@ use crate::{
     children::WidgetChildren,
     focus::{Focusable, WidgetBlur, WidgetFocus},
     keyboard_input::{WidgetKeyboardButtonEvent, WidgetPasteEvent},
-    prelude::{
-        Edge, Units, Widget, WidgetKeyboardCharEvent, WidgetPosition, WidgetRender, WoodpeckerStyle,
-    },
+    prelude::{Edge, Units, Widget, WidgetKeyboardCharEvent, WidgetRender, WoodpeckerStyle},
     CurrentWidget, DefaultFont,
 };
 use bevy::prelude::*;
@@ -38,7 +36,7 @@ impl Default for TextboxStyles {
             border: Edge::new(0.0, 0.0, 0.0, 2.0),
             padding: Edge::new(0.0, 5.0, 0.0, 5.0),
             font_size: 14.0,
-            line_height: 26.0,
+            line_height: Some(18.0),
             ..Default::default()
         };
         Self {
@@ -274,12 +272,12 @@ pub fn render(
     }
 
     let cursor_styles = WoodpeckerStyle {
-        background_color: Srgba::new(0.933, 0.745, 0.745, 1.0).into(),
-        position: WidgetPosition::Absolute,
+        background_color: styles.focused.border_color,
+        // position: WidgetPosition::Absolute,
         top: 5.0.into(),
         left: text_box.cursor_x.into(),
         width: 2.0.into(),
-        height: (26.0 - 10.0).into(),
+        height: (style.height.value_or(26.0) - 10.0).into(),
         ..Default::default()
     };
 
@@ -287,6 +285,7 @@ pub fn render(
         ElementBundle {
             styles: WoodpeckerStyle {
                 font_size: style.font_size,
+                line_height: style.line_height,
                 ..Default::default()
             },
             ..Default::default()
@@ -309,6 +308,11 @@ pub fn render(
     }
 
     children.add::<Clip>(ClipBundle {
+        styles: WoodpeckerStyle {
+            width: style.width,
+            height: style.height,
+            ..ClipBundle::default().styles // Take styles from clip bundle too!
+        },
         children: clip_children,
         ..Default::default()
     });

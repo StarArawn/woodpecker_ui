@@ -49,11 +49,7 @@ pub const BUTTON_STYLES_HOVER: WoodpeckerStyle = WoodpeckerStyle {
     ..BUTTON_STYLES
 };
 
-fn startup(
-    mut commands: Commands,
-    mut ui_context: ResMut<WoodpeckerContext>,
-    asset_server: Res<AssetServer>,
-) {
+fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     commands.spawn(Camera2dBundle::default());
 
     let mut buttons = WidgetChildren::default();
@@ -82,10 +78,9 @@ fn startup(
                     ..Default::default()
                 },
                 WidgetRender::Text {
-                    font: asset_server.load("Poppins/Poppins-Regular.ttf"),
                     alignment: VelloTextAlignment::TopLeft,
                     content: "C".into(),
-                    word_wrap: true,
+                    word_wrap: false,
                 },
             )),
             ..Default::default()
@@ -124,7 +119,6 @@ fn startup(
                         ..Default::default()
                     },
                     WidgetRender::Text {
-                        font: asset_server.load("Poppins/Poppins-Regular.ttf"),
                         alignment: VelloTextAlignment::TopLeft,
                         content: "".into(),
                         word_wrap: false,
@@ -161,7 +155,6 @@ fn startup(
                         ..Default::default()
                     },
                     WidgetRender::Text {
-                        font: asset_server.load("Poppins/Poppins-Regular.ttf"),
                         alignment: VelloTextAlignment::TopLeft,
                         content: button.into(),
                         word_wrap: true,

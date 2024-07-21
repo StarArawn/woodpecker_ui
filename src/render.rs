@@ -123,9 +123,8 @@ impl WidgetRender {
                 let axes = font.axes();
                 let var_loc = axes.location(VARIATIONS);
                 let metrics = font.metrics(font_size, &var_loc);
-                let line_height = if widget_style.line_height > 0.0 {
-                    // TODO: Make this an Option..
-                    widget_style.line_height
+                let line_height = if widget_style.line_height.is_some() {
+                    widget_style.line_height.unwrap()
                 } else {
                     metrics.ascent - metrics.descent + metrics.leading
                 };
@@ -139,7 +138,7 @@ impl WidgetRender {
                 let glyphs: Vec<(f32, Glyph)> = content
                     .chars()
                     .filter_map(|ch| {
-                        if ch == '\n' {
+                        if ch == '\n' && *word_wrap {
                             pen_y += line_height;
                             pen_x = 0.0;
                             return None;
@@ -188,10 +187,15 @@ impl WidgetRender {
 
                 let mut prev_line_width = 0.0;
                 for (i, line) in lines.into_iter().enumerate() {
+                    let height = if widget_style.line_height.is_some() {
+                        (line_height + pen_y) as f64
+                    } else {
+                        (metrics.cap_height.unwrap_or(line_height) + pen_y) as f64
+                    };
+
                     let mut transform = vello::kurbo::Affine::translate((
                         layout.location.x as f64 - prev_line_width,
-                        layout.location.y as f64
-                            + (i as f64 * metrics.cap_height.unwrap_or(line_height) as f64),
+                        layout.location.y as f64 + (i as f64 * height),
                     ));
 
                     // Push up from pen_y
@@ -199,11 +203,7 @@ impl WidgetRender {
 
                     // Alignment settings
                     let width = width as f64;
-                    let height = (if widget_style.line_height > 0.0 {
-                        line_height
-                    } else {
-                        metrics.cap_height.unwrap_or(line_height)
-                    } + pen_y) as f64;
+
                     match alignment {
                         VelloTextAlignment::TopLeft => {
                             transform *= vello::kurbo::Affine::translate((0.0, height));

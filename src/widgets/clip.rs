@@ -9,7 +9,7 @@ use bevy::prelude::*;
 #[derive(Bundle, Clone)]
 pub struct ClipBundle {
     /// The element component itself.
-    pub app: Clip,
+    pub clip: Clip,
     /// A widget children component
     pub children: WidgetChildren,
     /// The widget styles,
@@ -21,7 +21,7 @@ pub struct ClipBundle {
 impl Default for ClipBundle {
     fn default() -> Self {
         Self {
-            app: Default::default(),
+            clip: Default::default(),
             children: Default::default(),
             styles: WoodpeckerStyle {
                 width: Units::Percentage(100.0),

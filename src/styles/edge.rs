@@ -63,12 +63,12 @@ impl Edge {
     ///
     /// * `value`: The value of all edges
     ///
-    pub fn all(value: Units) -> Self {
+    pub fn all(value: impl Into<Units> + Copy) -> Self {
         Self {
-            top: value,
-            right: value,
-            bottom: value,
-            left: value,
+            top: value.into(),
+            right: value.into(),
+            bottom: value.into(),
+            left: value.into(),
         }
     }
 
