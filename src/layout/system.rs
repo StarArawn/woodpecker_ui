@@ -6,6 +6,7 @@ use taffy::Layout;
 use crate::{
     context::{Widget, WoodpeckerContext},
     prelude::WidgetRender,
+    DefaultFont,
 };
 
 use super::{UiLayout, WoodpeckerStyle};
@@ -15,6 +16,7 @@ pub struct WidgetLayout(Layout);
 
 pub(crate) fn run(
     mut commands: Commands,
+    default_font: Res<DefaultFont>,
     mut ui_layout: ResMut<UiLayout>,
     mut query: Query<(
         Entity,
@@ -62,6 +64,7 @@ pub(crate) fn run(
     // We also need to know if we are going back up the tree so we can pop the clipping and opacity layers.
     traverse_render_tree(
         &mut query,
+        &default_font,
         &widget_render,
         &mut cached_layout,
         &mut vello_scene,
@@ -84,6 +87,7 @@ fn traverse_render_tree(
         Option<&Parent>,
         Option<&Children>,
     )>,
+    default_font: &DefaultFont,
     widget_render: &Query<&WidgetRender>,
     cached_layout: &mut HashMap<Entity, Layout>,
     vello_scene: &mut VelloScene,
@@ -111,7 +115,14 @@ fn traverse_render_tree(
             layout.location.x += parent_layout.location.x;
             layout.location.y += parent_layout.location.y;
         }
-        did_layer = widget_render.render(vello_scene, &layout, font_assets, image_assets, styles);
+        did_layer = widget_render.render(
+            vello_scene,
+            &layout,
+            default_font,
+            font_assets,
+            image_assets,
+            styles,
+        );
         cached_layout.insert(entity, layout);
     }
 
@@ -125,6 +136,7 @@ fn traverse_render_tree(
     for child in children.iter() {
         traverse_render_tree(
             query,
+            &default_font,
             widget_render,
             cached_layout,
             vello_scene,

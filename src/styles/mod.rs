@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_vello::text::VelloFont;
 pub use corner::Corner;
 pub use edge::Edge;
 pub use layout::*;
@@ -12,7 +13,7 @@ mod units;
 // A struct used to define the look of a widget
 ///
 /// All fields are `pub`, so you can simply define your styles.
-#[derive(Component, Reflect, Debug, Clone, Copy, PartialEq)]
+#[derive(Component, Reflect, Debug, Clone, PartialEq)]
 #[reflect(Component)]
 pub struct WoodpeckerStyle {
     /************************ Layout ************************/
@@ -167,6 +168,8 @@ pub struct WoodpeckerStyle {
     ///
     /// Only applies to widgets marked [`RenderCommand::Text`]
     pub color: Color,
+    /// Font handle if none is set the [`crate::DefaultFont`] is used.
+    pub font: Option<Handle<VelloFont>>,
     /// The font size for this widget, in pixels
     ///
     /// Only applies to [`RenderCommand::Text`]
@@ -242,12 +245,13 @@ impl WoodpeckerStyle {
         font_size: 18.0,
         line_height: 18.0,
         opacity: 1.0,
+        font: None,
     };
 }
 
 impl From<&WoodpeckerStyle> for taffy::Style {
     fn from(val: &WoodpeckerStyle) -> taffy::Style {
-        (*val).into()
+        val.clone().into()
     }
 }
 

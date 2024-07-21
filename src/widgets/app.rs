@@ -61,7 +61,7 @@ pub fn render(
     *styles = WoodpeckerStyle {
         width: Units::Pixels(window.width()),
         height: Units::Pixels(window.height()),
-        ..*styles
+        ..styles.clone()
     };
 
     children.process(entity.as_parent());

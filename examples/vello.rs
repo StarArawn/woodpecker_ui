@@ -71,7 +71,7 @@ fn vello_render(
                 vello_widget.focused = false;
                 vello_widget.hovered = false;
             }),
-            On::<WidgetKeyboardEvent>::target_component_mut::<VelloWidget>(
+            On::<WidgetKeyboardCharEvent>::target_component_mut::<VelloWidget>(
                 |event, _vello_widget| info!("Widget {} got key {}!", event.target, event.c),
             ),
         ));

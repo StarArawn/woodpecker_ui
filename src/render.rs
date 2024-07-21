@@ -15,7 +15,7 @@ use bevy_vello::{
     VelloScene,
 };
 
-use crate::prelude::WoodpeckerStyle;
+use crate::{prelude::WoodpeckerStyle, DefaultFont};
 
 pub(crate) const VARIATIONS: &[(&str, f32)] = &[];
 
@@ -23,8 +23,6 @@ pub(crate) const VARIATIONS: &[(&str, f32)] = &[];
 pub enum WidgetRender {
     Quad,
     Text {
-        // TODO: Move some of this to styles..
-        font: Handle<VelloFont>,
         alignment: VelloTextAlignment,
         content: String,
         word_wrap: bool,
@@ -43,6 +41,7 @@ impl WidgetRender {
         &self,
         vello_scene: &mut VelloScene,
         layout: &taffy::Layout,
+        default_font: &DefaultFont,
         font_assets: &Assets<VelloFont>,
         image_assets: &Assets<Image>,
         widget_style: &WoodpeckerStyle,
@@ -81,12 +80,13 @@ impl WidgetRender {
                 );
             }
             WidgetRender::Text {
-                font,
                 content,
                 alignment,
                 word_wrap,
             } => {
-                let Some(font_asset) = font_assets.get(font) else {
+                let Some(font_asset) =
+                    font_assets.get(widget_style.font.as_ref().unwrap_or(&default_font.0))
+                else {
                     error!("Woodpecker UI: Missing font for text: {}!", content);
                     return false;
                 };

@@ -5574,6 +5574,7 @@ dependencies = [
  "calc",
  "smol_str",
  "taffy",
+ "unicode-segmentation",
  "woodpecker_ui_macros",
 ]
 
