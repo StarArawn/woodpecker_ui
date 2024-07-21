@@ -28,6 +28,7 @@ pub(crate) fn run(
     widget_render: Query<&WidgetRender>,
     context: Res<WoodpeckerContext>,
     font_assets: Res<Assets<VelloFont>>,
+    image_assets: Res<Assets<Image>>,
 ) {
     let Ok(mut vello_scene) = vello_query.get_single_mut() else {
         error!("Woodpecker UI: No vello scene spawned!");
@@ -65,6 +66,7 @@ pub(crate) fn run(
         &mut cached_layout,
         &mut vello_scene,
         &font_assets,
+        &image_assets,
         &ui_layout,
         root_node,
     );
@@ -86,6 +88,7 @@ fn traverse_render_tree(
     cached_layout: &mut HashMap<Entity, Layout>,
     vello_scene: &mut VelloScene,
     font_assets: &Assets<VelloFont>,
+    image_assets: &Assets<Image>,
     ui_layout: &UiLayout,
     current_node: Entity,
 ) {
@@ -108,7 +111,7 @@ fn traverse_render_tree(
             layout.location.x += parent_layout.location.x;
             layout.location.y += parent_layout.location.y;
         }
-        did_layer = widget_render.render(vello_scene, &layout, font_assets, styles);
+        did_layer = widget_render.render(vello_scene, &layout, font_assets, image_assets, styles);
         cached_layout.insert(entity, layout);
     }
 
@@ -126,6 +129,7 @@ fn traverse_render_tree(
             cached_layout,
             vello_scene,
             font_assets,
+            image_assets,
             ui_layout,
             *child,
         );

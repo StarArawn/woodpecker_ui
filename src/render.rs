@@ -33,6 +33,9 @@ pub enum WidgetRender {
         render: WidgetRenderCustom,
     },
     Layer,
+    Image {
+        image_handle: Handle<Image>,
+    },
 }
 
 impl WidgetRender {
@@ -41,6 +44,7 @@ impl WidgetRender {
         vello_scene: &mut VelloScene,
         layout: &taffy::Layout,
         font_assets: &Assets<VelloFont>,
+        image_assets: &Assets<Image>,
         widget_style: &WoodpeckerStyle,
     ) -> bool {
         let mut did_layer = false;
@@ -239,6 +243,42 @@ impl WidgetRender {
                     ),
                 );
                 did_layer = true;
+            }
+            WidgetRender::Image { image_handle } => {
+                let Some(image) = image_assets.get(image_handle) else {
+                    return false;
+                };
+
+                fn fit_image(size_to_fit: Vec2, container_size: Vec2) -> f32 {
+                    let multipler = size_to_fit.x * size_to_fit.y;
+                    let width_scale = container_size.x / size_to_fit.x;
+                    let height_scale = container_size.y / size_to_fit.y;
+                    if (width_scale * multipler) < (height_scale * multipler) {
+                        width_scale
+                    } else {
+                        height_scale
+                    }
+                }
+
+                let transform = vello::kurbo::Affine::translate((
+                    layout.location.x as f64,
+                    layout.location.y as f64,
+                ))
+                // TODO: Make scale fit optional via styles.
+                .then_scale(fit_image(
+                    image.size().as_vec2(),
+                    Vec2::new(layout.size.width, layout.size.height),
+                ) as f64);
+
+                // TODO: Cache these..
+                let vello_image = peniko::Image::new(
+                    image.data.clone().into(),
+                    peniko::Format::Rgba8,
+                    image.size().x,
+                    image.size().y,
+                );
+
+                vello_scene.draw_image(&vello_image, transform);
             }
         }
         did_layer
