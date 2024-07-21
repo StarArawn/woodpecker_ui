@@ -3,9 +3,9 @@ use std::time::Instant;
 use crate::{
     children::WidgetChildren,
     focus::{Focusable, WidgetBlur, WidgetFocus},
-    keyboard_input::WidgetKeyboardButtonEvent,
+    keyboard_input::{WidgetKeyboardButtonEvent, WidgetPasteEvent},
     prelude::{
-        Edge, Widget, WidgetKeyboardCharEvent, WidgetPosition, WidgetRender, WoodpeckerStyle,
+        Edge, Units, Widget, WidgetKeyboardCharEvent, WidgetPosition, WidgetRender, WoodpeckerStyle,
     },
     CurrentWidget, DefaultFont,
 };
@@ -32,7 +32,7 @@ impl Default for TextboxStyles {
     fn default() -> Self {
         let shared = WoodpeckerStyle {
             background_color: Srgba::new(0.160, 0.172, 0.235, 1.0).into(),
-            width: 150.0.into(),
+            width: Units::Percentage(100.0),
             height: 26.0.into(),
             border_color: Srgba::new(0.360, 0.380, 0.474, 1.0).into(),
             border: Edge::new(0.0, 0.0, 0.0, 2.0),
@@ -85,6 +85,7 @@ pub struct TextBoxBundle {
     pub on_key_char: On<WidgetKeyboardCharEvent>,
     /// On key char event listener
     pub on_key_button: On<WidgetKeyboardButtonEvent>,
+    pub on_paste_event: On<WidgetPasteEvent>,
 }
 
 impl Default for TextBoxBundle {
@@ -120,7 +121,7 @@ impl Default for TextBoxBundle {
                  font_assets: Res<Assets<VelloFont>>| {
                     if let Ok((mut state, styles)) = state_query.get_mut(event.target) {
                         let cursor_pos = state.cursor_position;
-                        let font = get_font(&font_assets, &styles, &default_font);
+                        let font = get_font(&font_assets, styles, &default_font);
 
                         let char_pos: usize =
                             state.graphemes[0..cursor_pos].iter().map(|g| g.len()).sum();
@@ -146,7 +147,7 @@ impl Default for TextBoxBundle {
                             if state.cursor_position < state.graphemes.len() {
                                 state.cursor_position += 1;
                             }
-                            let font = get_font(&font_assets, &styles, &default_font);
+                            let font = get_font(&font_assets, styles, &default_font);
                             set_new_cursor_position(&mut state, &font, styles.font_size);
                         }
                     }
@@ -155,14 +156,14 @@ impl Default for TextBoxBundle {
                             if state.cursor_position > 0 {
                                 state.cursor_position -= 1;
                             }
-                            let font = get_font(&font_assets, &styles, &default_font);
+                            let font = get_font(&font_assets, styles, &default_font);
                             set_new_cursor_position(&mut state, &font, styles.font_size);
                         }
                     }
                     if event.code == KeyCode::Backspace {
                         if let Ok((mut state, styles)) = state_query.get_mut(event.target) {
                             let cursor_pos = state.cursor_position;
-                            let font = get_font(&font_assets, &styles, &default_font);
+                            let font = get_font(&font_assets, styles, &default_font);
 
                             if !state.current_value.is_empty() && cursor_pos != 0 {
                                 let char_pos: usize = state.graphemes[0..cursor_pos - 1]
@@ -179,6 +180,28 @@ impl Default for TextBoxBundle {
                             }
                         }
                     }
+                },
+            ),
+            on_paste_event: On::<WidgetPasteEvent>::run(
+                |event: ResMut<ListenerInput<WidgetPasteEvent>>,
+                 default_font: Res<DefaultFont>,
+                 mut state_query: Query<(&mut TextBox, &WoodpeckerStyle)>,
+                 font_assets: Res<Assets<VelloFont>>| {
+                    let Ok((mut state, styles)) = state_query.get_mut(event.target) else {
+                        return;
+                    };
+                    let char_pos: usize = state.graphemes[0..state.cursor_position]
+                        .iter()
+                        .map(|g| g.len())
+                        .sum();
+                    state.current_value.insert_str(char_pos, &event.paste);
+
+                    state.cursor_position += get_graphemes(&event.paste).len();
+
+                    // Update graphemes
+                    set_graphemes(&mut state);
+                    let font = get_font(&font_assets, styles, &default_font);
+                    set_new_cursor_position(&mut state, &font, styles.font_size);
                 },
             ),
         }
@@ -304,7 +327,7 @@ fn get_font<'a>(
     font
 }
 
-fn get_graphemes<'a>(value: &'a str) -> Vec<&'a str> {
+fn get_graphemes(value: &str) -> Vec<&str> {
     UnicodeSegmentation::graphemes(value, true).collect::<Vec<_>>()
 }
 
@@ -313,11 +336,6 @@ fn set_graphemes(state: &mut TextBox) {
         .iter()
         .map(|g| g.to_string())
         .collect::<Vec<_>>();
-}
-
-fn get_single_grapheme_length(text: &str) -> usize {
-    let graphemes = get_graphemes(text);
-    return graphemes[0].len();
 }
 
 fn set_new_cursor_position(state: &mut TextBox, font: &FontRef, font_size: f32) {

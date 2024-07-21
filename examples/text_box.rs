@@ -11,11 +11,7 @@ fn main() {
         .run();
 }
 
-fn startup(
-    mut commands: Commands,
-    mut ui_context: ResMut<WoodpeckerContext>,
-    asset_server: Res<AssetServer>,
-) {
+fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     commands.spawn(Camera2dBundle::default());
 
     let root = commands

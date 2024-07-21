@@ -136,7 +136,7 @@ fn traverse_render_tree(
     for child in children.iter() {
         traverse_render_tree(
             query,
-            &default_font,
+            default_font,
             widget_render,
             cached_layout,
             vello_scene,

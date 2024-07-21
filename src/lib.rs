@@ -79,6 +79,7 @@ impl Plugin for WoodpeckerUIPlugin {
             .add_plugins(EventListenerPlugin::<
                 keyboard_input::WidgetKeyboardButtonEvent,
             >::default())
+            .add_plugins(EventListenerPlugin::<keyboard_input::WidgetPasteEvent>::default())
             .insert_resource(focus::CurrentFocus::new(Entity::PLACEHOLDER))
             .init_resource::<ContextHelper>()
             .init_resource::<WoodpeckerContext>()

@@ -6,7 +6,7 @@ use bevy_vello::vello::{
 use crate::render::VARIATIONS;
 
 /// Returns the width of the font with the given content string
-pub fn measure_width<'a>(font: &FontRef, content: &'a str, font_size: f32) -> f32 {
+pub fn measure_width(font: &FontRef, content: &str, font_size: f32) -> f32 {
     let font_size = vello::skrifa::instance::Size::new(font_size);
     let charmap = font.charmap();
     let axes = font.axes();

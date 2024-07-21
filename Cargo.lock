@@ -5566,6 +5566,7 @@ dependencies = [
 name = "woodpecker_ui"
 version = "0.1.0"
 dependencies = [
+ "arboard",
  "bevy",
  "bevy-inspector-egui",
  "bevy-trait-query",
