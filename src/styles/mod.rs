@@ -247,6 +247,62 @@ impl WoodpeckerStyle {
         opacity: 1.0,
         font: None,
     };
+
+    pub fn lerp(&self, b: &WoodpeckerStyle, x: f32) -> WoodpeckerStyle {
+        let mut new_styles = self.clone(); // Default to A styles.
+
+        new_styles.background_color = hsv_lerp(&self.background_color, &b.background_color, x);
+
+        // new_styles.border = Edge::new(
+        //     lerp_units(self.border.top, b.top, x),
+        //     lerp_units(self.border.right, b.right, x),
+        //     lerp_units(self.border.bottom, b.bottom, x),
+        //     lerp_units(self.border.left, b.left, x),
+        // );
+
+        new_styles.border_color = hsv_lerp(&self.border_color, &b.border_color, x);
+
+        // new_styles.border_radius = Corner::new(
+        //     lerp_units(self.border_radius.top_left, b.border_radius.top_left, x),
+        //     lerp_units(self.border_radius.top_right, b.border_radius.top_right, x),
+        //     lerp_units(
+        //         self.border_radius.bottom_left,
+        //         b.border_radius.bottom_left,
+        //         x,
+        //     ),
+        //     lerp_units(
+        //         self.border_radius.bottom_right,
+        //         b.border_radius.bottom_right,
+        //         x,
+        //     ),
+        // );
+
+        new_styles.color = hsv_lerp(&self.color, &b.color, x);
+
+        new_styles.font_size = lerp(self.font_size, b.font_size, x);
+        new_styles.height = lerp_units(self.height, b.height, x);
+        new_styles.line_height = lerp(self.line_height, b.line_height, x);
+        new_styles.max_height = lerp_units(self.max_height, b.max_height, x);
+        new_styles.max_width = lerp_units(self.max_width, b.max_width, x);
+        new_styles.min_height = lerp_units(self.min_height, b.min_height, x);
+        new_styles.min_width = lerp_units(self.min_width, b.min_width, x);
+
+        // new_styles.padding = Edge::new(
+        //     lerp_units(self.padding.top, b.padding.top, x),
+        //     lerp_units(self.padding.right, b.padding.right, x),
+        //     lerp_units(self.padding.bottom, b.padding.bottom, x),
+        //     lerp_units(self.padding.left, b.padding.left, x),
+        // );
+
+        new_styles.left = lerp_units(self.left, b.left, x);
+        new_styles.right = lerp_units(self.right, b.right, x);
+        new_styles.top = lerp_units(self.top, b.top, x);
+        new_styles.bottom = lerp_units(self.bottom, b.bottom, x);
+        new_styles.width = lerp_units(self.width, b.width, x);
+        new_styles.opacity = lerp(self.opacity, b.opacity, x);
+
+        new_styles
+    }
 }
 
 impl From<&WoodpeckerStyle> for taffy::Style {
@@ -298,4 +354,133 @@ impl From<WoodpeckerStyle> for taffy::Style {
             ..Default::default()
         }
     }
+}
+
+fn lerp_units(prop_a: Units, prop_b: Units, x: f32) -> Units {
+    match (prop_a, prop_b) {
+        (Units::Pixels(a), Units::Pixels(b)) => Units::Pixels(lerp(a, b, x)),
+        (Units::Percentage(a), Units::Percentage(b)) => Units::Percentage(lerp(a, b, x)),
+        _ => {
+            bevy::prelude::trace!(
+                "Cannot lerp between non-matching units! Unit_A: {:?}, Unit_B: {:?}",
+                prop_a,
+                prop_b
+            );
+            prop_a
+        }
+    }
+}
+
+// fn lerp_ang(a: f32, b: f32, x: f32) -> f32 {
+//     let ang = ((((a - b) % std::f32::consts::TAU) + std::f32::consts::PI * 3.)
+//         % std::f32::consts::TAU)
+//         - std::f32::consts::PI;
+//     ang * x + b
+// }
+
+fn rgb_to_hsv(from: Srgba) -> Vec3 {
+    // xyz <-> hsv
+    let r = from.red;
+    let g = from.green;
+    let b = from.blue;
+
+    let mut res = Vec3::ZERO;
+
+    let min = r.min(g).min(b);
+    let max = r.max(g).max(b);
+
+    // Value
+    res.z = max;
+
+    let delta = max - min;
+    // calc Saturation
+    if max != 0.0 {
+        res.y = delta / max;
+    } else {
+        res.x = -1.0;
+        res.y = 0.0;
+
+        return res;
+    }
+
+    // calc Hue
+    if r == max {
+        // between Yellow & Magenta
+        res.x = (g - b) / delta;
+    } else if g == max {
+        // cyan to yellow
+        res.x = 2.0 + (b - r) / delta;
+    } else {
+        // b == max // Megnta to cyan
+        res.x = 4.0 + (r - g) / delta;
+    }
+
+    res.x *= 60.0; // Convert to degrees
+    if res.x < 0.0 {
+        res.x += 360.0; // Unwrap angle in case of negative
+    }
+
+    res
+}
+
+fn hsv_to_rgb(from: &Vec3) -> Srgba {
+    let h = from.x;
+    let s = from.y;
+    let v = from.z;
+
+    // Calc base values
+    let c = s * v;
+    let x = c * (1.0 - (((h / 60.0) % 2.0) - 1.0).abs());
+    let m = v - c;
+
+    let mut res = Vec4::new(0.0, 0.0, 0.0, 1.0);
+
+    if (0.0..60.0).contains(&h) {
+        res.x = c;
+        res.y = x;
+        res.z = 0.0;
+    } else if (60.0..120.0).contains(&h) {
+        res.x = x;
+        res.y = c;
+        res.z = 0.0;
+    } else if (120.0..180.0).contains(&h) {
+        res.x = 0.0;
+        res.y = c;
+        res.z = x;
+    } else if (180.0..240.0).contains(&h) {
+        res.x = 0.0;
+        res.y = x;
+        res.z = c;
+    } else if (240.0..300.0).contains(&h) {
+        res.x = x;
+        res.y = 0.0;
+        res.z = c;
+    } else {
+        res.x = c;
+        res.y = 0.0;
+        res.z = x;
+    }
+
+    res += Vec4::new(m, m, m, 0.0);
+
+    Srgba::from_f32_array(res.to_array())
+}
+
+fn hsv_lerp(from: &Color, to: &Color, amount: f32) -> Color {
+    let from_a = from.alpha();
+    let to_a = to.alpha();
+    let from = rgb_to_hsv(from.to_srgba());
+    let to = rgb_to_hsv(to.to_srgba());
+    let mut res = from.lerp(to, amount);
+
+    if from.x < 0.0 {
+        res.x = to.x;
+    }
+    let mut color: Color = hsv_to_rgb(&res).into();
+    color.set_alpha(lerp(from_a, to_a, amount).clamp(0.0, 1.0));
+    color
+}
+
+pub(crate) fn lerp(a: f32, b: f32, x: f32) -> f32 {
+    a * (1.0 - x) + b * x
 }

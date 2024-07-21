@@ -17,6 +17,7 @@ bevy_mod_picking = "0.20"
 smol_str = { version = "0.2", default-features = false }
 unicode-segmentation = "1.10.0"
 arboard = "3.4"
+interpolation = "0.2"
 
 # Local
 woodpecker_ui_macros.path = "crates/woodpecker_ui_macros" # TODO: Make this crates.io friendly..
