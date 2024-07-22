@@ -4,6 +4,11 @@ use bevy::prelude::*;
 
 use crate::{context::Widget, prelude::WidgetMapper, CurrentWidget, ParentWidget};
 
+/// A commponent to pass children down the tree
+/// while also having children of its own.
+#[derive(Component, Default, Clone, Deref, DerefMut)]
+pub struct PassedChildren(pub WidgetChildren);
+
 /// A bevy component that keeps track of Woodpecker UI widget children.
 /// This is very similar to bevy commands as in it lets you spawn bundles
 /// but it does not create an entity until
@@ -70,7 +75,7 @@ impl WidgetChildren {
     /// Attaches the children to a parent widget.
     /// Note: This doesn't actually spawn the children
     /// that occurs when the parent widget finishes rendering.
-    pub fn process(&mut self, parent_widget: ParentWidget) {
+    pub fn apply(&mut self, parent_widget: ParentWidget) {
         self.parent_widget = Some(parent_widget);
     }
 

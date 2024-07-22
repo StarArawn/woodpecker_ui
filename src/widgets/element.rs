@@ -39,5 +39,5 @@ pub fn render(entity: Res<CurrentWidget>, mut query: Query<&mut WidgetChildren>)
         return;
     };
 
-    children.process(entity.as_parent());
+    children.apply(entity.as_parent());
 }

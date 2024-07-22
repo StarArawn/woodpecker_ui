@@ -5,6 +5,8 @@ pub use edge::Edge;
 pub use layout::*;
 pub use units::Units;
 
+use crate::font::TextAlign;
+
 mod corner;
 mod edge;
 mod layout;
@@ -180,6 +182,9 @@ pub struct WoodpeckerStyle {
     /// The opacity of the widget and it's children
     /// Note: This will spawn a new UI render layer so use sparingly.
     pub opacity: f32,
+    /// Alignent for text rendering
+    /// If none is set it uses right for RTL and left for LTR text.
+    pub text_alignment: Option<TextAlign>,
 }
 
 impl Default for WoodpeckerStyle {
@@ -205,10 +210,10 @@ impl WoodpeckerStyle {
         display: WidgetDisplay::Flex,
         overflow: WidgetOverflow::Visible,
         position: WidgetPosition::Relative,
-        left: Units::Pixels(0.0),
-        right: Units::Pixels(0.0),
-        top: Units::Pixels(0.0),
-        bottom: Units::Pixels(0.0),
+        left: Units::Auto,
+        right: Units::Auto,
+        top: Units::Auto,
+        bottom: Units::Auto,
         margin: Edge {
             left: Units::Pixels(0.0),
             right: Units::Pixels(0.0),
@@ -227,8 +232,18 @@ impl WoodpeckerStyle {
         flex_basis: Units::Auto,
         flex_grow: 0.0,
         flex_shrink: 1.0,
-        background_color: Color::WHITE,
-        border_color: Color::WHITE,
+        background_color: Color::Srgba(Srgba {
+            red: 0.0,
+            green: 0.0,
+            blue: 0.0,
+            alpha: 0.0,
+        }),
+        border_color: Color::Srgba(Srgba {
+            red: 0.0,
+            green: 0.0,
+            blue: 0.0,
+            alpha: 0.0,
+        }),
         border_radius: Corner {
             top_left: Units::Pixels(0.0),
             top_right: Units::Pixels(0.0),
@@ -246,6 +261,7 @@ impl WoodpeckerStyle {
         line_height: None,
         opacity: 1.0,
         font: None,
+        text_alignment: None,
     };
 
     pub fn lerp(&self, b: &WoodpeckerStyle, x: f32) -> WoodpeckerStyle {
@@ -365,7 +381,7 @@ fn lerp_units(prop_a: Units, prop_b: Units, x: f32) -> Units {
                 prop_a,
                 prop_b
             );
-            prop_a
+            prop_b
         }
     }
 }

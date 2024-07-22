@@ -14,7 +14,7 @@ pub enum Units {
 
 impl Default for Units {
     fn default() -> Self {
-        Units::Pixels(0.0)
+        Units::Auto
     }
 }
 

@@ -28,8 +28,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                     ..Default::default()
                 },
                 WidgetRender::Text {
-                    alignment: VelloTextAlignment::TopLeft,
-                    content: "Hello World! I am Woodpecker UI!".into(),
+                    content: "Hello World! I am Woodpecker UI! 😀".into(),
                     word_wrap: false,
                 },
             )),

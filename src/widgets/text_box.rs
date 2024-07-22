@@ -5,6 +5,7 @@ use crate::{
     focus::{Focusable, WidgetBlur, WidgetFocus},
     keyboard_input::{WidgetKeyboardButtonEvent, WidgetPasteEvent},
     prelude::{Edge, Units, Widget, WidgetKeyboardCharEvent, WidgetRender, WoodpeckerStyle},
+    styles::WidgetAlignItems,
     CurrentWidget, DefaultFont,
 };
 use bevy::prelude::*;
@@ -35,8 +36,8 @@ impl Default for TextboxStyles {
             border_color: Srgba::new(0.360, 0.380, 0.474, 1.0).into(),
             border: Edge::new(0.0, 0.0, 0.0, 2.0),
             padding: Edge::new(0.0, 5.0, 0.0, 5.0),
+            margin: Edge::new(0.0, 0.0, 0.0, 2.0),
             font_size: 14.0,
-            line_height: Some(18.0),
             ..Default::default()
         };
         Self {
@@ -274,7 +275,7 @@ pub fn render(
     let cursor_styles = WoodpeckerStyle {
         background_color: styles.focused.border_color,
         // position: WidgetPosition::Absolute,
-        top: 5.0.into(),
+        top: 0.0.into(),
         left: text_box.cursor_x.into(),
         width: 2.0.into(),
         height: (style.height.value_or(26.0) - 10.0).into(),
@@ -285,13 +286,11 @@ pub fn render(
         ElementBundle {
             styles: WoodpeckerStyle {
                 font_size: style.font_size,
-                line_height: style.line_height,
                 ..Default::default()
             },
             ..Default::default()
         },
         WidgetRender::Text {
-            alignment: bevy_vello::text::VelloTextAlignment::TopLeft,
             content: text_box.current_value.clone(),
             word_wrap: false,
         },
@@ -311,13 +310,14 @@ pub fn render(
         styles: WoodpeckerStyle {
             width: style.width,
             height: style.height,
+            align_items: Some(WidgetAlignItems::Center),
             ..ClipBundle::default().styles // Take styles from clip bundle too!
         },
         children: clip_children,
         ..Default::default()
     });
 
-    children.process(entity.as_parent());
+    children.apply(entity.as_parent());
 }
 
 fn get_font<'a>(

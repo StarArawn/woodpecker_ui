@@ -95,7 +95,6 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                         children: WidgetChildren::default().with_child::<Element>((
                             ElementBundle::default(),
                             WidgetRender::Text {
-                                alignment: VelloTextAlignment::TopLeft,
                                 content: "Hello, I am some random long text that gets clipped by a transition! :D".into(),
                                 word_wrap: false,
                             },
@@ -114,6 +113,41 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                         style_b: WoodpeckerStyle {
                             top: 425.0.into(),
                             width: 1000.0.into(),
+                            ..quad_styles.clone()
+                        },
+                        ..Default::default()
+                    },
+                ))
+                // With no clipping!
+                .with_child::<Element>((
+                    ElementBundle {
+                        children: WidgetChildren::default().with_child::<Element>((
+                            ElementBundle {
+                                styles: WoodpeckerStyle {
+                                    width: Units::Percentage(100.0),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            WidgetRender::Text {
+                                content: "Hello, I am some random long text that gets wrapped by a transition! :D".into(),
+                                word_wrap: true,
+                            },
+                        )),
+                        ..Default::default()
+                    },
+                    Transition {
+                        easing: TransitionEasing::CubicInOut,
+                        timeout: 2500.0,
+                        looping: true,
+                        style_a: WoodpeckerStyle {
+                            width: 0.0.into(),
+                            top: 450.0.into(),
+                            ..quad_styles.clone()
+                        },
+                        style_b: WoodpeckerStyle {
+                            top: 450.0.into(),
+                            width: 500.0.into(),
                             ..quad_styles.clone()
                         },
                         ..Default::default()

@@ -2,7 +2,7 @@ mod measure;
 pub(crate) mod system;
 
 use bevy::{prelude::*, utils::EntityHashMap};
-use measure::LayoutMeasure;
+use measure::{LayoutMeasure, Measure};
 use taffy::{Size, TaffyTree};
 
 use crate::{has_root, prelude::WoodpeckerStyle};
@@ -67,7 +67,22 @@ impl UiLayout {
         }
     }
 
-    pub fn add_children(&mut self, entity: Entity, children: &Children) {
+    pub fn add_child(&mut self, parent: Entity, child: Entity) {
+        if !self.entity_to_taffy.contains_key(&parent) {
+            return;
+        }
+        let parent_node_id = self.entity_to_taffy.get(&parent).unwrap();
+
+        if !self.entity_to_taffy.contains_key(&child) {
+            return;
+        }
+        let child_node_id = self.entity_to_taffy.get(&child).unwrap();
+        self.taffy
+            .add_child(*parent_node_id, *child_node_id)
+            .unwrap();
+    }
+
+    pub fn add_children(&mut self, entity: Entity, children: &[Entity]) {
         if !self.entity_to_taffy.contains_key(&entity) {
             return;
         }
@@ -96,47 +111,90 @@ with UI components as a child of an entity without UI components, results may be
         let Some(root_id) = self.entity_to_taffy.get(&root_node) else {
             return;
         };
-        self.taffy
-            .compute_layout(
-                *root_id,
-                // Size::max_content(),
-                Size {
-                    width: taffy::AvailableSpace::Definite(root_node_size.x),
-                    height: taffy::AvailableSpace::Definite(root_node_size.y),
-                },
-            )
-            .unwrap();
-        // self.taffy.print_tree(*root_id);
         // self.taffy
-        //     .compute_layout_with_measure(
+        //     .compute_layout(
         //         *root_id,
+        //         // Size::max_content(),
         //         Size {
         //             width: taffy::AvailableSpace::Definite(root_node_size.x),
         //             height: taffy::AvailableSpace::Definite(root_node_size.y),
         //         },
-        //         |known_dimensions: taffy::Size<Option<f32>>,
-        //          available_space: taffy::Size<taffy::AvailableSpace>,
-        //          _node_id: taffy::NodeId,
-        //          context: Option<&mut LayoutMeasure>,
-        //          style: &taffy::Style|
-        //          -> taffy::Size<f32> {
-        //             context
-        //                 .map(|ctx| {
-        //                     let size = ctx.measure(
-        //                         known_dimensions.width,
-        //                         known_dimensions.height,
-        //                         available_space.width,
-        //                         available_space.height,
-        //                         style,
-        //                     );
-        //                     taffy::Size {
-        //                         width: size.x,
-        //                         height: size.y,
-        //                     }
-        //                 })
-        //                 .unwrap_or(taffy::Size::ZERO)
-        //         },
         //     )
         //     .unwrap();
+        // self.taffy.print_tree(*root_id);
+        self.taffy
+            .compute_layout_with_measure(
+                *root_id,
+                Size {
+                    width: taffy::AvailableSpace::Definite(root_node_size.x),
+                    height: taffy::AvailableSpace::Definite(root_node_size.y),
+                },
+                |known_dimensions: taffy::Size<Option<f32>>,
+                 available_space: taffy::Size<taffy::AvailableSpace>,
+                 _node_id: taffy::NodeId,
+                 context: Option<&mut LayoutMeasure>,
+                 style: &taffy::Style|
+                 -> taffy::Size<f32> {
+                    context
+                        .map(|ctx| {
+                            let size = ctx.measure(
+                                known_dimensions.width,
+                                known_dimensions.height,
+                                available_space.width,
+                                available_space.height,
+                                style,
+                            );
+                            taffy::Size {
+                                width: size.x,
+                                height: size.y,
+                            }
+                        })
+                        .unwrap_or(taffy::Size::ZERO)
+                },
+            )
+            .unwrap();
     }
+}
+
+#[test]
+fn test_bug() {
+    use taffy::*;
+    let mut taffy: TaffyTree<()> = TaffyTree::new();
+
+    let child = taffy
+        .new_leaf(Style {
+            size: Size {
+                width: Dimension::Percent(1.0),
+                height: Dimension::Percent(1.0),
+            },
+            ..Default::default()
+        })
+        .unwrap();
+
+    let node = taffy
+        .new_with_children(
+            Style {
+                size: Size {
+                    width: Dimension::Length(1280.0),
+                    height: Dimension::Length(720.0),
+                },
+                justify_content: Some(JustifyContent::Center),
+                ..Default::default()
+            },
+            &[child],
+        )
+        .unwrap();
+
+    println!("Compute layout with 100x100 viewport:");
+    taffy
+        .compute_layout(
+            node,
+            Size {
+                width: AvailableSpace::Definite(1280.0),
+                height: AvailableSpace::Definite(720.0),
+            },
+        )
+        .unwrap();
+
+    taffy.print_tree(node);
 }

@@ -64,5 +64,5 @@ pub fn render(
         ..styles.clone()
     };
 
-    children.process(entity.as_parent());
+    children.apply(entity.as_parent());
 }

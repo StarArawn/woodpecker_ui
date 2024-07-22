@@ -13,6 +13,7 @@ pub use app::{WoodpeckerApp, WoodpeckerAppBundle};
 pub use button::{ButtonStyles, WButton, WButtonBundle};
 pub use clip::{Clip, ClipBundle};
 pub use element::{Element, ElementBundle};
+pub use modal::{Modal, ModalBundle};
 pub use text_box::{TextBox, TextBoxBundle, TextboxStyles};
 pub use transition::*;
 
@@ -26,6 +27,7 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
             .register_widget::<WButton>()
             .register_widget::<Clip>()
             .register_widget::<TextBox>()
+            .register_widget::<Modal>()
             .add_systems(
                 Update,
                 (

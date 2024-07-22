@@ -101,5 +101,5 @@ pub fn render(
         *styles = button_styles.normal.clone();
     }
 
-    children.process(entity.as_parent());
+    children.apply(entity.as_parent());
 }

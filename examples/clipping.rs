@@ -21,7 +21,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                 styles: WoodpeckerStyle {
                     width: 150.0.into(),
                     height: 100.0.into(),
-                    border_radius: Corner::all(50.0.into()),
+                    border_radius: Corner::all(50.0),
                     opacity: 0.15,
                     ..Default::default()
                 },
@@ -30,7 +30,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                     styles: WoodpeckerStyle {
                         width: Units::Percentage(100.0),
                         height: Units::Percentage(100.0),
-                        border_radius: Corner::all(50.0.into()),
+                        border_radius: Corner::all(50.0),
                         background_color: Srgba::RED.into(),
                         ..Default::default()
                         },
