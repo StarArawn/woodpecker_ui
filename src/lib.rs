@@ -1,22 +1,24 @@
 use bevy::{asset::embedded_asset, prelude::*};
-use bevy_mod_picking::prelude::EventListenerPlugin;
+use bevy_mod_picking::{events::Pointer, prelude::EventListenerPlugin};
 use bevy_trait_query::RegisterExt;
 use bevy_vello::{text::VelloFont, CoordinateSpace, VelloPlugin, VelloSceneBundle};
 use context::{Widget, WoodpeckerContext};
-use context_helper::ContextHelper;
 use entity_mapping::WidgetMapper;
 use font::FontManager;
+use hook_helper::HookHelper;
 use layout::WoodpeckerLayoutPlugin;
+use picking_backend::MouseWheelScroll;
 use widgets::WoodpeckerUIWidgetPlugin;
 
 mod children;
 mod context;
-mod context_helper;
 mod entity_mapping;
 mod focus;
 mod font;
+mod hook_helper;
 mod keyboard_input;
 mod layout;
+mod on_change;
 mod picking_backend;
 mod render;
 mod runner;
@@ -30,7 +32,10 @@ pub mod prelude {
     pub use crate::entity_mapping::*;
     pub use crate::focus::*;
     pub use crate::font::TextAlign;
+    pub use crate::hook_helper::HookHelper;
     pub use crate::keyboard_input::WidgetKeyboardCharEvent;
+    pub use crate::layout::system::{WidgetLayout, WidgetPreviousLayout};
+    pub use crate::on_change::OnChange;
     pub use crate::render::WidgetRender;
     pub use crate::styles::*;
     pub use crate::widgets::*;
@@ -89,10 +94,11 @@ impl Plugin for WoodpeckerUIPlugin {
             .add_plugins(EventListenerPlugin::<
                 keyboard_input::WidgetKeyboardButtonEvent,
             >::default())
+            .add_plugins(EventListenerPlugin::<Pointer<MouseWheelScroll>>::default())
             .add_plugins(EventListenerPlugin::<keyboard_input::WidgetPasteEvent>::default())
             .insert_resource(focus::CurrentFocus::new(Entity::PLACEHOLDER))
             .init_resource::<FontManager>()
-            .init_resource::<ContextHelper>()
+            .init_resource::<HookHelper>()
             .init_resource::<WoodpeckerContext>()
             .init_resource::<WidgetMapper>()
             .init_resource::<DefaultFont>()
@@ -102,14 +108,17 @@ impl Plugin for WoodpeckerUIPlugin {
                     runner::system,
                     focus::CurrentFocus::click_focus,
                     keyboard_input::runner,
-                    context_helper::ContextHelper::update_context_helper,
+                    hook_helper::HookHelper::update_context_helper,
                     font::load_fonts,
                 )
                     .run_if(has_root()),
             )
             .add_systems(
                 Update,
-                picking_backend::system.after(crate::layout::system::run),
+                (
+                    picking_backend::mouse_wheel_system,
+                    picking_backend::system.after(crate::layout::system::run),
+                ),
             )
             .add_systems(Startup, startup);
     }

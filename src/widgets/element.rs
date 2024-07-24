@@ -9,7 +9,7 @@ use bevy::prelude::*;
 #[derive(Bundle, Default, Clone)]
 pub struct ElementBundle {
     /// The element component itself.
-    pub app: Element,
+    pub element: Element,
     /// A widget children component
     pub children: WidgetChildren,
     /// The widget styles,

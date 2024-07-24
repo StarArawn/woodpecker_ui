@@ -12,6 +12,11 @@ mod edge;
 mod layout;
 mod units;
 
+/// A struct used to pass styles into a widget.
+#[derive(Component, Reflect, Default, Debug, Clone, PartialEq)]
+#[reflect(Component)]
+pub struct WoodpeckerStyleProp(pub WoodpeckerStyle);
+
 // A struct used to define the look of a widget
 ///
 /// All fields are `pub`, so you can simply define your styles.

@@ -44,7 +44,7 @@ impl WidgetChildren {
     ///
     /// Note: Make sure to call [`WidgetChildren::process`] in the render system of the parent
     /// otherwise the entities will not be spawned! This will NOT spawn the bundles.
-    pub fn add<T: Widget>(&mut self, bundle: impl Bundle + Clone) {
+    pub fn add<T: Widget>(&mut self, bundle: impl Bundle + Clone) -> &mut Self {
         let widget_name = T::get_name();
         self.children_queue.push((
             T::get_name(),
@@ -64,6 +64,8 @@ impl WidgetChildren {
                 },
             ),
         ));
+
+        self
     }
 
     /// Lets you know if the children have changed between now and when they were last rendered.

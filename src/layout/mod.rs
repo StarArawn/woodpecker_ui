@@ -54,14 +54,11 @@ impl UiLayout {
         });
 
         if !added {
-            // let has_measure = if new_node_context.is_some() {
-            //     taffy
-            //         .set_node_context(taffy_node_id, new_node_context)
-            //         .unwrap();
-            //     true
-            // } else {
-            //     taffy.get_node_context(taffy_node_id).is_some()
-            // };
+            if new_node_context.is_some() {
+                taffy
+                    .set_node_context(taffy_node_id, new_node_context)
+                    .unwrap();
+            }
 
             taffy.set_style(taffy_node_id, style.into()).unwrap();
         }
@@ -89,7 +86,8 @@ impl UiLayout {
         let node_id = self.entity_to_taffy.get(&entity).unwrap();
         let children = children
             .iter()
-            .map(|child| *self.entity_to_taffy.get(child).unwrap())
+            .map(|child| *self.entity_to_taffy.get(child).expect(&format!("Woodpecker UI: Couldn't find the child entity layout for {:?}. \
+                This likely occured because you are missing a WoodpeckerStyle component on one of your widgets", child)))
             .collect::<Vec<_>>();
         self.taffy.set_children(*node_id, &children).unwrap();
     }
@@ -111,17 +109,6 @@ with UI components as a child of an entity without UI components, results may be
         let Some(root_id) = self.entity_to_taffy.get(&root_node) else {
             return;
         };
-        // self.taffy
-        //     .compute_layout(
-        //         *root_id,
-        //         // Size::max_content(),
-        //         Size {
-        //             width: taffy::AvailableSpace::Definite(root_node_size.x),
-        //             height: taffy::AvailableSpace::Definite(root_node_size.y),
-        //         },
-        //     )
-        //     .unwrap();
-        // self.taffy.print_tree(*root_id);
         self.taffy
             .compute_layout_with_measure(
                 *root_id,
@@ -153,6 +140,8 @@ with UI components as a child of an entity without UI components, results may be
                 },
             )
             .unwrap();
+        // For debugging uncomment next line..
+        // self.taffy.print_tree(*root_id);
     }
 }
 

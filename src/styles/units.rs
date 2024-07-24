@@ -1,7 +1,7 @@
 use bevy::reflect::Reflect;
 
 /// Units which describe spacing and size
-#[derive(Debug, Reflect, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Reflect, Clone, Copy, PartialEq)]
 pub enum Units {
     /// A number of pixels
     Pixels(f32),
@@ -9,13 +9,8 @@ pub enum Units {
     /// between 0.0 and 100.0
     Percentage(f32),
     /// Automatically determine the value
+    #[default]
     Auto,
-}
-
-impl Default for Units {
-    fn default() -> Self {
-        Units::Auto
-    }
 }
 
 impl From<f32> for Units {

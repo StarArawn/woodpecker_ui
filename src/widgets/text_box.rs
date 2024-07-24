@@ -3,9 +3,13 @@ use std::time::Instant;
 use crate::{
     children::WidgetChildren,
     focus::{Focusable, WidgetBlur, WidgetFocus},
+    font::FontManager,
     keyboard_input::{WidgetKeyboardButtonEvent, WidgetPasteEvent},
-    prelude::{Edge, Units, Widget, WidgetKeyboardCharEvent, WidgetRender, WoodpeckerStyle},
-    styles::WidgetAlignItems,
+    prelude::{
+        Edge, HookHelper, OnChange, Units, Widget, WidgetKeyboardCharEvent, WidgetRender,
+        WoodpeckerStyle,
+    },
+    styles::{WidgetAlignItems, WidgetPosition},
     CurrentWidget, DefaultFont,
 };
 use bevy::prelude::*;
@@ -15,10 +19,15 @@ use bevy_mod_picking::{
     picking_core::Pickable,
     prelude::{ListenerInput, On},
 };
-use bevy_vello::{text::VelloFont, vello::glyph::skrifa::FontRef};
+use bevy_vello::text::VelloFont;
 use unicode_segmentation::UnicodeSegmentation;
 
 use super::{Clip, ClipBundle, Element, ElementBundle};
+
+#[derive(Debug, Clone, Reflect)]
+pub struct ChangedText {
+    pub value: String,
+}
 
 #[derive(Component, Clone)]
 pub struct TextboxStyles {
@@ -31,7 +40,7 @@ impl Default for TextboxStyles {
     fn default() -> Self {
         let shared = WoodpeckerStyle {
             background_color: Srgba::new(0.160, 0.172, 0.235, 1.0).into(),
-            width: Units::Percentage(100.0),
+            width: Units::Auto,
             height: 26.0.into(),
             border_color: Srgba::new(0.360, 0.380, 0.474, 1.0).into(),
             border: Edge::new(0.0, 0.0, 0.0, 2.0),
@@ -55,7 +64,7 @@ impl Default for TextboxStyles {
 #[derive(Bundle, Clone)]
 pub struct TextBoxBundle {
     /// The textbox component itself.
-    pub app: TextBox,
+    pub text_box: TextBox,
     /// The rendering of the button widget.
     pub render: WidgetRender,
     /// A widget children component
@@ -68,162 +77,47 @@ pub struct TextBoxBundle {
     pub pickable: Pickable,
     /// Tracks entity interaction state.
     pub interaction: PickingInteraction,
-    /// On over event listener
-    /// Note: If you override the default you will need to manually handle widget state.
-    pub on_over: On<Pointer<Over>>,
-    /// On out event listener
-    /// Note: If you override the default you will need to manually handle widget state.
-    pub on_out: On<Pointer<Out>>,
     /// Tells woodpecker we want this widget to get focus events.
     pub focuable: Focusable,
-    /// On focus event listener
-    pub on_focus: On<WidgetFocus>,
-    /// On blur event listener
-    pub on_blur: On<WidgetBlur>,
-    /// On key char event listener
-    pub on_key_char: On<WidgetKeyboardCharEvent>,
-    /// On key char event listener
-    pub on_key_button: On<WidgetKeyboardButtonEvent>,
-    pub on_paste_event: On<WidgetPasteEvent>,
 }
 
 impl Default for TextBoxBundle {
     fn default() -> Self {
         Self {
-            app: Default::default(),
+            text_box: Default::default(),
             render: WidgetRender::Quad,
             children: Default::default(),
             styles: Default::default(),
             pickable: Default::default(),
             interaction: Default::default(),
-            on_over: On::<Pointer<Over>>::listener_component_mut::<TextBox>(|_, text_box| {
-                if !text_box.focused {
-                    text_box.hovering = true;
-                }
-            }),
-            on_out: On::<Pointer<Out>>::listener_component_mut::<TextBox>(|_, text_box| {
-                text_box.hovering = false;
-            }),
             textbox_styles: TextboxStyles::default(),
             focuable: Focusable,
-            on_focus: On::<WidgetFocus>::listener_component_mut::<TextBox>(|_, text_box| {
-                text_box.hovering = false;
-                text_box.focused = true;
-            }),
-            on_blur: On::<WidgetBlur>::listener_component_mut::<TextBox>(|_, text_box| {
-                text_box.focused = false;
-            }),
-            on_key_char: On::<WidgetKeyboardCharEvent>::run(
-                |event: ResMut<ListenerInput<WidgetKeyboardCharEvent>>,
-                 mut state_query: Query<(&mut TextBox, &WoodpeckerStyle)>,
-                 default_font: Res<DefaultFont>,
-                 font_assets: Res<Assets<VelloFont>>| {
-                    if let Ok((mut state, styles)) = state_query.get_mut(event.target) {
-                        let cursor_pos = state.cursor_position;
-                        let font = get_font(&font_assets, styles, &default_font);
-
-                        let char_pos: usize =
-                            state.graphemes[0..cursor_pos].iter().map(|g| g.len()).sum();
-                        state.current_value.insert_str(char_pos, &event.c);
-                        state.cursor_position += 1;
-
-                        // Update graphemes
-                        set_graphemes(&mut state);
-
-                        set_new_cursor_position(&mut state, &font, styles.font_size);
-
-                        // TODO: Call changed event..
-                    }
-                },
-            ),
-            on_key_button: On::<WidgetKeyboardButtonEvent>::run(
-                |event: ResMut<ListenerInput<WidgetKeyboardButtonEvent>>,
-                 mut state_query: Query<(&mut TextBox, &WoodpeckerStyle)>,
-                 default_font: Res<DefaultFont>,
-                 font_assets: Res<Assets<VelloFont>>| {
-                    if event.code == KeyCode::ArrowRight {
-                        if let Ok((mut state, styles)) = state_query.get_mut(event.target) {
-                            if state.cursor_position < state.graphemes.len() {
-                                state.cursor_position += 1;
-                            }
-                            let font = get_font(&font_assets, styles, &default_font);
-                            set_new_cursor_position(&mut state, &font, styles.font_size);
-                        }
-                    }
-                    if event.code == KeyCode::ArrowLeft {
-                        if let Ok((mut state, styles)) = state_query.get_mut(event.target) {
-                            if state.cursor_position > 0 {
-                                state.cursor_position -= 1;
-                            }
-                            let font = get_font(&font_assets, styles, &default_font);
-                            set_new_cursor_position(&mut state, &font, styles.font_size);
-                        }
-                    }
-                    if event.code == KeyCode::Backspace {
-                        if let Ok((mut state, styles)) = state_query.get_mut(event.target) {
-                            let cursor_pos = state.cursor_position;
-                            let font = get_font(&font_assets, styles, &default_font);
-
-                            if !state.current_value.is_empty() && cursor_pos != 0 {
-                                let char_pos: usize = state.graphemes[0..cursor_pos - 1]
-                                    .iter()
-                                    .map(|g| g.len())
-                                    .sum();
-                                state.current_value.remove(char_pos);
-                                state.cursor_position -= 1;
-
-                                // Update graphemes
-                                set_graphemes(&mut state);
-
-                                set_new_cursor_position(&mut state, &font, styles.font_size);
-                            }
-                        }
-                    }
-                },
-            ),
-            on_paste_event: On::<WidgetPasteEvent>::run(
-                |event: ResMut<ListenerInput<WidgetPasteEvent>>,
-                 default_font: Res<DefaultFont>,
-                 mut state_query: Query<(&mut TextBox, &WoodpeckerStyle)>,
-                 font_assets: Res<Assets<VelloFont>>| {
-                    let Ok((mut state, styles)) = state_query.get_mut(event.target) else {
-                        return;
-                    };
-                    let char_pos: usize = state.graphemes[0..state.cursor_position]
-                        .iter()
-                        .map(|g| g.len())
-                        .sum();
-                    state.current_value.insert_str(char_pos, &event.paste);
-
-                    state.cursor_position += get_graphemes(&event.paste).len();
-
-                    // Update graphemes
-                    set_graphemes(&mut state);
-                    let font = get_font(&font_assets, styles, &default_font);
-                    set_new_cursor_position(&mut state, &font, styles.font_size);
-                },
-            ),
         }
     }
 }
 
 /// The Woodpecker UI Button
-#[derive(Component, Widget, Clone)]
+#[derive(Component, Default, Widget, Clone)]
 #[widget_systems(update, render)]
 pub struct TextBox {
-    // Mouse input state
-    hovering: bool,
-    focused: bool,
-    // Keyboard input state
-    graphemes: Vec<String>,
-    cursor_x: f32,
-    cursor_position: usize,
-    cursor_visible: bool,
-    cursor_last_update: Instant,
-    current_value: String,
+    pub initial_value: String,
 }
 
-impl Default for TextBox {
+#[derive(Component, Clone)]
+pub struct TextBoxState {
+    // Mouse input state
+    pub hovering: bool,
+    pub focused: bool,
+    // Keyboard input state
+    pub graphemes: Vec<String>,
+    pub cursor_x: f32,
+    pub cursor_position: usize,
+    pub cursor_visible: bool,
+    pub cursor_last_update: Instant,
+    pub current_value: String,
+}
+
+impl Default for TextBoxState {
     fn default() -> Self {
         Self {
             hovering: Default::default(),
@@ -241,32 +135,325 @@ impl Default for TextBox {
 pub fn update(
     entity: Res<CurrentWidget>,
     query: Query<Entity, Or<(Changed<TextBox>, Changed<TextboxStyles>)>>,
+    state_query: Query<Ref<TextBoxState>>,
     children_query: Query<&WidgetChildren>,
+    child_query: Query<&Children>,
 ) -> bool {
+    // We need to figure out if state changed
+    // We can check this by pulling in the state entity assocaited with this entity.
+    let state_changed = child_query
+        .get(**entity)
+        .map(|children| {
+            children.iter().any(|child| {
+                state_query
+                    .get(*child)
+                    .map(|s| s.is_changed())
+                    .unwrap_or_default()
+            })
+        })
+        .unwrap_or_default();
+
     query.contains(**entity)
         || children_query
             .iter()
             .next()
             .map(|c| c.children_changed())
             .unwrap_or_default()
+        || state_changed
 }
 
 pub fn render(
-    entity: Res<CurrentWidget>,
+    mut commands: Commands,
+    current_widget: Res<CurrentWidget>,
+    mut hook_helper: ResMut<HookHelper>,
+    mut font_manager: ResMut<FontManager>,
+    default_font: Res<DefaultFont>,
     mut query: Query<(
-        &TextBox,
+        Ref<TextBox>,
         &mut WoodpeckerStyle,
         &TextboxStyles,
         &mut WidgetChildren,
     )>,
+    mut state_query: Query<&mut TextBoxState>,
 ) {
-    let Ok((text_box, mut style, styles, mut children)) = query.get_mut(**entity) else {
+    let Ok((text_box, mut style, styles, mut children)) = query.get_mut(**current_widget) else {
         return;
     };
 
-    if text_box.focused {
+    let state_entity = hook_helper.use_state::<TextBoxState>(
+        &mut commands,
+        *current_widget,
+        TextBoxState {
+            current_value: text_box.initial_value.clone(),
+            ..Default::default()
+        },
+    );
+
+    let Ok(mut state) = state_query.get_mut(state_entity) else {
+        return;
+    };
+
+    if text_box.is_changed() {
+        state.current_value = text_box.initial_value.clone();
+
+        // Update graphemes
+        set_graphemes(&mut state);
+
+        state.cursor_position = state.cursor_position.min(state.graphemes.len());
+
+        // TODO: Use style font?
+        set_new_cursor_position(
+            &mut state,
+            &mut font_manager,
+            &default_font.0,
+            styles.normal.font_size,
+        );
+    }
+
+    // Hook up events
+    let widget_entity = **current_widget;
+    commands
+        .entity(widget_entity)
+        // Char event
+        .insert((
+            On::<WidgetKeyboardCharEvent>::run(
+                move |event: ResMut<ListenerInput<WidgetKeyboardCharEvent>>,
+                      style_query: Query<&WoodpeckerStyle>,
+                      mut state_query: Query<&mut TextBoxState>,
+                      default_font: Res<DefaultFont>,
+                      mut font_manager: ResMut<FontManager>,
+                      mut event_writer: EventWriter<OnChange<ChangedText>>| {
+                    let Ok(styles) = style_query.get(event.target) else {
+                        return;
+                    };
+                    let Ok(mut state) = state_query.get_mut(state_entity) else {
+                        return;
+                    };
+
+                    let cursor_pos = state.cursor_position;
+
+                    let char_pos: usize =
+                        state.graphemes[0..cursor_pos].iter().map(|g| g.len()).sum();
+                    state.current_value.insert_str(char_pos, &event.c);
+                    state.cursor_position += 1;
+
+                    event_writer.send(OnChange {
+                        target: widget_entity,
+                        data: ChangedText {
+                            value: state.current_value.clone(),
+                        },
+                    });
+
+                    // Update graphemes
+                    set_graphemes(&mut state);
+
+                    // TODO: Use style font?
+                    set_new_cursor_position(
+                        &mut state,
+                        &mut font_manager,
+                        &default_font.0,
+                        styles.font_size,
+                    );
+                },
+            ),
+            On::<Pointer<Over>>::run(move |mut state_query: Query<&mut TextBoxState>| {
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
+                if !state.focused {
+                    state.hovering = true;
+                }
+            }),
+            On::<Pointer<Out>>::run(move |mut state_query: Query<&mut TextBoxState>| {
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
+                state.hovering = false;
+            }),
+            On::<WidgetFocus>::run(move |mut state_query: Query<&mut TextBoxState>| {
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
+                state.hovering = false;
+                state.focused = true;
+            }),
+            On::<WidgetBlur>::run(move |mut state_query: Query<&mut TextBoxState>| {
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
+                state.focused = false;
+            }),
+        ))
+        // Paste event
+        .insert(On::<WidgetPasteEvent>::run(
+            move |event: ResMut<ListenerInput<WidgetPasteEvent>>,
+                  default_font: Res<DefaultFont>,
+                  style_query: Query<&WoodpeckerStyle>,
+                  mut state_query: Query<&mut TextBoxState>,
+                  mut font_manager: ResMut<FontManager>,
+                  mut event_writer: EventWriter<OnChange<ChangedText>>| {
+                let Ok(styles) = style_query.get(event.target) else {
+                    return;
+                };
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
+                let char_pos: usize = state.graphemes[0..state.cursor_position]
+                    .iter()
+                    .map(|g| g.len())
+                    .sum();
+                state.current_value.insert_str(char_pos, &event.paste);
+
+                event_writer.send(OnChange {
+                    target: widget_entity,
+                    data: ChangedText {
+                        value: state.current_value.clone(),
+                    },
+                });
+
+                state.cursor_position += get_graphemes(&event.paste).len();
+
+                // Update graphemes
+                set_graphemes(&mut state);
+                // TODO: Use style font?
+                set_new_cursor_position(
+                    &mut state,
+                    &mut font_manager,
+                    &default_font.0,
+                    styles.font_size,
+                );
+            },
+        ))
+        .insert(On::<WidgetKeyboardButtonEvent>::run(
+            move |event: ResMut<ListenerInput<WidgetKeyboardButtonEvent>>,
+                  style_query: Query<&WoodpeckerStyle>,
+                  mut state_query: Query<&mut TextBoxState>,
+                  default_font: Res<DefaultFont>,
+                  mut font_manager: ResMut<FontManager>,
+                  mut event_writer: EventWriter<OnChange<ChangedText>>,
+                  keyboard_input: Res<ButtonInput<KeyCode>>| {
+                if event.code == KeyCode::ArrowRight {
+                    let Ok(styles) = style_query.get(event.target) else {
+                        return;
+                    };
+                    let Ok(mut state) = state_query.get_mut(state_entity) else {
+                        return;
+                    };
+                    if state.cursor_position < state.graphemes.len() {
+                        if keyboard_input.pressed(KeyCode::ControlLeft) {
+                            if state
+                                .graphemes
+                                .get(state.cursor_position)
+                                .map(|g| g.contains(" "))
+                                .unwrap_or_default()
+                            {
+                                state.cursor_position += 1;
+                            } else {
+                                while !state
+                                    .graphemes
+                                    .get(state.cursor_position)
+                                    .map(|g| g.contains(" "))
+                                    .unwrap_or(true)
+                                {
+                                    state.cursor_position += 1;
+                                }
+                            }
+                        } else {
+                            state.cursor_position += 1;
+                        }
+                    }
+                    // TODO: Use style font?
+                    set_new_cursor_position(
+                        &mut state,
+                        &mut font_manager,
+                        &default_font.0,
+                        styles.font_size,
+                    );
+                }
+                if event.code == KeyCode::ArrowLeft {
+                    let Ok(styles) = style_query.get(event.target) else {
+                        return;
+                    };
+                    let Ok(mut state) = state_query.get_mut(state_entity) else {
+                        return;
+                    };
+
+                    if keyboard_input.pressed(KeyCode::ControlLeft) {
+                        if state.cursor_position > 0 {
+                            if state
+                                .graphemes
+                                .get(state.cursor_position - 1)
+                                .map(|g| g.contains(" "))
+                                .unwrap_or_default()
+                            {
+                                state.cursor_position -= 1;
+                            } else {
+                                while !state
+                                    .graphemes
+                                    .get(state.cursor_position - 1)
+                                    .map(|g| g.contains(" "))
+                                    .unwrap_or(true)
+                                {
+                                    state.cursor_position -= 1;
+                                }
+                            }
+                        }
+                    } else {
+                        if state.cursor_position > 0 {
+                            state.cursor_position -= 1;
+                        }
+                    }
+
+                    // TODO: Use style font?
+                    set_new_cursor_position(
+                        &mut state,
+                        &mut font_manager,
+                        &default_font.0,
+                        styles.font_size,
+                    );
+                }
+                if event.code == KeyCode::Backspace {
+                    let Ok(styles) = style_query.get(event.target) else {
+                        return;
+                    };
+                    let Ok(mut state) = state_query.get_mut(state_entity) else {
+                        return;
+                    };
+                    let cursor_pos = state.cursor_position;
+
+                    if !state.current_value.is_empty() && cursor_pos != 0 {
+                        let char_pos: usize = state.graphemes[0..cursor_pos - 1]
+                            .iter()
+                            .map(|g| g.len())
+                            .sum();
+                        state.current_value.remove(char_pos);
+                        state.cursor_position -= 1;
+
+                        event_writer.send(OnChange {
+                            target: widget_entity,
+                            data: ChangedText {
+                                value: state.current_value.clone(),
+                            },
+                        });
+
+                        // Update graphemes
+                        set_graphemes(&mut state);
+
+                        // TODO: Use style font?
+                        set_new_cursor_position(
+                            &mut state,
+                            &mut font_manager,
+                            &default_font.0,
+                            styles.font_size,
+                        );
+                    }
+                }
+            },
+        ));
+
+    if state.focused {
         *style = styles.focused.clone();
-    } else if text_box.hovering {
+    } else if state.hovering {
         *style = styles.hovered.clone();
     } else {
         *style = styles.normal.clone();
@@ -274,9 +461,9 @@ pub fn render(
 
     let cursor_styles = WoodpeckerStyle {
         background_color: styles.focused.border_color,
-        // position: WidgetPosition::Absolute,
-        top: 0.0.into(),
-        left: text_box.cursor_x.into(),
+        position: WidgetPosition::Absolute,
+        top: 5.0.into(),
+        left: state.cursor_x.into(),
         width: 2.0.into(),
         height: (style.height.value_or(26.0) - 10.0).into(),
         ..Default::default()
@@ -291,12 +478,12 @@ pub fn render(
             ..Default::default()
         },
         WidgetRender::Text {
-            content: text_box.current_value.clone(),
+            content: state.current_value.clone(),
             word_wrap: false,
         },
     ));
 
-    if text_box.cursor_visible {
+    if state.cursor_visible {
         clip_children.add::<Element>((
             ElementBundle {
                 styles: cursor_styles,
@@ -317,42 +504,61 @@ pub fn render(
         ..Default::default()
     });
 
-    children.apply(entity.as_parent());
-}
-
-fn get_font<'a>(
-    font_assets: &'a Assets<VelloFont>,
-    styles: &WoodpeckerStyle,
-    default_font: &DefaultFont,
-) -> FontRef<'a> {
-    let font_handle = styles.font.as_ref().unwrap_or(&default_font.0);
-    let font_asset = font_assets.get(font_handle).expect("Woodpecker UI: Expected to have a font or default font specified but found none. Either set the font on the style or use the DefaultFont resource.");
-    let font = FontRef::<'a>::new(font_asset.font.data.data()).expect("Vello font creation error");
-    font
+    children.apply(current_widget.as_parent());
 }
 
 fn get_graphemes(value: &str) -> Vec<&str> {
     UnicodeSegmentation::graphemes(value, true).collect::<Vec<_>>()
 }
 
-fn set_graphemes(state: &mut TextBox) {
+fn set_graphemes(state: &mut TextBoxState) {
     state.graphemes = get_graphemes(&state.current_value)
         .iter()
         .map(|g| g.to_string())
         .collect::<Vec<_>>();
 }
 
-fn set_new_cursor_position(state: &mut TextBox, font: &FontRef, font_size: f32) {
-    let string_to_cursor = state.graphemes[0..state.cursor_position].join("");
-    state.cursor_x = crate::font::measure_width(font, &string_to_cursor, font_size);
+fn set_new_cursor_position(
+    state: &mut TextBoxState,
+    font_manager: &mut FontManager,
+    font_handle: &Handle<VelloFont>,
+    font_size: f32,
+) {
+    let string_to_cursor = if state.graphemes.is_empty() {
+        "".into()
+    } else {
+        state.graphemes[0..state.cursor_position].join("")
+    };
+
+    let buffer = font_manager
+        .layout(
+            Vec2::new(1000000.0, font_size * 1.2),
+            &WoodpeckerStyle {
+                font_size,
+                ..Default::default()
+            },
+            font_handle,
+            &string_to_cursor,
+            false,
+        )
+        .unwrap();
+
+    let mut max_x: f32 = 0.0;
+
+    for run in buffer.layout_runs() {
+        max_x = max_x.max(run.line_w);
+    }
+
+    state.cursor_x = max_x;
 }
 
 pub fn cursor_animation_system(
-    mut state_query: ParamSet<(Query<(Entity, &TextBox)>, Query<&mut TextBox>)>,
+    mut state_query: ParamSet<(Query<(Entity, &TextBoxState)>, Query<&mut TextBoxState>)>,
 ) {
     let mut should_update = Vec::new();
 
     for (entity, state) in state_query.p0().iter() {
+        // Avoid mutating state if we can avoid it.
         if state.cursor_last_update.elapsed().as_secs_f32() > 0.5 && state.focused {
             should_update.push(entity);
         }

@@ -1,3 +1,4 @@
+use crate::prelude::OnChange;
 use crate::WidgetRegisterExt;
 use bevy::prelude::*;
 
@@ -6,15 +7,21 @@ mod button;
 mod clip;
 mod element;
 mod modal;
+mod scroll;
 mod text_box;
 mod transition;
 
 pub use app::{WoodpeckerApp, WoodpeckerAppBundle};
+use bevy_mod_picking::prelude::EventListenerPlugin;
 pub use button::{ButtonStyles, WButton, WButtonBundle};
 pub use clip::{Clip, ClipBundle};
 pub use element::{Element, ElementBundle};
 pub use modal::{Modal, ModalBundle};
-pub use text_box::{TextBox, TextBoxBundle, TextboxStyles};
+pub use scroll::content::{ScrollContent, ScrollContentBundle};
+pub use scroll::scroll_bar::{ScrollBar, ScrollBarBundle};
+pub use scroll::scroll_box::{ScrollBox, ScrollBoxBundle};
+pub use scroll::{ScrollContextProvider, ScrollContextProviderBundle};
+pub use text_box::{ChangedText, TextBox, TextBoxBundle, TextBoxState, TextboxStyles};
 pub use transition::*;
 
 /// A core set of UI widgets that Wookpecker UI provides.
@@ -22,12 +29,17 @@ pub use transition::*;
 pub(crate) struct WoodpeckerUIWidgetPlugin;
 impl Plugin for WoodpeckerUIWidgetPlugin {
     fn build(&self, app: &mut App) {
-        app.register_widget::<WoodpeckerApp>()
+        app.add_plugins(EventListenerPlugin::<OnChange<ChangedText>>::default())
+            .register_widget::<WoodpeckerApp>()
             .register_widget::<Element>()
             .register_widget::<WButton>()
             .register_widget::<Clip>()
             .register_widget::<TextBox>()
             .register_widget::<Modal>()
+            .register_widget::<ScrollContextProvider>()
+            .register_widget::<ScrollContent>()
+            .register_widget::<ScrollBox>()
+            .register_widget::<ScrollBar>()
             .add_systems(
                 Update,
                 (

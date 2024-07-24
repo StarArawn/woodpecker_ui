@@ -48,8 +48,8 @@ pub(crate) fn system(world: &mut World) {
         // Pull widget data.
         let mut widget_query = world.query::<One<&dyn Widget>>();
         let Ok(widget) = widget_query.get(world, *widget_entity) else {
-            error!("Woodpecker UI: Missing widget data!");
-            return;
+            error!("Woodpecker UI: Missing widget data for {}!", widget_entity);
+            continue;
         };
         let widget_name = widget.get_name_local();
 
@@ -57,7 +57,7 @@ pub(crate) fn system(world: &mut World) {
         let is_uninitialized = context.get_uninitialized(widget_name.clone());
         let Some(render) = context.get_render_system(widget_name.clone()) else {
             error!("Woodpecker UI: Please register widgets and their systems!");
-            return;
+            continue;
         };
         if is_uninitialized {
             render.initialize(world);
@@ -167,7 +167,7 @@ fn update_widgets(
     world.remove_resource::<CurrentWidget>();
 }
 
-// Recursively gets all children down the tree for a given entity.
+// Recursively gets all widget children down the tree for a given entity.
 fn get_all_children(world: &mut World, parent_entity: Entity) -> Vec<Entity> {
     let mut children = vec![];
     let Ok(bevy_children) = world
@@ -178,8 +178,11 @@ fn get_all_children(world: &mut World, parent_entity: Entity) -> Vec<Entity> {
         return vec![];
     };
     for child in bevy_children.into_iter() {
-        children.push(child);
-        get_all_children(world, child);
+        // Only widget entities should be traversed here
+        if world.query::<One<&dyn Widget>>().get(world, child).is_ok() {
+            children.push(child);
+            get_all_children(world, child);
+        }
     }
     children
 }

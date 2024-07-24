@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_mod_picking::{debug::DebugPickingMode, DefaultPickingPlugins};
+use bevy_mod_picking::DefaultPickingPlugins;
 use woodpecker_ui::prelude::*;
 
 fn main() {
@@ -7,7 +7,6 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin)
         .add_plugins(DefaultPickingPlugins)
-        .insert_resource(DebugPickingMode::Normal)
         .add_systems(Startup, startup)
         .run();
 }
@@ -28,7 +27,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                     ..Default::default()
                 },
                 WidgetRender::Text {
-                    content: "Hello World! I am Woodpecker UI! 😀".into(),
+                    content: "Hello World! I am Woodpecker UI!".into(),
                     word_wrap: false,
                 },
             )),
