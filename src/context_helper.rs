@@ -24,10 +24,7 @@ impl ContextHelper {
         } else {
             let context_entity = commands.spawn_empty().id();
 
-            let context_types = self
-                .internal_context
-                .entry(*current_entity)
-                .or_insert(HashMap::default());
+            let context_types = self.internal_context.entry(*current_entity).or_default();
 
             context_types.insert(type_name, context_entity);
 
@@ -44,15 +41,14 @@ impl ContextHelper {
         if let Some(context_entity) = self
             .internal_context
             .get(&*current_entity)
-            .map(|context_types| context_types.get(type_name))
-            .flatten()
+            .and_then(|context_types| context_types.get(type_name))
         {
             return Some(*context_entity);
         }
 
         // Walk up tree if nothing was found above.
         if let Some(parent) = self.parents.get(&*current_entity) {
-            return self.traverse_find_context_entity(&type_name, CurrentWidget(*parent));
+            return self.traverse_find_context_entity(type_name, CurrentWidget(*parent));
         }
 
         None

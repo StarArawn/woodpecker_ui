@@ -34,7 +34,7 @@ fn foo_render(mut commands: Commands, entity: Res<CurrentWidget>) {
     });
 
     // We tell the widget system runner that the children should be processed at this widget.
-    foo_children.process(entity.as_parent());
+    foo_children.apply(entity.as_parent());
     // Don't forget to add to the entity as a component!
     commands.entity(**entity).insert(foo_children);
 }
@@ -61,7 +61,7 @@ fn bar_render(entity: Res<CurrentWidget>, mut query: Query<&mut WidgetChildren>)
 
     // We tell the widget system runner that the children should be processed at this widget.
     // Optionally you can clone the children down the tree and process them at any point in the widget tree.
-    children.process(entity.as_parent());
+    children.apply(entity.as_parent());
 }
 
 #[derive(Component, Widget, Default, Clone)]

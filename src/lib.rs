@@ -1,10 +1,11 @@
-use bevy::prelude::*;
+use bevy::{asset::embedded_asset, prelude::*};
 use bevy_mod_picking::prelude::EventListenerPlugin;
 use bevy_trait_query::RegisterExt;
-use bevy_vello::{CoordinateSpace, VelloPlugin, VelloSceneBundle};
+use bevy_vello::{text::VelloFont, CoordinateSpace, VelloPlugin, VelloSceneBundle};
 use context::{Widget, WoodpeckerContext};
 use context_helper::ContextHelper;
 use entity_mapping::WidgetMapper;
+use font::FontManager;
 use layout::WoodpeckerLayoutPlugin;
 use widgets::WoodpeckerUIWidgetPlugin;
 
@@ -13,6 +14,7 @@ mod context;
 mod context_helper;
 mod entity_mapping;
 mod focus;
+mod font;
 mod keyboard_input;
 mod layout;
 mod picking_backend;
@@ -23,18 +25,31 @@ mod widgets;
 
 /// A module that exports all publicly exposed types.
 pub mod prelude {
-    pub use crate::children::WidgetChildren;
+    pub use crate::children::{PassedChildren, WidgetChildren};
     pub use crate::context::*;
     pub use crate::entity_mapping::*;
     pub use crate::focus::*;
-    pub use crate::keyboard_input::WidgetKeyboardEvent;
+    pub use crate::font::TextAlign;
+    pub use crate::keyboard_input::WidgetKeyboardCharEvent;
     pub use crate::render::WidgetRender;
     pub use crate::styles::*;
     pub use crate::widgets::*;
     pub use crate::{CurrentWidget, ParentWidget};
     pub use crate::{WidgetRegisterExt, WoodpeckerUIPlugin};
-    pub use bevy_vello::prelude::*;
     pub use woodpecker_ui_macros::*;
+}
+
+/// A bevy resource used as the default font.
+#[derive(Resource)]
+pub struct DefaultFont(pub Handle<VelloFont>);
+
+impl FromWorld for DefaultFont {
+    fn from_world(world: &mut World) -> Self {
+        let asset_server = world.get_resource::<AssetServer>().unwrap();
+        DefaultFont(
+            asset_server.load("embedded://woodpecker_ui/embedded_assets/Poppins-Regular.ttf"),
+        )
+    }
 }
 
 /// Wraps an entity and lets woodpecker know its a parent.
@@ -64,16 +79,23 @@ impl CurrentWidget {
 pub struct WoodpeckerUIPlugin;
 impl Plugin for WoodpeckerUIPlugin {
     fn build(&self, app: &mut App) {
+        embedded_asset!(app, "embedded_assets/Poppins-Regular.ttf");
         app.add_plugins(WoodpeckerLayoutPlugin)
             .add_plugins(VelloPlugin)
             .add_plugins(WoodpeckerUIWidgetPlugin)
             .add_plugins(EventListenerPlugin::<focus::WidgetFocus>::default())
             .add_plugins(EventListenerPlugin::<focus::WidgetBlur>::default())
-            .add_plugins(EventListenerPlugin::<keyboard_input::WidgetKeyboardEvent>::default())
+            .add_plugins(EventListenerPlugin::<keyboard_input::WidgetKeyboardCharEvent>::default())
+            .add_plugins(EventListenerPlugin::<
+                keyboard_input::WidgetKeyboardButtonEvent,
+            >::default())
+            .add_plugins(EventListenerPlugin::<keyboard_input::WidgetPasteEvent>::default())
             .insert_resource(focus::CurrentFocus::new(Entity::PLACEHOLDER))
+            .init_resource::<FontManager>()
             .init_resource::<ContextHelper>()
             .init_resource::<WoodpeckerContext>()
             .init_resource::<WidgetMapper>()
+            .init_resource::<DefaultFont>()
             .add_systems(
                 Update,
                 (
@@ -81,6 +103,7 @@ impl Plugin for WoodpeckerUIPlugin {
                     focus::CurrentFocus::click_focus,
                     keyboard_input::runner,
                     context_helper::ContextHelper::update_context_helper,
+                    font::load_fonts,
                 )
                     .run_if(has_root()),
             )

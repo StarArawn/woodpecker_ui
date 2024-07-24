@@ -27,12 +27,17 @@ impl Edge {
     /// * `bottom`: The bottom edge value
     /// * `left`: The left edge value
     ///
-    pub fn new(top: Units, right: Units, bottom: Units, left: Units) -> Self {
+    pub fn new(
+        top: impl Into<Units>,
+        right: impl Into<Units>,
+        bottom: impl Into<Units>,
+        left: impl Into<Units>,
+    ) -> Self {
         Self {
-            top,
-            right,
-            bottom,
-            left,
+            top: top.into(),
+            right: right.into(),
+            bottom: bottom.into(),
+            left: left.into(),
         }
     }
 
@@ -58,12 +63,12 @@ impl Edge {
     ///
     /// * `value`: The value of all edges
     ///
-    pub fn all(value: Units) -> Self {
+    pub fn all(value: impl Into<Units> + Copy) -> Self {
         Self {
-            top: value,
-            right: value,
-            bottom: value,
-            left: value,
+            top: value.into(),
+            right: value.into(),
+            bottom: value.into(),
+            left: value.into(),
         }
     }
 

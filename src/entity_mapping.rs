@@ -92,7 +92,6 @@ impl WidgetMapper {
                     self.new_this_tick.insert(mapping.entity);
                     return mapping.entity;
                 } else {
-                    dbg!("Despawning old entities!");
                     commands.entity(mapping.entity).despawn_recursive();
                 }
             }

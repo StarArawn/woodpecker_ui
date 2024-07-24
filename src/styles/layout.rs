@@ -94,6 +94,8 @@ pub enum WidgetPosition {
     ///
     /// WARNING: to opt-out of layouting entirely, you must use [`Display::None`] instead on your [`Style`] object.
     Absolute,
+    /// A fixed position that will match the size of the camera viewport.
+    Fixed,
 }
 
 impl From<WidgetPosition> for taffy::Position {
@@ -101,6 +103,7 @@ impl From<WidgetPosition> for taffy::Position {
         match val {
             WidgetPosition::Relative => taffy::Position::Relative,
             WidgetPosition::Absolute => taffy::Position::Absolute,
+            _ => taffy::Position::Absolute,
         }
     }
 }
@@ -109,7 +112,7 @@ impl From<super::Units> for taffy::Dimension {
     fn from(val: super::Units) -> taffy::Dimension {
         match val {
             super::Units::Pixels(pixels) => taffy::Dimension::Length(pixels),
-            super::Units::Percentage(percentage) => taffy::Dimension::Percent(percentage),
+            super::Units::Percentage(percentage) => taffy::Dimension::Percent(percentage / 100.0),
             super::Units::Auto => taffy::Dimension::Auto,
         }
     }
@@ -131,7 +134,9 @@ impl From<super::Units> for taffy::LengthPercentage {
     fn from(val: super::Units) -> taffy::LengthPercentage {
         match val {
             super::Units::Pixels(pixels) => taffy::LengthPercentage::Length(pixels),
-            super::Units::Percentage(percentage) => taffy::LengthPercentage::Percent(percentage),
+            super::Units::Percentage(percentage) => {
+                taffy::LengthPercentage::Percent(percentage / 100.0)
+            }
             super::Units::Auto => taffy::LengthPercentage::Percent(1.0),
         }
     }

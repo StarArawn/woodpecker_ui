@@ -1,13 +1,21 @@
+use crate::WidgetRegisterExt;
 use bevy::prelude::*;
+
 mod app;
 mod button;
 mod clip;
 mod element;
-use crate::WidgetRegisterExt;
+mod modal;
+mod text_box;
+mod transition;
+
 pub use app::{WoodpeckerApp, WoodpeckerAppBundle};
 pub use button::{ButtonStyles, WButton, WButtonBundle};
 pub use clip::{Clip, ClipBundle};
 pub use element::{Element, ElementBundle};
+pub use modal::{Modal, ModalBundle};
+pub use text_box::{TextBox, TextBoxBundle, TextboxStyles};
+pub use transition::*;
 
 /// A core set of UI widgets that Wookpecker UI provides.
 // TODO: Make this optional? Expose publicly.
@@ -17,6 +25,15 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
         app.register_widget::<WoodpeckerApp>()
             .register_widget::<Element>()
             .register_widget::<WButton>()
-            .register_widget::<Clip>();
+            .register_widget::<Clip>()
+            .register_widget::<TextBox>()
+            .register_widget::<Modal>()
+            .add_systems(
+                Update,
+                (
+                    text_box::cursor_animation_system,
+                    transition::update_transitions,
+                ),
+            );
     }
 }

@@ -90,7 +90,7 @@ pub(crate) fn system(world: &mut World) {
             for child in children.iter() {
                 // Only remove if the child was not added this frame.
                 if !widget_mapper.added_this_frame(*child) {
-                    info!("Removing: {child}");
+                    trace!("Removing: {child}");
                     // Remove from the mapper.
                     widget_mapper.remove_by_entity_id(*widget_entity, *child);
                     // Depsawn and despawn recursive.

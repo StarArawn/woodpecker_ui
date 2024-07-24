@@ -96,10 +96,10 @@ pub fn render(
     };
 
     if button.hovering {
-        *styles = button_styles.hovered;
+        *styles = button_styles.hovered.clone();
     } else {
-        *styles = button_styles.normal;
+        *styles = button_styles.normal.clone();
     }
 
-    children.process(entity.as_parent());
+    children.apply(entity.as_parent());
 }

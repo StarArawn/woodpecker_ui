@@ -90,12 +90,12 @@ impl Corner {
     ///
     /// * `value`: The value of all corners
     ///
-    pub fn all(value: Units) -> Self {
+    pub fn all(value: impl Into<Units> + Copy) -> Self {
         Self {
-            top_left: value,
-            top_right: value,
-            bottom_left: value,
-            bottom_right: value,
+            top_left: value.into(),
+            top_right: value.into(),
+            bottom_left: value.into(),
+            bottom_right: value.into(),
         }
     }
 

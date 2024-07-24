@@ -40,7 +40,7 @@ pub const BUTTON_STYLES: WoodpeckerStyle = WoodpeckerStyle {
     width: Units::Pixels(BUTTON_SIZE),
     height: Units::Pixels(BUTTON_SIZE),
     justify_content: Some(WidgetAlignContent::Center),
-    align_content: Some(WidgetAlignContent::Center),
+    align_items: Some(WidgetAlignItems::Center),
     ..WoodpeckerStyle::DEFAULT
 };
 
@@ -49,11 +49,7 @@ pub const BUTTON_STYLES_HOVER: WoodpeckerStyle = WoodpeckerStyle {
     ..BUTTON_STYLES
 };
 
-fn startup(
-    mut commands: Commands,
-    mut ui_context: ResMut<WoodpeckerContext>,
-    asset_server: Res<AssetServer>,
-) {
+fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     commands.spawn(Camera2dBundle::default());
 
     let mut buttons = WidgetChildren::default();
@@ -68,24 +64,16 @@ fn startup(
             children: WidgetChildren::default().with_child::<Element>((
                 ElementBundle {
                     styles: WoodpeckerStyle {
-                        width: FONT_SIZE.into(),
-                        height: FONT_SIZE.into(),
-                        margin: Edge {
-                            left: (FONT_SIZE / 2.0).into(),
-                            top: (FONT_SIZE / 2.0).into(),
-                            ..Default::default()
-                        },
                         font_size: FONT_SIZE,
                         color: Color::WHITE,
+                        text_alignment: Some(TextAlign::Center),
                         ..Default::default()
                     },
                     ..Default::default()
                 },
                 WidgetRender::Text {
-                    font: asset_server.load("Poppins/Poppins-Regular.ttf"),
-                    alignment: VelloTextAlignment::TopLeft,
                     content: "C".into(),
-                    word_wrap: true,
+                    word_wrap: false,
                 },
             )),
             ..Default::default()
@@ -101,31 +89,24 @@ fn startup(
             styles: WoodpeckerStyle {
                 width: (BUTTON_SIZE * 3. + GAP * 2.).into(),
                 height: BUTTON_SIZE.into(),
-                justify_content: Some(WidgetAlignContent::FlexStart),
-                align_content: Some(WidgetAlignContent::Center),
                 background_color: Srgba::hex("DE3161").unwrap().into(),
                 border_radius: Corner::all(Units::Pixels(5.0)),
                 ..Default::default()
             },
             children: WidgetChildren::default().with_child::<Clip>(ClipBundle {
+                styles: WoodpeckerStyle {
+                    align_items: Some(WidgetAlignItems::Center),
+                    ..ClipBundle::default().styles
+                },
                 children: WidgetChildren::default().with_child::<Output>((
                     Output,
                     WoodpeckerStyle {
-                        width: (BUTTON_SIZE * 3. + GAP * 2.).into(),
-                        height: FONT_SIZE.into(),
-                        margin: Edge {
-                            left: 15.0.into(),
-                            top: (FONT_SIZE / 2.0).into(),
-                            right: 0.0.into(),
-                            bottom: 0.0.into(),
-                        },
+                        margin: Edge::new(0.0, 0.0, 0.0, 15.0),
                         font_size: FONT_SIZE,
                         color: Color::WHITE,
                         ..Default::default()
                     },
                     WidgetRender::Text {
-                        font: asset_server.load("Poppins/Poppins-Regular.ttf"),
-                        alignment: VelloTextAlignment::TopLeft,
                         content: "".into(),
                         word_wrap: false,
                     },
@@ -147,22 +128,14 @@ fn startup(
                 children: WidgetChildren::default().with_child::<Element>((
                     ElementBundle {
                         styles: WoodpeckerStyle {
-                            width: FONT_SIZE.into(),
-                            height: FONT_SIZE.into(),
-                            margin: Edge {
-                                left: (FONT_SIZE / 2.0).into(),
-                                top: (FONT_SIZE / 2.0).into(),
-                                ..Default::default()
-                            },
                             font_size: FONT_SIZE,
                             color: Color::WHITE,
+                            text_alignment: Some(TextAlign::Center),
                             ..Default::default()
                         },
                         ..Default::default()
                     },
                     WidgetRender::Text {
-                        font: asset_server.load("Poppins/Poppins-Regular.ttf"),
-                        alignment: VelloTextAlignment::TopLeft,
                         content: button.into(),
                         word_wrap: true,
                     },
