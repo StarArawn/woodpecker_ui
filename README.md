@@ -1,7 +1,6 @@
 [![Crates.io](https://img.shields.io/crates/v/woodpecker_ui)](https://crates.io/crates/woodpecker_ui)
 [![docs](https://docs.rs/woodpecker_ui/badge.svg)](https://docs.rs/woodpecker_ui/)
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/StarArawn/woodpecker_ui/blob/main/LICENSE-MIT)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/StarArawn/woodpecker_ui/blob/main/LICENSE-APACHE)
+[![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](https://github.com/StarArawn/woodpecker_ui/blob/main/LICENSE)
 [![Crates.io](https://img.shields.io/crates/d/woodpecker_ui)](https://crates.io/crates/woodpecker_ui)
 
 <h1>
