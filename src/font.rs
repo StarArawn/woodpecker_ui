@@ -1,14 +1,10 @@
-use bevy::{prelude::*, utils::HashMap};
-use bevy_vello::{
-    text::VelloFont,
-    vello::{
-        self,
-        glyph::skrifa::{FontRef, MetadataProvider},
-    },
-};
-use cosmic_text::Family;
+use std::hash::{DefaultHasher, Hash, Hasher};
 
-use crate::{prelude::WoodpeckerStyle, render::VARIATIONS};
+use bevy::{prelude::*, utils::HashMap};
+use bevy_vello::{text::VelloFont, vello::glyph::skrifa::FontRef};
+use cosmic_text::{Buffer, Family};
+
+use crate::prelude::WoodpeckerStyle;
 
 #[derive(Debug, Clone, Copy, Default, Reflect, PartialEq)]
 pub enum TextAlign {
@@ -32,30 +28,12 @@ impl From<TextAlign> for cosmic_text::Align {
     }
 }
 
-/// Returns the width of the font with the given content string
-pub fn measure_width(font: &FontRef, content: &str, font_size: f32) -> f32 {
-    let font_size = vello::skrifa::instance::Size::new(font_size);
-    let charmap = font.charmap();
-    let axes = font.axes();
-    let var_loc = axes.location(VARIATIONS);
-    let glyph_metrics = font.glyph_metrics(font_size, &var_loc);
-    let mut width = 0.0;
-    content.chars().for_each(|ch| {
-        if ch == '\n' {
-            return;
-        }
-        let gid = charmap.map(ch).unwrap_or_default();
-        let advance = glyph_metrics.advance_width(gid).unwrap_or_default();
-        width += advance;
-    });
-    width
-}
-
 #[derive(Resource)]
 pub(crate) struct FontManager {
     font_system: cosmic_text::FontSystem,
     font_data: HashMap<Handle<VelloFont>, Vec<u8>>,
     vello_to_family: HashMap<Handle<VelloFont>, String>,
+    buffer_cache: HashMap<u64, Buffer>,
 }
 
 impl Default for FontManager {
@@ -64,6 +42,7 @@ impl Default for FontManager {
             font_system: cosmic_text::FontSystem::new(),
             vello_to_family: Default::default(),
             font_data: Default::default(),
+            buffer_cache: Default::default(),
         }
     }
 }
@@ -71,7 +50,7 @@ impl Default for FontManager {
 impl FontManager {
     pub fn get_vello_font(&mut self, vello_font: &Handle<VelloFont>) -> FontRef {
         let font_data = self.font_data.get(vello_font).unwrap();
-        let font_ref = FontRef::from_index(&font_data, 0).unwrap();
+        let font_ref = FontRef::from_index(font_data, 0).unwrap();
         font_ref
     }
 
@@ -83,16 +62,29 @@ impl FontManager {
         content: &str,
         word_wrap: bool,
     ) -> Option<cosmic_text::Buffer> {
+        // Per mozilla the default line height is roughly font_size * 1.2
+        let line_height = style.line_height.unwrap_or(style.font_size * 1.2);
+
+        // TODO: This might not be the best hash method..
+        let mut hasher = DefaultHasher::default();
+        content.hash(&mut hasher);
+        (avaliable_space.x as u32).hash(&mut hasher);
+        (avaliable_space.y as u32).hash(&mut hasher);
+        font_handle.hash(&mut hasher);
+        (style.font_size as u32).hash(&mut hasher);
+        (line_height as u32).hash(&mut hasher);
+        let key = hasher.finish();
+
+        if let Some(buffer) = self.buffer_cache.get(&key) {
+            return Some(buffer.clone());
+        }
+
         if !self.vello_to_family.contains_key(font_handle) {
             return None;
         }
 
         // Text metrics indicate the font size and line height of a buffer
-        // Per mozilla the default line height is roughly font_size * 1.2
-        let metrics = cosmic_text::Metrics::new(
-            style.font_size,
-            style.line_height.unwrap_or(style.font_size * 1.2),
-        );
+        let metrics = cosmic_text::Metrics::new(style.font_size, line_height);
 
         // A Buffer provides shaping and layout for a UTF-8 string, create one per text widget
         let mut buffer = cosmic_text::Buffer::new(&mut self.font_system, metrics);
@@ -129,6 +121,8 @@ impl FontManager {
         // Perform shaping as desired
         buffer.shape_until_scroll(&mut self.font_system, true);
 
+        self.buffer_cache.insert(key, buffer.clone());
+
         Some(buffer)
     }
 }
@@ -139,33 +133,31 @@ pub fn load_fonts(
     assets: Res<Assets<VelloFont>>,
 ) {
     for event in event_reader.read() {
-        match event {
-            AssetEvent::Added { id } => {
-                let font_asset = assets.get(*id).unwrap();
-                let font_data: &[u8] = font_asset.font.data.data();
-                let font_data = font_data.to_vec();
+        if let AssetEvent::Added { id } = event {
+            let font_asset = assets.get(*id).unwrap();
+            let font_data: &[u8] = font_asset.font.data.data();
+            let font_data = font_data.to_vec();
 
-                let face = cosmic_text::ttf_parser::Face::parse(&font_data, 0).unwrap();
-                let family = face
-                    .names()
-                    .into_iter()
-                    .find(|name| name.name_id == cosmic_text::ttf_parser::name_id::FAMILY)
-                    .expect("Couldn't find font family.");
-                font_manager.vello_to_family.insert(
-                    Handle::Weak(*id),
-                    family
-                        .to_string()
-                        .expect("Couldn't get string from family name."),
-                );
+            let face = cosmic_text::ttf_parser::Face::parse(&font_data, 0).unwrap();
+            let family = face
+                .names()
+                .into_iter()
+                .find(|name| name.name_id == cosmic_text::ttf_parser::name_id::FAMILY)
+                .expect("Couldn't find font family.");
 
-                font_manager
-                    .font_system
-                    .db_mut()
-                    .load_font_data(font_data.clone());
+            font_manager.vello_to_family.insert(
+                Handle::Weak(*id),
+                family
+                    .to_string()
+                    .expect("Couldn't get string from family name."),
+            );
 
-                font_manager.font_data.insert(Handle::Weak(*id), font_data);
-            }
-            _ => {}
+            font_manager
+                .font_system
+                .db_mut()
+                .load_font_data(font_data.clone());
+
+            font_manager.font_data.insert(Handle::Weak(*id), font_data);
         }
     }
 }

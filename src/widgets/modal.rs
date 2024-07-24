@@ -67,11 +67,11 @@ impl Default for ModalBundle {
                 looping: false,
                 playing: false,
                 style_a: WoodpeckerStyle {
-                    opacity: 0.0.into(),
+                    opacity: 0.0,
                     ..styles.clone()
                 },
                 style_b: WoodpeckerStyle {
-                    opacity: 1.0.into(),
+                    opacity: 1.0,
                     ..styles.clone()
                 },
                 ..Default::default()
@@ -138,8 +138,8 @@ fn render(
             ElementBundle {
                 styles: WoodpeckerStyle {
                     background_color: Srgba::new(0.0, 0.0, 0.0, modal.overlay_alpha).into(),
-                    width: Units::Percentage(100.0),
-                    height: Units::Percentage(100.0),
+                    // width: Units::Percentage(100.0),
+                    // height: Units::Percentage(100.0),
                     position: WidgetPosition::Absolute,
                     ..Default::default()
                 },
@@ -155,8 +155,8 @@ fn render(
                     border_color: Srgba::new(0.933, 0.745, 0.745, 1.0).into(),
                     border: Edge::all(2.0),
                     border_radius: Corner::all(10.0),
-                    width: modal.min_size.x.into(),
-                    height: modal.min_size.y.into(),
+                    min_width: modal.min_size.x.into(),
+                    min_height: modal.min_size.y.into(),
                     flex_direction: WidgetFlexDirection::Column,
                     ..Default::default()
                 },

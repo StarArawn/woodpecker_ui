@@ -1,8 +1,4 @@
-use crate::{
-    children::WidgetChildren,
-    prelude::{Widget, WidgetRender, WoodpeckerStyle},
-    CurrentWidget,
-};
+use crate::prelude::*;
 use bevy::prelude::*;
 use bevy_mod_picking::{
     events::{Out, Over, Pointer},
@@ -11,17 +7,44 @@ use bevy_mod_picking::{
     prelude::On,
 };
 
-#[derive(Component, Default, Clone)]
+#[derive(Component, Clone)]
 pub struct ButtonStyles {
     pub normal: WoodpeckerStyle,
     pub hovered: WoodpeckerStyle,
+}
+
+impl Default for ButtonStyles {
+    fn default() -> Self {
+        let normal = WoodpeckerStyle {
+            background_color: Srgba::new(0.254, 0.270, 0.349, 1.0).into(),
+            border_color: Srgba::new(0.254, 0.270, 0.349, 1.0).into(),
+            border: Edge::all(2.0),
+            border_radius: Corner::all(10.0),
+            margin: Edge::new(20.0, 0.0, 0.0, 0.0),
+            padding: Edge::all(0.0).left(5.0).right(5.0),
+            font_size: 16.0,
+            height: 28.0.into(),
+            text_alignment: Some(TextAlign::Center),
+            width: Units::Auto,
+            justify_content: Some(WidgetAlignContent::Center),
+            align_items: Some(WidgetAlignItems::Center),
+            ..Default::default()
+        };
+        Self {
+            normal: normal.clone(),
+            hovered: WoodpeckerStyle {
+                border_color: Srgba::new(0.592, 0.627, 0.749, 1.0).into(),
+                ..normal
+            },
+        }
+    }
 }
 
 /// A generic button widget used for easy buttons!
 #[derive(Bundle, Clone)]
 pub struct WButtonBundle {
     /// The button component itself.
-    pub app: WButton,
+    pub button: WButton,
     /// The rendering of the button widget.
     pub render: WidgetRender,
     /// A widget children component
@@ -45,7 +68,7 @@ pub struct WButtonBundle {
 impl Default for WButtonBundle {
     fn default() -> Self {
         Self {
-            app: Default::default(),
+            button: Default::default(),
             render: WidgetRender::Quad,
             children: Default::default(),
             styles: Default::default(),

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use bevy::{prelude::*, utils::HashMap};
 use bevy_trait_query::One;
 use bevy_vello::{text::VelloFont, VelloScene};
@@ -6,6 +8,7 @@ use taffy::Layout;
 use crate::{
     context::{Widget, WoodpeckerContext},
     font::FontManager,
+    hook_helper::StateMarker,
     prelude::{WidgetPosition, WidgetRender},
     DefaultFont,
 };
@@ -15,18 +18,69 @@ use super::{measure::LayoutMeasure, UiLayout, WoodpeckerStyle};
 #[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
 pub struct WidgetLayout(Layout);
 
+impl WidgetLayout {
+    pub fn width(&self) -> f32 {
+        self.0.size.width
+    }
+
+    pub fn height(&self) -> f32 {
+        self.0.size.height
+    }
+
+    pub fn content_width(&self) -> f32 {
+        self.0.content_size.width
+    }
+
+    pub fn content_height(&self) -> f32 {
+        self.0.content_size.height
+    }
+}
+
+// TODO: Add more here..
+fn layout_equality(layout_a: &Layout, layout_b: &Layout) -> bool {
+    layout_a.size == layout_b.size
+        && layout_a.location == layout_b.location
+        && layout_a.content_size == layout_b.content_size
+}
+
+impl std::cmp::PartialEq<WidgetLayout> for WidgetPreviousLayout {
+    fn eq(&self, other: &WidgetLayout) -> bool {
+        layout_equality(self, other)
+    }
+}
+
+impl PartialEq for WidgetLayout {
+    fn eq(&self, other: &Self) -> bool {
+        layout_equality(self, other)
+    }
+}
+
+#[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
+pub struct WidgetPreviousLayout(Layout);
+
+impl PartialEq for WidgetPreviousLayout {
+    fn eq(&self, other: &Self) -> bool {
+        layout_equality(self, other)
+    }
+}
+
 pub(crate) fn run(
     mut commands: Commands,
     default_font: Res<DefaultFont>,
     mut font_manager: ResMut<FontManager>,
     mut ui_layout: ResMut<UiLayout>,
-    mut query: Query<(
-        Entity,
-        One<&dyn Widget>,
-        &WoodpeckerStyle,
-        Option<&Parent>,
-        Option<&Children>,
-    )>,
+    mut query: Query<
+        (
+            Entity,
+            One<&dyn Widget>,
+            &WoodpeckerStyle,
+            Option<&Parent>,
+            Option<&Children>,
+        ),
+        Without<StateMarker>,
+    >,
+    state_marker_query: Query<&StateMarker>,
+    layout_query: Query<&WidgetLayout>,
     children_query: Query<(Entity, &Children, One<&dyn Widget>), Changed<Children>>,
     mut vello_query: Query<&mut VelloScene>,
     widget_render: Query<&WidgetRender>,
@@ -49,7 +103,6 @@ pub(crate) fn run(
         &widget_render,
         &default_font,
         &mut font_manager,
-        &font_assets,
         &mut ui_layout,
         root_node,
     );
@@ -64,6 +117,7 @@ pub(crate) fn run(
                 };
                 !matches!(styles.position, WidgetPosition::Fixed)
             })
+            .filter(|child| !state_marker_query.contains(**child))
             .copied()
             .collect::<Vec<_>>();
         ui_layout.add_children(entity, &normal_children);
@@ -104,21 +158,30 @@ pub(crate) fn run(
         &image_assets,
         &ui_layout,
         root_node,
+        0,
     );
 
     for (entity, layout) in cached_layout.iter() {
+        if let Ok(prev_layout) = layout_query.get(*entity) {
+            commands
+                .entity(*entity)
+                .insert(WidgetPreviousLayout(prev_layout.0));
+        }
         commands.entity(*entity).insert(WidgetLayout(*layout));
     }
 }
 
 fn traverse_render_tree(
-    query: &mut Query<(
-        Entity,
-        One<&dyn Widget>,
-        &WoodpeckerStyle,
-        Option<&Parent>,
-        Option<&Children>,
-    )>,
+    query: &mut Query<
+        (
+            Entity,
+            One<&dyn Widget>,
+            &WoodpeckerStyle,
+            Option<&Parent>,
+            Option<&Children>,
+        ),
+        Without<StateMarker>,
+    >,
     default_font: &DefaultFont,
     font_manager: &mut FontManager,
     widget_render: &Query<&WidgetRender>,
@@ -128,6 +191,7 @@ fn traverse_render_tree(
     image_assets: &Assets<Image>,
     ui_layout: &UiLayout,
     current_node: Entity,
+    mut order: u32,
 ) {
     let Ok((entity, _, styles, parent, children)) = query.get_mut(current_node) else {
         return;
@@ -149,17 +213,27 @@ fn traverse_render_tree(
         }
     }
 
+    layout.order = order;
+
     let mut did_layer = false;
     if let Ok(widget_render) = widget_render.get(entity) {
-        did_layer = widget_render.render(
-            vello_scene,
-            &layout,
-            default_font,
-            font_assets,
-            font_manager,
-            image_assets,
-            styles,
-        );
+        if let Some(parent_layout) = parent.map(|parent| {
+            cached_layout
+                .get(&parent.get())
+                .copied()
+                .unwrap_or_else(|| *ui_layout.get_layout(parent.get()).unwrap())
+        }) {
+            did_layer = widget_render.render(
+                vello_scene,
+                &layout,
+                &parent_layout,
+                default_font,
+                font_assets,
+                font_manager,
+                image_assets,
+                styles,
+            );
+        }
     }
     cached_layout.insert(entity, layout);
 
@@ -171,6 +245,7 @@ fn traverse_render_tree(
     };
 
     for child in children.iter() {
+        order += 1;
         traverse_render_tree(
             query,
             default_font,
@@ -182,8 +257,10 @@ fn traverse_render_tree(
             image_assets,
             ui_layout,
             *child,
+            order,
         );
     }
+
     if did_layer {
         vello_scene.pop_layer();
     }
@@ -191,17 +268,19 @@ fn traverse_render_tree(
 
 fn traverse_upsert_node(
     root_node: Entity,
-    query: &Query<(
-        Entity,
-        One<&dyn Widget>,
-        &WoodpeckerStyle,
-        Option<&Parent>,
-        Option<&Children>,
-    )>,
+    query: &Query<
+        (
+            Entity,
+            One<&dyn Widget>,
+            &WoodpeckerStyle,
+            Option<&Parent>,
+            Option<&Children>,
+        ),
+        Without<StateMarker>,
+    >,
     query_widget_render: &Query<&WidgetRender>,
     default_font: &DefaultFont,
     font_manager: &mut FontManager,
-    font_assets: &Assets<VelloFont>,
     layout: &mut UiLayout,
     current_node: Entity,
 ) {
@@ -219,15 +298,18 @@ fn traverse_upsert_node(
                 // Measure text
                 let font_handle = styles.font.as_ref().unwrap_or(&default_font.0);
                 if let Some(buffer) = font_manager.layout(
-                    Vec2::new(parent_layout.size.width, parent_layout.size.height),
+                    Vec2::new(
+                        parent_layout.size.width,
+                        parent_layout.size.height + 100000.0,
+                    ),
                     styles,
                     font_handle,
                     content,
                     *word_wrap,
                 ) {
                     let mut size = Vec2::new(0.0, 0.0);
-                    buffer.layout_runs().into_iter().for_each(|r| {
-                        size.x += r.line_w;
+                    buffer.layout_runs().for_each(|r| {
+                        size.x = size.x.max(r.line_w);
                         size.y += r.line_height;
                     });
                     Some(LayoutMeasure::Fixed(super::measure::FixedMeasure { size }))
@@ -255,7 +337,6 @@ fn traverse_upsert_node(
             query_widget_render,
             default_font,
             font_manager,
-            font_assets,
             layout,
             *child,
         );

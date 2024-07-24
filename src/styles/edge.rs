@@ -76,6 +76,26 @@ impl Edge {
     pub fn into_tuple(self) -> (Units, Units, Units, Units) {
         (self.top, self.right, self.bottom, self.left)
     }
+
+    pub fn bottom(mut self, value: impl Into<Units>) -> Self {
+        self.bottom = value.into();
+        self
+    }
+
+    pub fn top(mut self, value: impl Into<Units>) -> Self {
+        self.top = value.into();
+        self
+    }
+
+    pub fn left(mut self, value: impl Into<Units>) -> Self {
+        self.left = value.into();
+        self
+    }
+
+    pub fn right(mut self, value: impl Into<Units>) -> Self {
+        self.right = value.into();
+        self
+    }
 }
 
 impl From<Edge> for (Units, Units, Units, Units) {

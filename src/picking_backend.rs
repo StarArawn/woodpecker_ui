@@ -1,10 +1,13 @@
 use std::cmp::Ordering;
 
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::{input::mouse::MouseWheel, prelude::*, window::PrimaryWindow};
 use bevy_mod_picking::{
     backend::{HitData, PointerHits},
+    events::Pointer,
+    focus::HoverMap,
     picking_core::Pickable,
     pointer::{PointerId, PointerLocation},
+    prelude::PointerMap,
 };
 
 use crate::layout::system::WidgetLayout;
@@ -62,7 +65,8 @@ pub fn system(
                 if rect.contains(cursor_pos_world) {
                     Some((
                         entity,
-                        HitData::new(cam_entity, layout.order as f32, None, None),
+                        // Is 10k entities enough? :shrug:
+                        HitData::new(cam_entity, 10000.0 - layout.order as f32, None, None),
                     ))
                 } else {
                     None
@@ -72,5 +76,50 @@ pub fn system(
 
         let order = camera.order as f32;
         output.send(PointerHits::new(*pointer, picks, order));
+    }
+}
+
+#[derive(Debug, Default, Reflect, Clone, Copy)]
+pub struct MouseWheelScroll {
+    pub scroll: Vec2,
+}
+
+pub fn mouse_wheel_system(
+    // Input
+    hover_map: Res<HoverMap>,
+    pointer_map: Res<PointerMap>,
+    pointers: Query<&PointerLocation>,
+    // Bevy Input
+    mut evr_scroll: EventReader<MouseWheel>,
+    mut pointer_scroll: EventWriter<Pointer<MouseWheelScroll>>,
+) {
+    let pointer_location = |pointer_id: PointerId| {
+        pointer_map
+            .get_entity(pointer_id)
+            .and_then(|entity| pointers.get(entity).ok())
+            .and_then(|pointer| pointer.location.clone())
+    };
+
+    for (pointer_id, hovered_entity, _hit) in hover_map
+        .iter()
+        .flat_map(|(id, hashmap)| hashmap.iter().map(|data| (*id, *data.0, data.1.clone())))
+    {
+        let Some(location) = pointer_location(pointer_id) else {
+            debug!(
+                "Unable to get location for pointer {:?} during pointer over",
+                pointer_id
+            );
+            continue;
+        };
+
+        for mwe in evr_scroll.read() {
+            let scroll = Vec2::new(mwe.x, mwe.y);
+            pointer_scroll.send(Pointer::new(
+                pointer_id,
+                location.clone(),
+                hovered_entity,
+                MouseWheelScroll { scroll },
+            ));
+        }
     }
 }

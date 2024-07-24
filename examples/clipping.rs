@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_mod_picking::{debug::DebugPickingMode, DefaultPickingPlugins};
+use bevy_mod_picking::DefaultPickingPlugins;
 use woodpecker_ui::prelude::*;
 
 fn main() {
@@ -7,7 +7,6 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin)
         .add_plugins(DefaultPickingPlugins)
-        .insert_resource(DebugPickingMode::Normal)
         .add_systems(Startup, startup)
         .run();
 }
@@ -45,13 +44,12 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                                         top: 10.0.into(),
                                         bottom: 10.0.into(),
                                     },
-                                    font_size: 20.0,
+                                    font_size: 14.0,
                                     ..Default::default()
                                 },
                                 ..Default::default()
                             },
                             WidgetRender::Text {
-                                alignment: VelloTextAlignment::TopLeft,
                                 content: "Hello World! I am Woodpecker UI! This text is way too long and thus it clips out of the bottom of our quad.".into(),
                                 word_wrap: true,
                             },

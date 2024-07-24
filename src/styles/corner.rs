@@ -44,7 +44,6 @@ impl Corner {
     /// * `bottom`: The value of the bottom corners
     ///
     /// ```
-    /// # use kayak_core::styles::Corner;
     /// // Creates a `Corner` with only the top corners rounded
     /// let corner_radius = Corner::vertical(10.0, 0.0);
     ///
@@ -68,7 +67,6 @@ impl Corner {
     /// * `right`: The value of the right corners
     ///
     /// ```
-    /// # use kayak_core::styles::Corner;
     /// // Creates a `Corner` with only the left corners rounded
     /// let corner_radius = Corner::horizontal(10.0, 0.0);
     ///

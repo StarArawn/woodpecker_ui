@@ -28,30 +28,9 @@ fn render(current_widget: Res<CurrentWidget>, mut query: Query<(&MyWidget, &mut 
         return;
     };
 
-    let button_styles = WoodpeckerStyle {
-        background_color: Srgba::new(0.254, 0.270, 0.349, 1.0).into(),
-        border_color: Srgba::new(0.254, 0.270, 0.349, 1.0).into(),
-        border: Edge::all(2.0),
-        border_radius: Corner::all(10.0),
-        margin: Edge::new(20.0, 0.0, 0.0, 0.0),
-        font_size: 16.0,
-        height: 28.0.into(),
-        width: Units::Pixels(200.0),
-        justify_content: Some(WidgetAlignContent::Center),
-        align_items: Some(WidgetAlignItems::Center),
-        ..Default::default()
-    };
-
     let my_widget_entity = **current_widget;
     widget_children.add::<WButton>((
         WButtonBundle {
-            button_styles: ButtonStyles {
-                normal: button_styles.clone(),
-                hovered: WoodpeckerStyle {
-                    border_color: Srgba::new(0.592, 0.627, 0.749, 1.0).into(),
-                    ..button_styles.clone()
-                },
-            },
             children: WidgetChildren::default().with_child::<Element>((
                 ElementBundle {
                     styles: WoodpeckerStyle {
@@ -111,13 +90,6 @@ fn render(current_widget: Res<CurrentWidget>, mut query: Query<(&MyWidget, &mut 
                     ))
                     .with_child::<WButton>((
                         WButtonBundle {
-                            button_styles: ButtonStyles {
-                                normal: button_styles.clone(),
-                                hovered: WoodpeckerStyle {
-                                    border_color: Srgba::new(0.592, 0.627, 0.749, 1.0).into(),
-                                    ..button_styles
-                                },
-                            },
                             children: WidgetChildren::default().with_child::<Element>((
                                 ElementBundle {
                                     styles: WoodpeckerStyle {
