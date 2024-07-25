@@ -82,14 +82,16 @@ impl Default for ModalBundle {
 }
 
 fn update(
-    entity: Res<CurrentWidget>,
-    query: Query<Entity, Changed<Modal>>,
+    mut commands: Commands,
+    current_widget: Res<CurrentWidget>,
+    mut hook_helper: ResMut<HookHelper>,
+    query: Query<&'static Modal, Without<PreviousWidget>>,
+    prev_query: Query<&'static Modal, With<PreviousWidget>>,
     children_query: Query<&WidgetChildren>,
 ) -> bool {
-    query.contains(**entity)
+    hook_helper.compare(*current_widget, &mut commands, &query, &prev_query)
         || children_query
-            .iter()
-            .next()
+            .get(**current_widget)
             .map(|c| c.children_changed())
             .unwrap_or_default()
 }

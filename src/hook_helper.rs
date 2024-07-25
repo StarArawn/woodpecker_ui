@@ -1,4 +1,8 @@
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{
+    ecs::query::{QueryData, WorldQuery},
+    prelude::*,
+    utils::HashMap,
+};
 use bevy_trait_query::One;
 
 use crate::{context::Widget, CurrentWidget};
@@ -9,6 +13,7 @@ pub struct HookHelper {
     internal_context: HashMap<Entity, HashMap<String, Entity>>,
     parents: HashMap<Entity, Entity>,
     state: HashMap<Entity, HashMap<String, Entity>>,
+    prev_state_entities: HashMap<Entity, Entity>,
 }
 
 #[derive(Component)]
@@ -109,4 +114,38 @@ impl HookHelper {
             context_helper.parents.remove(&entity);
         }
     }
+
+    pub fn compare<'w, 's, Q: bevy::ecs::query::QueryData>(
+        &mut self,
+        current_widget: &Entity,
+        commands: &mut Commands,
+        query1: &'w Query<'w, 's, Q, Without<PreviousWidget>>,
+        query2: &'w Query<'w, 's, Q, With<PreviousWidget>>,
+    ) -> bool
+    where
+        <Q::ReadOnly as WorldQuery>::Item<'w>: PartialEq + Clone,
+        <Q::ReadOnly as WorldQuery>::Item<'w>: bevy::prelude::Component, // This doesn't work because its &Item = Component not Item = Component..
+    {
+        let prev_state_entity = self
+            .prev_state_entities
+            .entry(*current_widget)
+            .or_insert(commands.spawn(PreviousWidget).id());
+        let should_update = {
+            if let Ok(item1) = query1.get(*current_widget) {
+                // Replace previous entity state with new state.
+                commands.entity(*prev_state_entity).insert(item1.clone());
+                if let Ok(item2) = query2.get(*current_widget) {
+                    item1 != item2
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        };
+        should_update
+    }
 }
+
+#[derive(Component)]
+pub struct PreviousWidget;
