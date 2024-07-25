@@ -319,14 +319,18 @@ fn traverse_upsert_node(
             // TODO: Move to a function so we can get rid of this stupid nesting...
             if let WidgetRender::Text { content, word_wrap } = widget_render {
                 // Measure text
-                let font_handle = styles.font.as_ref().unwrap_or(&default_font.0);
+                let font_handle = styles
+                    .font
+                    .as_ref()
+                    .map(|a| Handle::Weak(*a))
+                    .unwrap_or(default_font.0.clone());
                 if let Some(buffer) = font_manager.layout(
                     Vec2::new(
                         parent_layout.size.width,
                         parent_layout.size.height + 100000.0,
                     ),
                     styles,
-                    font_handle,
+                    &font_handle,
                     content,
                     *word_wrap,
                 ) {

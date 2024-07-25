@@ -125,23 +125,27 @@ impl WidgetRender {
                 );
             }
             WidgetRender::Text { content, word_wrap } => {
-                let font_handle = widget_style.font.as_ref().unwrap_or(&default_font.0);
+                let font_handle = widget_style
+                    .font
+                    .as_ref()
+                    .map(|a| Handle::<VelloFont>::Weak(*a))
+                    .unwrap_or(default_font.0.clone());
 
-                let Some(vello_font) = font_assets.get(font_handle) else {
+                let Some(vello_font) = font_assets.get(&font_handle) else {
                     return false;
                 };
 
                 let Some(buffer) = font_manager.layout(
                     Vec2::new(parent_layout.size.width, parent_layout.size.height),
                     widget_style,
-                    font_handle,
+                    &font_handle,
                     content,
                     *word_wrap,
                 ) else {
                     return false;
                 };
 
-                let font_ref = font_manager.get_vello_font(font_handle);
+                let font_ref = font_manager.get_vello_font(&font_handle);
 
                 for run in buffer.layout_runs() {
                     let mut glyphs = vec![];

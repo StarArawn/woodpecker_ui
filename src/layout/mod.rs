@@ -18,7 +18,7 @@ impl Plugin for WoodpeckerLayoutPlugin {
 }
 
 #[derive(Resource)]
-pub struct UiLayout {
+pub(crate) struct UiLayout {
     entity_to_taffy: EntityHashMap<Entity, taffy::NodeId>,
     taffy: TaffyTree<LayoutMeasure>,
 }
@@ -86,7 +86,7 @@ impl UiLayout {
         let node_id = self.entity_to_taffy.get(&entity).unwrap();
         let children = children
             .iter()
-            .map(|child| *self.entity_to_taffy.get(child).expect(&format!("Woodpecker UI: Couldn't find the child entity layout for {:?}. \
+            .map(|child| *self.entity_to_taffy.get(child).unwrap_or_else(|| panic!("Woodpecker UI: Couldn't find the child entity layout for {:?}. \
                 This likely occured because you are missing a WoodpeckerStyle component on one of your widgets", child)))
             .collect::<Vec<_>>();
         self.taffy.set_children(*node_id, &children).unwrap();

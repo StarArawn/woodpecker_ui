@@ -54,6 +54,7 @@ impl WidgetMapper {
         );
     }
 
+    #[allow(unused)]
     fn get_key<T: Widget>(child_key: Option<String>) -> String {
         if let Some(child_key) = child_key {
             format!("{}-{}", T::get_name(), child_key)
@@ -80,6 +81,8 @@ impl WidgetMapper {
     }
 
     /// Get's the existing entity or creates a new one.
+    /// TODO: Investigate possible removing this?
+    #[allow(unused)]
     pub(crate) fn get_or_insert_entity<T: Widget>(
         &mut self,
         commands: &mut Commands,

@@ -47,8 +47,7 @@ impl HookHelper {
         let type_name: String = std::any::type_name::<T>().into();
         self.state
             .get(&*current_widget)
-            .map(|context_types| context_types.get(&type_name).map(|e| *e))
-            .flatten()
+            .and_then(|context_types| context_types.get(&type_name).copied())
     }
 
     /// Traverses the widget tree(bevy hierarchy) and finds the context entity

@@ -20,7 +20,7 @@ pub struct WoodpeckerStyleProp(pub WoodpeckerStyle);
 // A struct used to define the look of a widget
 ///
 /// All fields are `pub`, so you can simply define your styles.
-#[derive(Component, Reflect, Debug, Clone, PartialEq)]
+#[derive(Component, Reflect, Debug, Clone, PartialEq, Copy)]
 #[reflect(Component)]
 pub struct WoodpeckerStyle {
     /************************ Layout ************************/
@@ -176,7 +176,8 @@ pub struct WoodpeckerStyle {
     /// Only applies to widgets marked [`RenderCommand::Text`]
     pub color: Color,
     /// Font handle if none is set the [`crate::DefaultFont`] is used.
-    pub font: Option<Handle<VelloFont>>,
+    /// We use AssetId here because it can be copied thus it makes styles easier.
+    pub font: Option<AssetId<VelloFont>>,
     /// The font size for this widget, in pixels
     ///
     /// Only applies to [`RenderCommand::Text`]
@@ -275,7 +276,7 @@ impl WoodpeckerStyle {
     /// Note: Only lerps: border_color, color, font_size, height, max_height, width,
     /// max_width, min_width, min_height, left, bottom, right, top, and opacity currrently.
     pub fn lerp(&self, b: &WoodpeckerStyle, x: f32) -> WoodpeckerStyle {
-        let mut new_styles = self.clone(); // Default to A styles.
+        let mut new_styles = *self; // Default to A styles.
 
         new_styles.background_color = hsv_lerp(&self.background_color, &b.background_color, x);
 
@@ -332,7 +333,7 @@ impl WoodpeckerStyle {
 
 impl From<&WoodpeckerStyle> for taffy::Style {
     fn from(val: &WoodpeckerStyle) -> taffy::Style {
-        val.clone().into()
+        (*val).into()
     }
 }
 
