@@ -40,7 +40,7 @@ impl Default for TextboxStyles {
     fn default() -> Self {
         let shared = WoodpeckerStyle {
             background_color: Srgba::new(0.160, 0.172, 0.235, 1.0).into(),
-            width: Units::Auto,
+            width: Units::Percentage(100.0),
             height: 26.0.into(),
             border_color: Srgba::new(0.360, 0.380, 0.474, 1.0).into(),
             border: Edge::new(0.0, 0.0, 0.0, 2.0),

@@ -16,11 +16,6 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
 
     let root = commands
         .spawn((WoodpeckerAppBundle {
-            styles: WoodpeckerStyle {
-                font_size: 50.0,
-                color: Srgba::RED.into(),
-                ..Default::default()
-            },
             children: WidgetChildren::default().with_child::<TextBox>(TextBoxBundle::default()),
             ..Default::default()
         },))

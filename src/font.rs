@@ -1,6 +1,9 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{
+    prelude::*,
+    utils::{HashMap, HashSet},
+};
 use bevy_vello::{text::VelloFont, vello::glyph::skrifa::FontRef};
 use cosmic_text::{Buffer, Family};
 
@@ -32,11 +35,12 @@ impl From<TextAlign> for cosmic_text::Align {
 /// Used to keep track of fonts and to measure text with a given font
 /// Internally this uses cosmic text to layout and measure text.
 #[derive(Resource)]
-pub(crate) struct FontManager {
+pub struct FontManager {
     font_system: cosmic_text::FontSystem,
     font_data: HashMap<Handle<VelloFont>, Vec<u8>>,
     vello_to_family: HashMap<Handle<VelloFont>, String>,
     buffer_cache: HashMap<u64, Buffer>,
+    fonts: HashSet<Handle<VelloFont>>,
 }
 
 impl Default for FontManager {
@@ -46,6 +50,7 @@ impl Default for FontManager {
             vello_to_family: Default::default(),
             font_data: Default::default(),
             buffer_cache: Default::default(),
+            fonts: HashSet::default(),
         }
     }
 }
@@ -56,6 +61,11 @@ impl FontManager {
         let font_data = self.font_data.get(vello_font).unwrap();
         let font_ref = FontRef::from_index(font_data, 0).unwrap();
         font_ref
+    }
+
+    /// Adds a font handle to the font manager to keep it alive.
+    pub fn add(&mut self, handle: &Handle<VelloFont>) {
+        self.fonts.insert(handle.clone());
     }
 
     /// Computes the layout for a given piece of text and an avaliable space.

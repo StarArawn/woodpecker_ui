@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_mod_picking::{debug::DebugPickingMode, DefaultPickingPlugins};
+use bevy_mod_picking::DefaultPickingPlugins;
 use woodpecker_ui::prelude::*;
 
 fn main() {
@@ -7,7 +7,6 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin)
         .add_plugins(DefaultPickingPlugins)
-        .insert_resource(DebugPickingMode::Normal)
         .add_systems(Startup, startup)
         .run();
 }
@@ -40,7 +39,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras sed tellus neque. 
                     WidgetChildren::default().with_child::<ScrollContextProvider>((
                         ScrollContextProviderBundle {
                             styles: WoodpeckerStyle {
-                                margin: Edge::all(10.0),
+                                margin: Edge::all(0.0).left(10.0).right(10.0).bottom(10.0),
                                 width: Units::Percentage(100.0),
                                 height: Units::Percentage(100.0),
                                 ..Default::default()

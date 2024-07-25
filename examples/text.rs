@@ -11,8 +11,16 @@ fn main() {
         .run();
 }
 
-fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
+fn startup(
+    mut commands: Commands,
+    mut ui_context: ResMut<WoodpeckerContext>,
+    mut font_manager: ResMut<FontManager>,
+    asset_server: Res<AssetServer>,
+) {
     commands.spawn(Camera2dBundle::default());
+
+    let font = asset_server.load("Outfit/static/Outfit-Regular.ttf");
+    font_manager.add(&font);
 
     let root = commands
         .spawn(WoodpeckerAppBundle {
@@ -22,6 +30,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                         font_size: 50.0,
                         color: Srgba::RED.into(),
                         margin: Edge::all(10.0),
+                        font: Some(font.id()),
                         ..Default::default()
                     },
                     ..Default::default()

@@ -88,11 +88,13 @@ fn render(current_widget: Res<CurrentWidget>, mut query: Query<(&TodoInput, &mut
             WButtonBundle {
                 button_styles: ButtonStyles {
                     normal: WoodpeckerStyle {
-                        margin: Edge::all(0.0).right(0.0),
+                        margin: Edge::all(0.0).left(10.0),
+                        width: 100.0.into(),
                         ..ButtonStyles::default().normal
                     },
                     hovered: WoodpeckerStyle {
-                        margin: Edge::all(0.0).right(0.0),
+                        margin: Edge::all(0.0).left(10.0),
+                        width: 100.0.into(),
                         ..ButtonStyles::default().hovered
                     },
                 },

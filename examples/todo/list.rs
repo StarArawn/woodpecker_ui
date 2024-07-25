@@ -83,11 +83,13 @@ fn render(
                         WButtonBundle {
                             button_styles: ButtonStyles {
                                 normal: WoodpeckerStyle {
-                                    margin: Edge::new(0.0, 20.0, 0.0, 0.0),
+                                    margin: Edge::new(0.0, 0.0, 0.0, 0.0),
+                                    width: 100.0.into(),
                                     ..ButtonStyles::default().normal
                                 },
                                 hovered: WoodpeckerStyle {
-                                    margin: Edge::new(0.0, 20.0, 0.0, 0.0),
+                                    margin: Edge::new(0.0, 0.0, 0.0, 0.0),
+                                    width: 100.0.into(),
                                     ..ButtonStyles::default().hovered
                                 },
                             },

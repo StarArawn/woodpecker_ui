@@ -79,8 +79,6 @@ pub fn render(
         top: context.scroll_y().into(),
         left: context.scroll_x().into(),
         width: Units::Pixels(context.scrollable_width()),
-        padding: Edge::all(10.0).right(10.0),
-        height: Units::Pixels(context.content_height()),
         ..*styles
     };
 

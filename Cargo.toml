@@ -25,6 +25,7 @@ woodpecker_ui_macros.path = "crates/woodpecker_ui_macros" # TODO: Make this crat
 
 [dev-dependencies]
 calc = { version = "0.4.0", default-features = false }
+bevy = { version = "0.14", features = ["jpeg"] }
 
 [patch.crates-io]
 bevy_mod_picking = { git = "https://github.com/StarArawn/bevy_mod_picking", branch = "main" }
