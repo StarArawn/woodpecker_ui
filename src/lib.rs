@@ -105,19 +105,17 @@ impl Plugin for WoodpeckerUIPlugin {
             .add_systems(
                 Update,
                 (
-                    (
-                        runner::system,
-                        focus::CurrentFocus::click_focus,
-                        keyboard_input::runner,
-                        hook_helper::HookHelper::update_context_helper,
-                    )
-                        .run_if(has_root()),
-                    font::load_fonts,
-                ),
+                    runner::system,
+                    focus::CurrentFocus::click_focus,
+                    keyboard_input::runner,
+                    hook_helper::HookHelper::update_context_helper,
+                )
+                    .run_if(has_root()),
             )
             .add_systems(
                 Update,
                 (
+                    font::load_fonts,
                     picking_backend::mouse_wheel_system,
                     picking_backend::system.after(crate::layout::system::run),
                 ),
