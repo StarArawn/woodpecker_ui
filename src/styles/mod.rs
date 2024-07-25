@@ -199,6 +199,7 @@ impl Default for WoodpeckerStyle {
 }
 
 impl WoodpeckerStyle {
+    /// Same as Default::default but constant.
     pub const DEFAULT: WoodpeckerStyle = WoodpeckerStyle {
         width: Units::Auto,
         height: Units::Auto,
@@ -269,6 +270,10 @@ impl WoodpeckerStyle {
         text_alignment: None,
     };
 
+    /// Lerps between two styles.
+    ///
+    /// Note: Only lerps: border_color, color, font_size, height, max_height, width,
+    /// max_width, min_width, min_height, left, bottom, right, top, and opacity currrently.
     pub fn lerp(&self, b: &WoodpeckerStyle, x: f32) -> WoodpeckerStyle {
         let mut new_styles = self.clone(); // Default to A styles.
 

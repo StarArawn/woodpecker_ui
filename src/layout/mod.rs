@@ -7,7 +7,7 @@ use taffy::{Size, TaffyTree};
 
 use crate::{has_root, prelude::WoodpeckerStyle};
 
-pub struct WoodpeckerLayoutPlugin;
+pub(crate) struct WoodpeckerLayoutPlugin;
 impl Plugin for WoodpeckerLayoutPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<UiLayout>().add_systems(

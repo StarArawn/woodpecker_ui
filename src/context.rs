@@ -3,8 +3,10 @@ use bevy::{
     utils::{HashMap, HashSet},
 };
 
+/// A trait used to mark an entity as a widget.
 #[bevy_trait_query::queryable]
 pub trait Widget {
+    /// Gets the type name of the widget.
     fn get_name() -> String
     where
         Self: Sized,
@@ -12,10 +14,12 @@ pub trait Widget {
         std::any::type_name::<Self>().into()
     }
 
+    /// Same as the [`T::get_name`] just does it on &self.
     fn get_name_local(&self) -> String {
         std::any::type_name::<Self>().into()
     }
 
+    /// Creates the update widget system.
     fn update() -> impl System<In = (), Out = bool>
     where
         Self: Sized,
@@ -23,6 +27,7 @@ pub trait Widget {
         IntoSystem::into_system(default_update)
     }
 
+    /// Creates the Render widget system.
     fn render() -> impl System<In = (), Out = ()>
     where
         Self: Sized,
@@ -44,6 +49,9 @@ type WidgetSystems = HashMap<
     ),
 >;
 
+/// A Woodpecker UI context resource.
+/// This primiarily exists to keep track of widget systems
+/// and the root widget.
 #[derive(Resource, Default, Debug)]
 pub struct WoodpeckerContext {
     pub(crate) widgets: WidgetSystems,

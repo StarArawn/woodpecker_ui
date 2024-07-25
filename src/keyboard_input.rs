@@ -12,16 +12,21 @@ use bevy_mod_picking::prelude::EntityEvent;
 
 use crate::focus::CurrentFocus;
 
+/// An event that fires when a keyboard button is pressed.
+/// The event target is the currently focused entity.
+/// Note: This does not continously fire unless a button is released.
 #[derive(Clone, PartialEq, Debug, Reflect, Event, EntityEvent)]
 pub struct WidgetKeyboardButtonEvent {
     /// The target of this event
     #[target]
     pub target: Entity,
 
-    /// The keyboard button pressedy
+    /// The keyboard button pressed
     pub code: KeyCode,
 }
 
+/// An event that fires when a keyboard character is sent.
+/// The event target is the currently focused entity.
 #[derive(Clone, PartialEq, Debug, Reflect, Event, EntityEvent)]
 pub struct WidgetKeyboardCharEvent {
     /// The target of this event
@@ -34,6 +39,8 @@ pub struct WidgetKeyboardCharEvent {
     pub c: smol_str::SmolStr,
 }
 
+/// An event that fires when the user pastes(ctrl + v).
+/// The event target is the currently focused entity.
 #[derive(Clone, PartialEq, Debug, Reflect, Event, EntityEvent)]
 pub struct WidgetPasteEvent {
     /// The target of this event
@@ -47,7 +54,7 @@ pub struct WidgetPasteEvent {
 }
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct TimeSinceLastPaste(Instant);
+pub(crate) struct TimeSinceLastPaste(Instant);
 impl Default for TimeSinceLastPaste {
     fn default() -> Self {
         Self(Instant::now())

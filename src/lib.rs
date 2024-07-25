@@ -135,6 +135,8 @@ fn startup(mut commands: Commands) {
     });
 }
 
+/// A trait that gives us some extra functionality for register widgets
+/// in bevy.
 pub trait WidgetRegisterExt {
     /// Registers a new widget
     /// This tells bevy-trait-query that this is a component, don't do it twice.
@@ -181,16 +183,16 @@ impl WidgetRegisterExt for App {
 }
 
 mod test_proc_macro {
-    use crate::prelude::Widget;
-    #[derive(Widget)]
-    #[widget_systems(update, render)]
-    pub struct MyStruct {}
-
-    fn update() -> bool {
-        false
-    }
-    fn render() {}
-
     #[test]
-    fn test_widget_macro() {}
+    fn test_widget_macro() {
+        use crate::prelude::Widget;
+        #[derive(Widget)]
+        #[widget_systems(update, render)]
+        pub struct MyStruct {}
+
+        fn update() -> bool {
+            false
+        }
+        fn render() {}
+    }
 }

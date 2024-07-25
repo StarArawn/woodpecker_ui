@@ -12,7 +12,7 @@ use bevy_mod_picking::{
 
 use crate::layout::system::WidgetLayout;
 
-pub fn system(
+pub(crate) fn system(
     pointers: Query<(&PointerId, &PointerLocation)>,
     cameras: Query<(Entity, &Camera, &GlobalTransform, &OrthographicProjection)>,
     primary_window: Query<Entity, With<PrimaryWindow>>,
@@ -79,6 +79,7 @@ pub fn system(
     }
 }
 
+/// When a user scrolls the mouse wheel over an entity.
 #[derive(Debug, Default, Reflect, Clone, Copy)]
 pub struct MouseWheelScroll {
     pub scroll: Vec2,

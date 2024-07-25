@@ -13,13 +13,17 @@ pub struct WidgetMapper {
     new_this_tick: HashSet<Entity>,
 }
 
+/// The mapped entity with a key and entity id.
 pub struct EntityMappping {
+    /// A widget key normally just the widget's type name
+    /// This can be user specified however.
     key: String,
+    /// The widget entity.
     entity: Entity,
 }
 
 impl WidgetMapper {
-    /// Createde a new widget mapper.
+    /// Create a new widget mapper.
     pub fn new() -> Self {
         Self {
             parent_entity_to_child: HashMap::default(),
@@ -76,9 +80,7 @@ impl WidgetMapper {
     }
 
     /// Get's the existing entity or creates a new one.
-    /// Note: You can use this, but its advised to instead use [`WidgetChildren`]
-    /// which has better ergonomics.
-    pub fn get_or_insert_entity<T: Widget>(
+    pub(crate) fn get_or_insert_entity<T: Widget>(
         &mut self,
         commands: &mut Commands,
         parent: ParentWidget,

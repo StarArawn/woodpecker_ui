@@ -1,3 +1,11 @@
+// This runner system is the fundemental bones of how Woodpecker UI works.
+// Its relatively simple in operation although more complex mechinsms can be found
+// elsewhere in the code base for widget handling like:
+// - entity_mapping.rs
+// - hook_helper.rs
+// - children.rs
+// Most of the functionality in those files that runs starts here in this file.
+
 use bevy::{ecs::component::Tick, prelude::*, utils::HashMap};
 use bevy_trait_query::One;
 use std::collections::BTreeSet;

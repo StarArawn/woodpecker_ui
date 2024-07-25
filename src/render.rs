@@ -16,13 +16,39 @@ use crate::{font::FontManager, prelude::WoodpeckerStyle, DefaultFont};
 
 pub(crate) const VARIATIONS: &[(&str, f32)] = &[];
 
+/// Used to tell Woodpecker UI's rendering system(vello) how
+/// to render a specific widget entity.
 #[derive(Component, Clone)]
 pub enum WidgetRender {
+    /// A basic quad shape. Can include borders.
     Quad,
-    Text { content: String, word_wrap: bool },
-    Custom { render: WidgetRenderCustom },
+    /// A text shape renderer
+    Text {
+        /// The text to render
+        content: String,
+        /// Should the text word wrap
+        // TODO: Move to styles..
+        word_wrap: bool,
+    },
+    /// A custom vello renderer.
+    /// TODO: Untested, write an example?
+    Custom {
+        // A custom widget render function
+        render: WidgetRenderCustom,
+    },
+    /// A render layer
+    ///
+    /// Render layers are two things
+    /// 1. They clip child content that overflows outside of their own bounds(shape).
+    /// 2. They stick children into a new opacity layer. This allows the children to have opacity
+    /// as a group instead of individually.
+    /// TODO: Allow users to define custom clip shapes (supported by vellow we just need to expose somehow)
     Layer,
-    Image { image_handle: Handle<Image> },
+    /// A simple image renderer
+    Image {
+        /// A handle to a bevy image.
+        image_handle: Handle<Image>,
+    },
 }
 
 impl WidgetRender {

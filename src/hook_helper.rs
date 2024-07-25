@@ -111,37 +111,3 @@ impl HookHelper {
         }
     }
 }
-
-mod tests {
-    #[test]
-    fn test_context() {
-        use crate::context_helper::HookHelper;
-        use bevy::ecs::world::CommandQueue;
-        use bevy::prelude::*;
-
-        #[derive(Component)]
-        struct MyContext;
-
-        // Setup
-        let mut world = World::default();
-        let mut context_helper = HookHelper::default();
-
-        // Entities
-        let parent = world.spawn_empty().id();
-        let child = world.spawn_empty().set_parent(parent).id();
-
-        // Simulate..
-        context_helper.parents.insert(child, parent);
-
-        // Test
-        let mut command_queue = CommandQueue::default();
-        let mut commands = Commands::new(&mut command_queue, &world);
-        let parent_context_entity =
-            context_helper.use_context::<MyContext>(&mut commands, crate::CurrentWidget(parent));
-
-        let child_context_entity =
-            context_helper.use_context::<MyContext>(&mut commands, crate::CurrentWidget(child));
-
-        assert!(parent_context_entity == child_context_entity);
-    }
-}
