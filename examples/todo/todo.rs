@@ -60,6 +60,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                                         WidgetChildren::default().with_child::<Element>((
                                             ElementBundle {
                                                 styles: WoodpeckerStyle {
+                                                    padding: Edge::all(0.0).left(10.0).right(10.0),
                                                     flex_direction: WidgetFlexDirection::Column,
                                                     ..Default::default()
                                                 },

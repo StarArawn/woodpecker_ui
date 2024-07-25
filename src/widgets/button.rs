@@ -25,7 +25,7 @@ impl Default for ButtonStyles {
             font_size: 16.0,
             height: 28.0.into(),
             text_alignment: Some(TextAlign::Center),
-            width: Units::Auto,
+            width: Units::Pixels(200.0),
             justify_content: Some(WidgetAlignContent::Center),
             align_items: Some(WidgetAlignItems::Center),
             ..Default::default()

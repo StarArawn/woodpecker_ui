@@ -170,6 +170,7 @@ pub(crate) fn run(
     // Needs to be done in the correct order..
     // We also need to know if we are going back up the tree so we can pop the clipping and opacity layers.
     traverse_render_tree(
+        root_node,
         &mut query,
         &default_font,
         &mut font_manager,
@@ -194,6 +195,7 @@ pub(crate) fn run(
 }
 
 fn traverse_render_tree(
+    root_node: Entity,
     query: &mut Query<
         (
             Entity,
@@ -239,16 +241,17 @@ fn traverse_render_tree(
 
     let mut did_layer = false;
     if let Ok(widget_render) = widget_render.get(entity) {
-        if let Some(parent_layout) = parent.map(|parent| {
+        let parent_layout = parent.map(|parent| {
             cached_layout
                 .get(&parent.get())
                 .copied()
                 .unwrap_or_else(|| *ui_layout.get_layout(parent.get()).unwrap())
-        }) {
+        });
+        if parent_layout.is_some() || root_node == entity {
             did_layer = widget_render.render(
                 vello_scene,
                 &layout,
-                &parent_layout,
+                &parent_layout.unwrap_or_default(),
                 default_font,
                 font_assets,
                 font_manager,
@@ -269,6 +272,7 @@ fn traverse_render_tree(
     for child in children.iter() {
         order += 1;
         traverse_render_tree(
+            root_node,
             query,
             default_font,
             font_manager,

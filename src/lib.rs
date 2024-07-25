@@ -31,7 +31,7 @@ pub mod prelude {
     pub use crate::context::*;
     pub use crate::entity_mapping::*;
     pub use crate::focus::*;
-    pub use crate::font::TextAlign;
+    pub use crate::font::{FontManager, TextAlign};
     pub use crate::hook_helper::HookHelper;
     pub use crate::keyboard_input::WidgetKeyboardCharEvent;
     pub use crate::layout::system::{WidgetLayout, WidgetPreviousLayout};

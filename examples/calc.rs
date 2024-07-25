@@ -66,7 +66,6 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                     styles: WoodpeckerStyle {
                         font_size: FONT_SIZE,
                         color: Color::WHITE,
-                        text_alignment: Some(TextAlign::Center),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -130,7 +129,6 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                         styles: WoodpeckerStyle {
                             font_size: FONT_SIZE,
                             color: Color::WHITE,
-                            text_alignment: Some(TextAlign::Center),
                             ..Default::default()
                         },
                         ..Default::default()

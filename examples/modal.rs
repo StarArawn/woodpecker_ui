@@ -35,7 +35,6 @@ fn render(current_widget: Res<CurrentWidget>, mut query: Query<(&MyWidget, &mut 
                 ElementBundle {
                     styles: WoodpeckerStyle {
                         font_size: 20.0,
-                        text_alignment: Some(TextAlign::Center),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -74,9 +73,7 @@ fn render(current_widget: Res<CurrentWidget>, mut query: Query<(&MyWidget, &mut 
                     children: WidgetChildren::default().with_child::<Element>((
                         ElementBundle {
                             styles: WoodpeckerStyle {
-                                width: Units::Percentage(100.0),
                                 font_size: 20.0,
-                                text_alignment: Some(TextAlign::Center),
                                 ..Default::default()
                             },
                             ..Default::default()
