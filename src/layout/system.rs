@@ -15,22 +15,40 @@ use crate::{
 
 use super::{measure::LayoutMeasure, UiLayout, WoodpeckerStyle};
 
+/// A widget's layout
+/// This is built by taffy and included as a component on
+/// your widgets automatically when taffy computes layout logic.
 #[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
 pub struct WidgetLayout(Layout);
 
 impl WidgetLayout {
+    /// The position of the widget in pixels
+    pub fn position(&self) -> Vec2 {
+        Vec2::new(self.0.location.x, self.0.location.y)
+    }
+
+    /// The width of the layout in pixels
     pub fn width(&self) -> f32 {
         self.0.size.width
     }
 
+    /// The height of the layout in pixels
     pub fn height(&self) -> f32 {
         self.0.size.height
     }
 
+    /// The content width of the layout in pixels
+    ///
+    /// Not to be confused with width or height this measurement is the amount of space
+    /// the children take up.
     pub fn content_width(&self) -> f32 {
         self.0.content_size.width
     }
 
+    /// The content height of the layout in pixels
+    ///
+    /// Not to be confused with width or height this measurement is the amount of space
+    /// the children take up.
     pub fn content_height(&self) -> f32 {
         self.0.content_size.height
     }
@@ -55,6 +73,9 @@ impl PartialEq for WidgetLayout {
     }
 }
 
+/// The previous layout from the last frame.
+/// Useful in some cases to see if a widget's layout has
+/// changed.
 #[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
 pub struct WidgetPreviousLayout(Layout);
 
@@ -64,6 +85,7 @@ impl PartialEq for WidgetPreviousLayout {
     }
 }
 
+// TODO: Document how layouting works..
 pub(crate) fn run(
     mut commands: Commands,
     default_font: Res<DefaultFont>,
@@ -294,16 +316,21 @@ fn traverse_upsert_node(
         } else {
             layout.get_layout(root_node)
         } {
+            // TODO: Move to a function so we can get rid of this stupid nesting...
             if let WidgetRender::Text { content, word_wrap } = widget_render {
                 // Measure text
-                let font_handle = styles.font.as_ref().unwrap_or(&default_font.0);
+                let font_handle = styles
+                    .font
+                    .as_ref()
+                    .map(|a| Handle::Weak(*a))
+                    .unwrap_or(default_font.0.clone());
                 if let Some(buffer) = font_manager.layout(
                     Vec2::new(
                         parent_layout.size.width,
                         parent_layout.size.height + 100000.0,
                     ),
                     styles,
-                    font_handle,
+                    &font_handle,
                     content,
                     *word_wrap,
                 ) {

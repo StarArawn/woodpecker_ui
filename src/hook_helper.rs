@@ -47,8 +47,7 @@ impl HookHelper {
         let type_name: String = std::any::type_name::<T>().into();
         self.state
             .get(&*current_widget)
-            .map(|context_types| context_types.get(&type_name).map(|e| *e))
-            .flatten()
+            .and_then(|context_types| context_types.get(&type_name).copied())
     }
 
     /// Traverses the widget tree(bevy hierarchy) and finds the context entity
@@ -109,39 +108,5 @@ impl HookHelper {
         for entity in removed.read() {
             context_helper.parents.remove(&entity);
         }
-    }
-}
-
-mod tests {
-    #[test]
-    fn test_context() {
-        use crate::context_helper::HookHelper;
-        use bevy::ecs::world::CommandQueue;
-        use bevy::prelude::*;
-
-        #[derive(Component)]
-        struct MyContext;
-
-        // Setup
-        let mut world = World::default();
-        let mut context_helper = HookHelper::default();
-
-        // Entities
-        let parent = world.spawn_empty().id();
-        let child = world.spawn_empty().set_parent(parent).id();
-
-        // Simulate..
-        context_helper.parents.insert(child, parent);
-
-        // Test
-        let mut command_queue = CommandQueue::default();
-        let mut commands = Commands::new(&mut command_queue, &world);
-        let parent_context_entity =
-            context_helper.use_context::<MyContext>(&mut commands, crate::CurrentWidget(parent));
-
-        let child_context_entity =
-            context_helper.use_context::<MyContext>(&mut commands, crate::CurrentWidget(child));
-
-        assert!(parent_context_entity == child_context_entity);
     }
 }

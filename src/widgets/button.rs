@@ -31,7 +31,7 @@ impl Default for ButtonStyles {
             ..Default::default()
         };
         Self {
-            normal: normal.clone(),
+            normal,
             hovered: WoodpeckerStyle {
                 border_color: Srgba::new(0.592, 0.627, 0.749, 1.0).into(),
                 ..normal
@@ -119,9 +119,9 @@ pub fn render(
     };
 
     if button.hovering {
-        *styles = button_styles.hovered.clone();
+        *styles = button_styles.hovered;
     } else {
-        *styles = button_styles.normal.clone();
+        *styles = button_styles.normal;
     }
 
     children.apply(entity.as_parent());

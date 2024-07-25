@@ -1,21 +1,26 @@
 use bevy::prelude::*;
 use bevy_mod_picking::{focus::PickingInteraction, prelude::EntityEvent};
 
+/// Marks an entity as focusable
 #[derive(Component, Default, Debug, Clone, Copy)]
 pub struct Focusable;
 
+/// A resource used to keep track of the currently focused entity.
 #[derive(Resource, Debug, Clone, Copy)]
 pub struct CurrentFocus(Entity);
 
 impl CurrentFocus {
+    /// Create a new CurrentFocus.
     pub fn new(entity: Entity) -> Self {
         Self(entity)
     }
 
+    /// Gets the entity that has focus.
     pub fn get(&self) -> Entity {
         self.0
     }
 
+    /// Sets the entity that has focus.
     pub fn set(&mut self, entity: Entity) {
         self.0 = entity;
     }
@@ -75,6 +80,8 @@ impl CurrentFocus {
     }
 }
 
+/// A bevy_eventlistener Event that triggers when a widget has focus.
+/// Note: The widget must have the Focusable component tag.
 #[derive(Clone, PartialEq, Debug, Reflect, Event, EntityEvent)]
 pub struct WidgetFocus {
     /// The target of this event
@@ -82,6 +89,8 @@ pub struct WidgetFocus {
     pub target: Entity,
 }
 
+/// A bevy_eventlistener Event that triggers when a widget has lost focus.
+/// Note: The widget must have the Focusable component tag.
 #[derive(Clone, PartialEq, Debug, Reflect, Event, EntityEvent)]
 pub struct WidgetBlur {
     /// The target of this event

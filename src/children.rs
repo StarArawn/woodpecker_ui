@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use bevy::prelude::*;
 
-use crate::{context::Widget, prelude::WidgetMapper, CurrentWidget, ParentWidget};
+use crate::{context::Widget, prelude::WidgetMapper, ParentWidget};
 
 /// A commponent to pass children down the tree
 /// while also having children of its own.
@@ -15,15 +15,22 @@ pub struct PassedChildren(pub WidgetChildren);
 /// [`WidgetChildren::process`] is called.
 #[derive(Component, Default, Clone)]
 pub struct WidgetChildren {
-    prev_children: Vec<String>,
+    // Strings here are widget type names. TODO: Maybe give the strings a wrapper name so that is clear?
+    // First children are stored in a queue.
     children_queue: Vec<(
         String,
         Arc<dyn Fn(&mut World, &mut WidgetMapper, ParentWidget, usize) + Sync + Send>,
     )>,
+    // When a widget is processed onto a parent they get stored here and removed from the queue.
     children: Vec<(
         String,
         Arc<dyn Fn(&mut World, &mut WidgetMapper, ParentWidget, usize) + Sync + Send>,
     )>,
+    /// Stores a list of previous children.
+    prev_children: Vec<String>,
+    /// Lets the system know who the parent is.
+    /// We need this because childen can be passed around until they
+    /// are committed to a parent.
     parent_widget: Option<ParentWidget>,
 }
 
@@ -86,17 +93,29 @@ impl WidgetChildren {
             return;
         };
 
+        // If our queue isn't empty drain it into the children
+        // This ensures we remove previous children.
         if !self.children_queue.is_empty() {
             self.children = self.children_queue.drain(..).collect::<Vec<_>>();
         }
 
         world.resource_scope(|world: &mut World, mut widget_mapper: Mut<WidgetMapper>| {
+            // Loop through each child and spawn the bundles.
+            // The widget mapper helps keep track of which entities go with which child.
+            // They are ensured to have the same entity id for a given child index and
+            // widget type name. The type name is passed into the closure in [`Self::add`].
+            // TODO: Maybe just pass it in here to make it clearer?
             for (i, (_, child)) in self.children.iter().enumerate() {
                 child(world, &mut widget_mapper, parent_widget, i);
             }
         });
-        world.remove_resource::<CurrentWidget>();
+
+        // Remove the parent widget.
+        // [`Self::apply`] should be called if this parent re-renders.
+        // If its not then we assume no children.
         self.parent_widget = None;
+
+        // Throw the children type names into the previous children list.
         self.prev_children = self
             .children
             .iter()

@@ -59,7 +59,7 @@ impl Default for ModalBundle {
         };
         Self {
             modal: Default::default(),
-            styles: styles.clone(),
+            styles,
             children: Default::default(),
             internal_children: Default::default(),
             transition: Transition {
@@ -68,11 +68,11 @@ impl Default for ModalBundle {
                 playing: false,
                 style_a: WoodpeckerStyle {
                     opacity: 0.0,
-                    ..styles.clone()
+                    ..styles
                 },
                 style_b: WoodpeckerStyle {
                     opacity: 1.0,
-                    ..styles.clone()
+                    ..styles
                 },
                 ..Default::default()
             },

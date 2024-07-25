@@ -6,6 +6,7 @@ use cosmic_text::{Buffer, Family};
 
 use crate::prelude::WoodpeckerStyle;
 
+/// The text alignment of the font.
 #[derive(Debug, Clone, Copy, Default, Reflect, PartialEq)]
 pub enum TextAlign {
     #[default]
@@ -28,6 +29,8 @@ impl From<TextAlign> for cosmic_text::Align {
     }
 }
 
+/// Used to keep track of fonts and to measure text with a given font
+/// Internally this uses cosmic text to layout and measure text.
 #[derive(Resource)]
 pub(crate) struct FontManager {
     font_system: cosmic_text::FontSystem,
@@ -48,12 +51,17 @@ impl Default for FontManager {
 }
 
 impl FontManager {
-    pub fn get_vello_font(&mut self, vello_font: &Handle<VelloFont>) -> FontRef {
+    /// Used for vello rendering.
+    pub(crate) fn get_vello_font(&mut self, vello_font: &Handle<VelloFont>) -> FontRef {
         let font_data = self.font_data.get(vello_font).unwrap();
         let font_ref = FontRef::from_index(font_data, 0).unwrap();
         font_ref
     }
 
+    /// Computes the layout for a given piece of text and an avaliable space.
+    /// It will use line height and font size from the styles.
+    /// This function returns a cosmic text buffer.
+    /// It also caches the resulting cosmic text buffer that it returns.
     pub fn layout(
         &mut self,
         avaliable_space: Vec2,
@@ -127,7 +135,8 @@ impl FontManager {
     }
 }
 
-pub fn load_fonts(
+/// Loads vello font assets into the font manager.
+pub(crate) fn load_fonts(
     mut font_manager: ResMut<FontManager>,
     mut event_reader: EventReader<AssetEvent<VelloFont>>,
     assets: Res<Assets<VelloFont>>,

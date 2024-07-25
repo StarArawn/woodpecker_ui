@@ -134,17 +134,17 @@ impl Transition {
             self.start = Instant::now();
             self.reversing = !self.reversing;
             if self.reversing {
-                self.style_b.clone()
+                self.style_b
             } else {
-                self.style_a.clone()
+                self.style_a
             }
         } else {
             // End of animation
             self.playing = false;
             if self.reversing {
-                self.style_a.clone()
+                self.style_a
             } else {
-                self.style_b.clone()
+                self.style_b
             }
         }
     }

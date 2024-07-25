@@ -77,21 +77,25 @@ impl Edge {
         (self.top, self.right, self.bottom, self.left)
     }
 
+    /// Modifies the bottom edge value.
     pub fn bottom(mut self, value: impl Into<Units>) -> Self {
         self.bottom = value.into();
         self
     }
 
+    /// Modifies the top edge value.
     pub fn top(mut self, value: impl Into<Units>) -> Self {
         self.top = value.into();
         self
     }
 
+    /// Modifies the left edge value.
     pub fn left(mut self, value: impl Into<Units>) -> Self {
         self.left = value.into();
         self
     }
 
+    /// Modifies the right edge value.
     pub fn right(mut self, value: impl Into<Units>) -> Self {
         self.right = value.into();
         self

@@ -1,3 +1,4 @@
+/// This is mostly copied from taffy but bevyified to include reflection, clone, and default support.
 use bevy::reflect::Reflect;
 
 /// Sets the layout used for the children of this node

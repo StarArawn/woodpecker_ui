@@ -82,7 +82,7 @@ pub fn render(
         return;
     };
 
-    let layout = layout.clone();
+    let layout = *layout;
     let content_width = context.content_width();
     let content_height = context.content_height();
 
@@ -94,11 +94,11 @@ pub fn render(
     let thumb_color = scrollbar
         .thumb_color
         .unwrap_or_else(|| Color::srgba(0.239, 0.258, 0.337, 1.0));
-    let thumb_styles = scrollbar.thumb_styles.clone();
+    let thumb_styles = scrollbar.thumb_styles;
     let track_color = scrollbar
         .track_color
         .unwrap_or_else(|| Color::srgba(0.1581, 0.1758, 0.191, 0.15));
-    let track_styles = scrollbar.track_styles.clone().unwrap_or(WoodpeckerStyle {
+    let track_styles = scrollbar.track_styles.unwrap_or(WoodpeckerStyle {
         background_color: track_color,
         border_radius: Corner::all(thickness / 2.0),
         ..Default::default()
@@ -133,7 +133,7 @@ pub fn render(
         } else {
             Units::Percentage(100.0)
         },
-        ..styles.clone()
+        ..*styles
     };
 
     let mut border_color = thumb_color;
@@ -165,7 +165,7 @@ pub fn render(
         track_style = WoodpeckerStyle {
             height: Units::Pixels(thickness),
             width: Units::Percentage(100.0),
-            ..track_style.clone()
+            ..track_style
         };
         thumb_style = WoodpeckerStyle {
             height: Units::Pixels(thickness),
@@ -178,7 +178,7 @@ pub fn render(
         track_style = WoodpeckerStyle {
             width: Units::Pixels(thickness),
             height: Units::Percentage(100.0),
-            ..track_style.clone()
+            ..track_style
         };
         thumb_style = WoodpeckerStyle {
             width: Units::Pixels(thickness),

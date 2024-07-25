@@ -50,11 +50,11 @@ impl Default for TextboxStyles {
             ..Default::default()
         };
         Self {
-            normal: WoodpeckerStyle { ..shared.clone() },
-            hovered: WoodpeckerStyle { ..shared.clone() },
+            normal: WoodpeckerStyle { ..shared },
+            hovered: WoodpeckerStyle { ..shared },
             focused: WoodpeckerStyle {
                 border_color: Srgba::new(0.933, 0.745, 0.745, 1.0).into(),
-                ..shared.clone()
+                ..shared
             },
         }
     }
@@ -194,7 +194,7 @@ pub fn render(
     };
 
     if text_box.is_changed() {
-        state.current_value = text_box.initial_value.clone();
+        state.current_value.clone_from(&text_box.initial_value);
 
         // Update graphemes
         set_graphemes(&mut state);
@@ -344,7 +344,7 @@ pub fn render(
                             if state
                                 .graphemes
                                 .get(state.cursor_position)
-                                .map(|g| g.contains(" "))
+                                .map(|g| g.contains(' '))
                                 .unwrap_or_default()
                             {
                                 state.cursor_position += 1;
@@ -352,7 +352,7 @@ pub fn render(
                                 while !state
                                     .graphemes
                                     .get(state.cursor_position)
-                                    .map(|g| g.contains(" "))
+                                    .map(|g| g.contains(' '))
                                     .unwrap_or(true)
                                 {
                                     state.cursor_position += 1;
@@ -383,7 +383,7 @@ pub fn render(
                             if state
                                 .graphemes
                                 .get(state.cursor_position - 1)
-                                .map(|g| g.contains(" "))
+                                .map(|g| g.contains(' '))
                                 .unwrap_or_default()
                             {
                                 state.cursor_position -= 1;
@@ -391,17 +391,15 @@ pub fn render(
                                 while !state
                                     .graphemes
                                     .get(state.cursor_position - 1)
-                                    .map(|g| g.contains(" "))
+                                    .map(|g| g.contains(' '))
                                     .unwrap_or(true)
                                 {
                                     state.cursor_position -= 1;
                                 }
                             }
                         }
-                    } else {
-                        if state.cursor_position > 0 {
-                            state.cursor_position -= 1;
-                        }
+                    } else if state.cursor_position > 0 {
+                        state.cursor_position -= 1;
                     }
 
                     // TODO: Use style font?
@@ -452,11 +450,11 @@ pub fn render(
         ));
 
     if state.focused {
-        *style = styles.focused.clone();
+        *style = styles.focused
     } else if state.hovering {
-        *style = styles.hovered.clone();
+        *style = styles.hovered
     } else {
-        *style = styles.normal.clone();
+        *style = styles.normal
     }
 
     let cursor_styles = WoodpeckerStyle {

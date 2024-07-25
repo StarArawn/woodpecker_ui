@@ -110,9 +110,9 @@ pub fn render(
     let scrollbar_thickness = scroll_box.scrollbar_thickness.unwrap_or(10.0);
     let scroll_line = scroll_box.scroll_line.unwrap_or(128.0);
     let thumb_color = scroll_box.thumb_color;
-    let thumb_styles = scroll_box.thumb_styles.clone();
+    let thumb_styles = scroll_box.thumb_styles;
     let track_color = scroll_box.track_color;
-    let track_styles = scroll_box.track_styles.clone();
+    let track_styles = scroll_box.track_styles;
 
     let scrollable_width = context.scrollable_width();
     let scrollable_height = context.scrollable_height();
@@ -144,7 +144,7 @@ pub fn render(
         width: Units::Percentage(100.0),
         height: Units::Percentage(100.0),
         margin: Edge::all(0.0).right(scrollbar_thickness / 2.0),
-        ..styles.clone()
+        ..*styles
     };
 
     let hbox_styles = WoodpeckerStyle {
@@ -173,9 +173,9 @@ pub fn render(
                 horizontal: true,
                 thickness: hori_thickness,
                 thumb_color,
-                thumb_styles: thumb_styles.clone(),
+                thumb_styles,
                 track_color,
-                track_styles: track_styles.clone(),
+                track_styles,
             },
             ..Default::default()
         });

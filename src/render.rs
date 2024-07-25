@@ -16,13 +16,39 @@ use crate::{font::FontManager, prelude::WoodpeckerStyle, DefaultFont};
 
 pub(crate) const VARIATIONS: &[(&str, f32)] = &[];
 
+/// Used to tell Woodpecker UI's rendering system(vello) how
+/// to render a specific widget entity.
 #[derive(Component, Clone)]
 pub enum WidgetRender {
+    /// A basic quad shape. Can include borders.
     Quad,
-    Text { content: String, word_wrap: bool },
-    Custom { render: WidgetRenderCustom },
+    /// A text shape renderer
+    Text {
+        /// The text to render
+        content: String,
+        /// Should the text word wrap
+        // TODO: Move to styles..
+        word_wrap: bool,
+    },
+    /// A custom vello renderer.
+    /// TODO: Untested, write an example?
+    Custom {
+        // A custom widget render function
+        render: WidgetRenderCustom,
+    },
+    /// A render layer
+    ///
+    /// Render layers are two things
+    /// 1. They clip child content that overflows outside of their own bounds(shape).
+    /// 2. They stick children into a new opacity layer. This allows the children to have opacity
+    /// as a group instead of individually.
+    /// TODO: Allow users to define custom clip shapes (supported by vellow we just need to expose somehow)
     Layer,
-    Image { image_handle: Handle<Image> },
+    /// A simple image renderer
+    Image {
+        /// A handle to a bevy image.
+        image_handle: Handle<Image>,
+    },
 }
 
 impl WidgetRender {
@@ -99,23 +125,27 @@ impl WidgetRender {
                 );
             }
             WidgetRender::Text { content, word_wrap } => {
-                let font_handle = widget_style.font.as_ref().unwrap_or(&default_font.0);
+                let font_handle = widget_style
+                    .font
+                    .as_ref()
+                    .map(|a| Handle::<VelloFont>::Weak(*a))
+                    .unwrap_or(default_font.0.clone());
 
-                let Some(vello_font) = font_assets.get(font_handle) else {
+                let Some(vello_font) = font_assets.get(&font_handle) else {
                     return false;
                 };
 
                 let Some(buffer) = font_manager.layout(
                     Vec2::new(parent_layout.size.width, parent_layout.size.height),
                     widget_style,
-                    font_handle,
+                    &font_handle,
                     content,
                     *word_wrap,
                 ) else {
                     return false;
                 };
 
-                let font_ref = font_manager.get_vello_font(font_handle);
+                let font_ref = font_manager.get_vello_font(&font_handle);
 
                 for run in buffer.layout_runs() {
                     let mut glyphs = vec![];
