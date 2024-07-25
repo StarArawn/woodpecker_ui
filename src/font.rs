@@ -152,7 +152,7 @@ pub(crate) fn load_fonts(
     assets: Res<Assets<VelloFont>>,
 ) {
     for event in event_reader.read() {
-        if let AssetEvent::Added { id } = event {
+        if let AssetEvent::LoadedWithDependencies { id } = event {
             let font_asset = assets.get(*id).unwrap();
             let font_data: &[u8] = font_asset.font.data.data();
             let font_data = font_data.to_vec();
