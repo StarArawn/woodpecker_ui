@@ -11,8 +11,10 @@ use bevy_trait_query::One;
 use std::collections::BTreeSet;
 
 use crate::{
-    children::WidgetChildren, context::Widget, prelude::WidgetMapper, CurrentWidget,
-    WoodpeckerContext,
+    children::WidgetChildren,
+    context::Widget,
+    prelude::{PreviousWidget, WidgetMapper},
+    CurrentWidget, WoodpeckerContext,
 };
 
 pub(crate) fn system(world: &mut World) {
@@ -30,7 +32,7 @@ pub(crate) fn system(world: &mut World) {
     });
 
     for widget_entity in world
-        .query::<(Entity, One<&dyn Widget>)>()
+        .query_filtered::<(Entity, One<&dyn Widget>), Without<PreviousWidget>>()
         .iter(world)
         .map(|(e, _)| e)
         .collect::<Vec<_>>()
@@ -54,7 +56,7 @@ pub(crate) fn system(world: &mut World) {
             continue;
         }
         // Pull widget data.
-        let mut widget_query = world.query::<One<&dyn Widget>>();
+        let mut widget_query = world.query_filtered::<One<&dyn Widget>, Without<PreviousWidget>>();
         let Ok(widget) = widget_query.get(world, *widget_entity) else {
             error!("Woodpecker UI: Missing widget data for {}!", widget_entity);
             continue;
@@ -143,7 +145,7 @@ fn update_widgets(
     re_render_list: &mut BTreeSet<Entity>,
     new_ticks: &mut HashMap<String, Tick>,
 ) {
-    let mut widget_query = world.query::<One<&dyn Widget>>();
+    let mut widget_query = world.query_filtered::<One<&dyn Widget>, Without<PreviousWidget>>();
     let Ok(widget) = widget_query.get(world, widget_entity) else {
         error!("Woodpecker UI: Missing widget data!");
         return;
@@ -187,7 +189,11 @@ fn get_all_children(world: &mut World, parent_entity: Entity) -> Vec<Entity> {
     };
     for child in bevy_children.into_iter() {
         // Only widget entities should be traversed here
-        if world.query::<One<&dyn Widget>>().get(world, child).is_ok() {
+        if world
+            .query_filtered::<One<&dyn Widget>, Without<PreviousWidget>>()
+            .get(world, child)
+            .is_ok()
+        {
             children.push(child);
             get_all_children(world, child);
         }

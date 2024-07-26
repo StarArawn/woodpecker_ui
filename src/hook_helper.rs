@@ -1,8 +1,4 @@
-use bevy::{
-    ecs::query::{QueryData, WorldQuery},
-    prelude::*,
-    utils::HashMap,
-};
+use bevy::{prelude::*, utils::HashMap};
 use bevy_trait_query::One;
 
 use crate::{context::Widget, CurrentWidget};
@@ -101,7 +97,10 @@ impl HookHelper {
 
     pub(crate) fn update_context_helper(
         mut context_helper: ResMut<HookHelper>,
-        query: Query<(Entity, &Parent, One<&dyn Widget>), Changed<Parent>>,
+        query: Query<
+            (Entity, &Parent, One<&dyn Widget>),
+            (Changed<Parent>, Without<PreviousWidget>),
+        >,
         mut removed: RemovedComponents<Parent>,
     ) {
         // Add any that were added or changed.
@@ -115,60 +114,80 @@ impl HookHelper {
         }
     }
 
-    pub fn compare<Q: QueryData + WidgetCompareTrait, T: WidgetCompareTrait + PartialEq>(
+    pub fn get_previous_widget(
         &mut self,
-        current_widget: CurrentWidget,
         commands: &mut Commands,
-        query1: &Query<Q, Without<PreviousWidget>>,
-        query2: &Query<Q, With<PreviousWidget>>,
-    ) -> bool
-    where
-        // for <'a> <Q::ReadOnly as WorldQuery>::Item<'a>: PartialEq + WidgetCompareTrait,
-        Q: for<'a> bevy::ecs::query::QueryData<ReadOnly: WorldQuery<Item<'a> = &'a T>>,
-    {
+        current_widget: CurrentWidget,
+    ) -> Entity {
         let prev_state_entity = self
             .prev_state_entities
             .entry(*current_widget)
             .or_insert_with(|| commands.spawn(PreviousWidget).id());
-        let should_update = {
-            if let Ok(item1) = query1.get(*current_widget) {
-                // Replace previous entity state with new state.
-                item1.insert_components(commands, *prev_state_entity);
-                if let Ok(item2) = query2.get(*current_widget) {
-                    item1 != item2
-                } else {
-                    false
-                }
-            } else {
-                false
-            }
-        };
-        should_update
+
+        *prev_state_entity
     }
+
+    // pub fn compare<'a, 'w, 's, Q: QueryData>(
+    //     &mut self,
+    //     current_widget: CurrentWidget,
+    //     commands: &mut Commands,
+    //     query1: &'a Query<'w, 's, Q, Without<PreviousWidget>>,
+    //     query2: &'a Query<'w, 's, Q, With<PreviousWidget>>,
+    // ) -> bool
+    // where
+    //     // <<Q as QueryData>::ReadOnly as WorldQuery>::Item<'a>: Component + PartialEq + Clone
+    //     <<Q as QueryData>::ReadOnly as WorldQuery>::Item<'a>: PartialEq
+    // {
+    //     let prev_state_entity = self
+    //         .prev_state_entities
+    //         .entry(*current_widget)
+    //         .or_insert_with(|| commands.spawn(PreviousWidget).id());
+    //     let should_update = {
+    //         if let Ok(item1) = query1.get(*current_widget) {
+    //             // Replace previous entity state with new state.
+
+    //             // item1.insert_components(commands, *prev_state_entity);
+    //             if let Ok(item2) = query2.get(*current_widget) {
+    //                 item1 != item2
+    //             } else {
+    //                 false
+    //             }
+    //         } else {
+    //             false
+    //         }
+    //     };
+    //     should_update
+    // }
 }
 
 #[derive(Component)]
 pub struct PreviousWidget;
 
-trait WidgetCompareTrait: Clone {
-    fn insert_components(&self, commands: &mut Commands, entity: Entity);
-}
+// trait WidgetCompareTrait {
+//     fn insert_components(&self, commands: &mut Commands, entity: Entity);
+// }
 
-macro_rules! impl_tuple_query_data {
-    ($(($name: ident, $state: ident)),*) => {
-        #[allow(non_snake_case)]
-        #[allow(clippy::unused_unit)]
-        impl<$($name: Component + PartialEq + Clone),*> WidgetCompareTrait for (&$($name,)*) { 
-            fn insert_components(&self, commands: &mut Commands, entity: Entity) {
-                let ($($name,)*) = self.clone();
-                commands.entity(entity)
-                $(
-                    .insert($name.clone())
-                )*;
-            }
-        }
+// impl<T: Component> WidgetCompareTrait for &T {
+//     fn insert_components(&self, commands: &mut Commands, entity: Entity) {
 
-    };
-}
+//     }
+// }
 
-bevy::utils::all_tuples!(impl_tuple_query_data, 1, 15, F, S);
+// macro_rules! impl_tuple_query_data {
+//     ($(($name: ident, $state: ident)),*) => {
+//         #[allow(non_snake_case)]
+//         #[allow(clippy::unused_unit)]
+//         impl<$($name),*> WidgetCompareTrait for (&$($name,)*) {
+//             fn insert_components(&self, commands: &mut Commands, entity: Entity) {
+//                 let ($($name,)*) = self.clone();
+//                 commands.entity(entity);
+//                 // $(
+//                     // .insert($name.clone())
+//                 // )*;
+//             }
+//         }
+
+//     };
+// }
+
+// bevy::utils::all_tuples!(impl_tuple_query_data, 1, 15, F, S);

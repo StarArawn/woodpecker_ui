@@ -3,7 +3,8 @@ use bevy::prelude::*;
 use crate::prelude::*;
 
 #[derive(Component, Widget, PartialEq, Clone, Debug)]
-#[widget_systems(update, render)]
+#[auto_update(render)]
+#[diff(Modal)]
 pub struct Modal {
     /// The text to display in the modal's title bar
     pub title: String,
@@ -81,20 +82,20 @@ impl Default for ModalBundle {
     }
 }
 
-fn update(
-    mut commands: Commands,
-    current_widget: Res<CurrentWidget>,
-    mut hook_helper: ResMut<HookHelper>,
-    query: Query<(&Modal, &WoodpeckerStyle), Without<PreviousWidget>>,
-    prev_query: Query<(&Modal, &WoodpeckerStyle), With<PreviousWidget>>,
-    children_query: Query<&WidgetChildren>,
-) -> bool {
-    hook_helper.compare(*current_widget, &mut commands, &query, &prev_query)
-        || children_query
-            .get(**current_widget)
-            .map(|c| c.children_changed())
-            .unwrap_or_default()
-}
+// fn update<'a>(
+//     mut commands: Commands,
+//     current_widget: Res<CurrentWidget>,
+//     mut hook_helper: ResMut<HookHelper>,
+//     query: Query<(&'a Modal, &'a WoodpeckerStyle), Without<PreviousWidget>>,
+//     prev_query: Query<(&'a Modal, &'a WoodpeckerStyle), With<PreviousWidget>>,
+//     children_query: Query<&WidgetChildren>,
+// ) -> bool {
+
+//         || children_query
+//             .get(**current_widget)
+//             .map(|c| c.children_changed())
+//             .unwrap_or_default()
+// }
 
 fn render(
     entity: Res<CurrentWidget>,
