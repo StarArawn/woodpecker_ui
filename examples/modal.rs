@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_mod_picking::{
     events::{Click, Pointer},
     prelude::On,
@@ -124,6 +125,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin)
         .add_plugins(DefaultPickingPlugins)
+        .add_plugins(WorldInspectorPlugin::new())
         .register_widget::<MyWidget>()
         .add_systems(Startup, startup)
         .run();

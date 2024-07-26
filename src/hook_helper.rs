@@ -115,25 +115,25 @@ impl HookHelper {
         }
     }
 
-    pub fn compare<'w, 's, Q: bevy::ecs::query::QueryData>(
+    pub fn compare<Q: QueryData + WidgetCompareTrait, T: WidgetCompareTrait + PartialEq>(
         &mut self,
-        current_widget: &Entity,
+        current_widget: CurrentWidget,
         commands: &mut Commands,
-        query1: &'w Query<'w, 's, Q, Without<PreviousWidget>>,
-        query2: &'w Query<'w, 's, Q, With<PreviousWidget>>,
+        query1: &Query<Q, Without<PreviousWidget>>,
+        query2: &Query<Q, With<PreviousWidget>>,
     ) -> bool
     where
-        <Q::ReadOnly as WorldQuery>::Item<'w>: PartialEq + Clone,
-        <Q::ReadOnly as WorldQuery>::Item<'w>: bevy::prelude::Component, // This doesn't work because its &Item = Component not Item = Component..
+        // for <'a> <Q::ReadOnly as WorldQuery>::Item<'a>: PartialEq + WidgetCompareTrait,
+        Q: for<'a> bevy::ecs::query::QueryData<ReadOnly: WorldQuery<Item<'a> = &'a T>>,
     {
         let prev_state_entity = self
             .prev_state_entities
             .entry(*current_widget)
-            .or_insert(commands.spawn(PreviousWidget).id());
+            .or_insert_with(|| commands.spawn(PreviousWidget).id());
         let should_update = {
             if let Ok(item1) = query1.get(*current_widget) {
                 // Replace previous entity state with new state.
-                commands.entity(*prev_state_entity).insert(item1.clone());
+                item1.insert_components(commands, *prev_state_entity);
                 if let Ok(item2) = query2.get(*current_widget) {
                     item1 != item2
                 } else {
@@ -149,3 +149,26 @@ impl HookHelper {
 
 #[derive(Component)]
 pub struct PreviousWidget;
+
+trait WidgetCompareTrait: Clone {
+    fn insert_components(&self, commands: &mut Commands, entity: Entity);
+}
+
+macro_rules! impl_tuple_query_data {
+    ($(($name: ident, $state: ident)),*) => {
+        #[allow(non_snake_case)]
+        #[allow(clippy::unused_unit)]
+        impl<$($name: Component + PartialEq + Clone),*> WidgetCompareTrait for (&$($name,)*) { 
+            fn insert_components(&self, commands: &mut Commands, entity: Entity) {
+                let ($($name,)*) = self.clone();
+                commands.entity(entity)
+                $(
+                    .insert($name.clone())
+                )*;
+            }
+        }
+
+    };
+}
+
+bevy::utils::all_tuples!(impl_tuple_query_data, 1, 15, F, S);

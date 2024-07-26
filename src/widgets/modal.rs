@@ -85,8 +85,8 @@ fn update(
     mut commands: Commands,
     current_widget: Res<CurrentWidget>,
     mut hook_helper: ResMut<HookHelper>,
-    query: Query<&'static Modal, Without<PreviousWidget>>,
-    prev_query: Query<&'static Modal, With<PreviousWidget>>,
+    query: Query<(&Modal, &WoodpeckerStyle), Without<PreviousWidget>>,
+    prev_query: Query<(&Modal, &WoodpeckerStyle), With<PreviousWidget>>,
     children_query: Query<&WidgetChildren>,
 ) -> bool {
     hook_helper.compare(*current_widget, &mut commands, &query, &prev_query)
