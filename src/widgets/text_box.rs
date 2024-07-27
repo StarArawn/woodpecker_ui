@@ -1,17 +1,6 @@
 use std::time::Instant;
 
-use crate::{
-    children::WidgetChildren,
-    focus::{Focusable, WidgetBlur, WidgetFocus},
-    font::FontManager,
-    keyboard_input::{WidgetKeyboardButtonEvent, WidgetPasteEvent},
-    prelude::{
-        Edge, HookHelper, OnChange, Units, Widget, WidgetKeyboardCharEvent, WidgetRender,
-        WoodpeckerStyle,
-    },
-    styles::{WidgetAlignItems, WidgetPosition},
-    CurrentWidget, DefaultFont,
-};
+use crate::{keyboard_input::{WidgetKeyboardButtonEvent, WidgetPasteEvent}, prelude::*, DefaultFont};
 use bevy::prelude::*;
 use bevy_mod_picking::{
     events::{Out, Over, Pointer},
@@ -29,7 +18,7 @@ pub struct ChangedText {
     pub value: String,
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, PartialEq)]
 pub struct TextboxStyles {
     pub normal: WoodpeckerStyle,
     pub hovered: WoodpeckerStyle,
@@ -97,13 +86,15 @@ impl Default for TextBoxBundle {
 }
 
 /// The Woodpecker UI Button
-#[derive(Component, Reflect, Default, Widget, Clone)]
-#[widget_systems(update, render)]
+#[derive(Component, Reflect, Default, PartialEq, Widget, Clone)]
+#[auto_update(render)]
+#[props(TextBox, TextboxStyles)]
+#[state(TextBoxState)]
 pub struct TextBox {
     pub initial_value: String,
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, PartialEq, Clone)]
 pub struct TextBoxState {
     // Mouse input state
     pub hovering: bool,
@@ -130,36 +121,6 @@ impl Default for TextBoxState {
             current_value: String::new(),
         }
     }
-}
-
-pub fn update(
-    entity: Res<CurrentWidget>,
-    query: Query<Entity, Or<(Changed<TextBox>, Changed<TextboxStyles>)>>,
-    state_query: Query<Ref<TextBoxState>>,
-    children_query: Query<&WidgetChildren>,
-    child_query: Query<&Children>,
-) -> bool {
-    // We need to figure out if state changed
-    // We can check this by pulling in the state entity assocaited with this entity.
-    let state_changed = child_query
-        .get(**entity)
-        .map(|children| {
-            children.iter().any(|child| {
-                state_query
-                    .get(*child)
-                    .map(|s| s.is_changed())
-                    .unwrap_or_default()
-            })
-        })
-        .unwrap_or_default();
-
-    query.contains(**entity)
-        || children_query
-            .iter()
-            .next()
-            .map(|c| c.children_changed())
-            .unwrap_or_default()
-        || state_changed
 }
 
 pub fn render(

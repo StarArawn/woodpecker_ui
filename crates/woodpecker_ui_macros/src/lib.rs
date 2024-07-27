@@ -12,15 +12,16 @@ pub fn widget_macro(input: TokenStream) -> TokenStream {
     let struct_identifier = &input.ident;
 
     const ATTR_ERROR_MESSAGE: &str = r#"
-The `systems` attribute is the only supported argument
+The `auto_update` and `widget_systems` attributes are the only supported arguments
 
-= help: use `#[widget_systems(update, render)]`
+= help: use `#[auto_update(render)] or #[widget_systems(update, render)]`
 "#;
 
     let mut systems: (Option<proc_macro2::TokenStream>, Option<String>) = (None, None);
     let mut is_auto_update = false;
     let mut is_auto_diff_state = false;
     let mut is_auto_diff_context = false;
+    let mut is_diff_props = false;
     let mut diff_props = vec![];
     let mut diff_state = vec![];
     let mut diff_context = vec![];
@@ -78,6 +79,7 @@ The `systems` attribute is the only supported argument
             for component in split {
                 diff_props.push(component.to_string().replace(' ', ""));
             }
+            is_diff_props = true;
             props_span = Some(attr.path().get_ident().span());
         }
         if attr.path().is_ident("state") && is_auto_update {
@@ -114,6 +116,13 @@ The `systems` attribute is the only supported argument
     }
 
     if is_auto_update {
+
+        if !is_diff_props {
+            return syn::Error::new(input.span(), "`auto_update` attribute used but no props were specified please use #[props(Component)] and specify at least one component to diff.")
+                .to_compile_error()
+                .into();
+        }
+
         let (prop_diff, prop_names_a, prop_names_b, prop_type_names) =
             get_diff(props_span.unwrap(), diff_props, true);
 

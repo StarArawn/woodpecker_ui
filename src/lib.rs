@@ -199,7 +199,9 @@ impl WidgetRegisterExt for App {
 mod test_proc_macro {
     #[test]
     fn test_widget_macro() {
-        use crate::prelude::Widget;
+        use crate::prelude::*;
+        use bevy::prelude::*;
+
         #[derive(Widget)]
         #[widget_systems(update, render)]
         pub struct MyStruct {}
@@ -207,6 +209,12 @@ mod test_proc_macro {
         fn update() -> bool {
             false
         }
+
+        #[derive(Widget, Component, PartialEq, Clone)]
+        #[auto_update(render)]
+        #[props(MyStruct2)]
+        pub struct MyStruct2 {}
+
         fn render() {}
     }
 }
