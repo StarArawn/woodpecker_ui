@@ -34,7 +34,7 @@ impl Default for ClipBundle {
 }
 
 /// The Woodpecker UI Element
-#[derive(Component, Widget, Default, Clone)]
+#[derive(Component, Widget, Reflect, Default, Clone)]
 #[widget_systems(update, render)]
 pub struct Clip {}
 

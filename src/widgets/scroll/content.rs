@@ -6,7 +6,7 @@ use bevy::prelude::*;
 
 use super::ScrollContext;
 
-#[derive(Component, Widget, Default, PartialEq, Eq, Clone)]
+#[derive(Component, Widget, Reflect, Default, PartialEq, Eq, Clone)]
 #[widget_systems(update, render)]
 pub struct ScrollContent;
 

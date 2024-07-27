@@ -79,7 +79,7 @@ pub struct WButtonState {
 }
 
 /// The Woodpecker UI Button
-#[derive(Component, Widget, Default, PartialEq, Clone)]
+#[derive(Component, Widget, Default, Reflect, PartialEq, Clone)]
 #[auto_update(render)]
 #[props(WButton, ButtonStyles)]
 #[state(WButtonState)]

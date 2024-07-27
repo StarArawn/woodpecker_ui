@@ -1,7 +1,7 @@
 use bevy::{prelude::*, utils::HashMap};
 use bevy_trait_query::One;
 
-use crate::{context::Widget, CurrentWidget};
+use crate::{context::{self, Widget}, CurrentWidget};
 
 /// A helper resource that keeps track of context(hierachy state) entities and state tied to entities.
 #[derive(Resource, Default, Debug, Clone)]
@@ -51,6 +51,10 @@ impl HookHelper {
         self.state
             .get(&*current_widget)
             .and_then(|context_types| context_types.get(&type_name).copied())
+    }
+
+    pub(crate) fn get_all_state_entities(&self, current_widget: CurrentWidget) -> Option<Vec<&Entity>> {
+        self.state.get(&*current_widget).map(|context_types| context_types.values().collect::<Vec<_>>())
     }
 
     /// Traverses the widget tree(bevy hierarchy) and finds the context entity
@@ -134,9 +138,13 @@ impl HookHelper {
         let prev_state_entity = self
             .prev_state_entities
             .entry(*current_widget)
-            .or_insert_with(|| commands.spawn(PreviousWidget).id());
+            .or_insert_with(|| commands.spawn(PreviousWidget).set_parent(*current_widget).id());
 
         *prev_state_entity
+    }
+
+    pub(crate) fn get_previous_widget_no_spawn(&self, current_widget: CurrentWidget) -> Option<&Entity> {
+        self.prev_state_entities.get(&*current_widget)
     }
 }
 

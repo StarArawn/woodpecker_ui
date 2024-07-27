@@ -58,6 +58,7 @@ impl WidgetChildren {
     /// otherwise the entities will not be spawned! This will NOT spawn the bundles.
     pub fn add<T: Widget>(&mut self, bundle: impl Bundle + Clone) -> &mut Self {
         let widget_name = T::get_name();
+        let widget_type_name = widget_name.clone().split("::").last().unwrap().to_string();
         self.children_queue.push((
             T::get_name(),
             Arc::new(
@@ -72,7 +73,7 @@ impl WidgetChildren {
                         None,
                         index,
                     );
-                    world.entity_mut(child_widget).insert(bundle.clone()).insert(Mounted);
+                    world.entity_mut(child_widget).insert(bundle.clone()).insert(Mounted).insert(Name::new(format!("{}", widget_type_name)));
                 },
             ),
         ));
@@ -110,7 +111,8 @@ impl WidgetChildren {
             // They are ensured to have the same entity id for a given child index and
             // widget type name. The type name is passed into the closure in [`Self::add`].
             // TODO: Maybe just pass it in here to make it clearer?
-            for (i, (_, child)) in self.children.iter().enumerate() {
+            for (i, (name, child)) in self.children.iter().enumerate() {
+                trace!("Adding as child: {}", name);
                 child(world, &mut widget_mapper, parent_widget, i);
             }
         });

@@ -97,7 +97,7 @@ impl Default for TextBoxBundle {
 }
 
 /// The Woodpecker UI Button
-#[derive(Component, Default, Widget, Clone)]
+#[derive(Component, Reflect, Default, Widget, Clone)]
 #[widget_systems(update, render)]
 pub struct TextBox {
     pub initial_value: String,

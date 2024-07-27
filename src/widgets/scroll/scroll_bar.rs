@@ -9,7 +9,7 @@ use bevy_mod_picking::{
 use super::{map_range, ScrollContext};
 
 /// [`ScrollBar`] widget
-#[derive(Component, Widget, Default, Debug, PartialEq, Clone)]
+#[derive(Component, Widget, Reflect, Default, Debug, PartialEq, Clone)]
 #[widget_systems(update, render)]
 pub struct ScrollBar {
     /// If true, disables the ability to drag

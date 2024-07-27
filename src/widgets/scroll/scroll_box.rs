@@ -12,7 +12,7 @@ use bevy_mod_picking::{
 
 use super::ScrollContext;
 
-#[derive(Widget, Component, Default, Clone, PartialEq)]
+#[derive(Widget, Component, Reflect, Default, Clone, PartialEq)]
 #[widget_systems(update, render)]
 pub struct ScrollBox {
     /// If true, always shows scrollbars even when there's nothing to scroll

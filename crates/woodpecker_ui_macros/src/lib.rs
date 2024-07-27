@@ -205,6 +205,7 @@ The `systems` attribute is the only supported argument
                 query_b: Query<(Entity, #(&#prop_type_names, )*), With<PreviousWidget>>,
                 #state_query_statements
                 #context_query_statements
+                transition_query: Query<&Transition>,
             | {
                 // Ignore no children
                 if let Ok(children) = child_query.get(**current_widget) {
@@ -237,6 +238,15 @@ The `systems` attribute is the only supported argument
                     // Probably means we mounted(created) so we should re-render!
                     return true;
                 };
+
+                if let Ok(transition_a) = transition_query.get(**current_widget) {
+                    commands.entity(previous_widget_entity).insert(transition_a.clone());
+                    if let Ok(transition_b) = transition_query.get(previous_widget_entity) {
+                        if transition_a.is_playing() != transition_b.is_playing() {   
+                            return true;
+                        } 
+                    }
+                }
 
                 let diff_result = #prop_diff;
                 diff_result

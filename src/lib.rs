@@ -1,4 +1,4 @@
-use bevy::{asset::embedded_asset, prelude::*};
+use bevy::{asset::embedded_asset, prelude::*, reflect::GetTypeRegistration};
 use bevy_mod_picking::{events::Pointer, prelude::EventListenerPlugin};
 use bevy_trait_query::RegisterExt;
 use bevy_vello::{text::VelloFont, CoordinateSpace, VelloPlugin, VelloSceneBundle};
@@ -120,7 +120,20 @@ impl Plugin for WoodpeckerUIPlugin {
                     picking_backend::system.after(crate::layout::system::run),
                 ),
             )
-            .add_systems(Startup, startup);
+            .add_systems(Startup, startup)
+            // Reflection registration
+            .register_type::<crate::prelude::WidgetLayout>()
+            .register_type::<styles::WoodpeckerStyle>()
+            .register_type::<styles::Corner>()
+            .register_type::<styles::Edge>()
+            .register_type::<styles::Units>()
+            .register_type::<styles::WidgetAlignContent>()
+            .register_type::<styles::WidgetAlignItems>()
+            .register_type::<styles::WidgetDisplay>()
+            .register_type::<styles::WidgetFlexDirection>()
+            .register_type::<styles::WidgetFlexWrap>()
+            .register_type::<styles::WidgetOverflow>()
+            .register_type::<styles::WidgetPosition>();
     }
 }
 
@@ -140,7 +153,7 @@ fn startup(mut commands: Commands) {
 pub trait WidgetRegisterExt {
     /// Registers a new widget
     /// This tells bevy-trait-query that this is a component, don't do it twice.
-    fn register_widget<T: Component + Widget>(&mut self) -> &mut Self;
+    fn register_widget<T: Component + Widget + GetTypeRegistration>(&mut self) -> &mut Self;
 
     /// Adds a new set of systems for a widget type.
     /// Update systems are ran every frame and return true or false depending on if the widget has "changed".
@@ -155,8 +168,9 @@ pub trait WidgetRegisterExt {
 }
 
 impl WidgetRegisterExt for App {
-    fn register_widget<T: Component + Widget>(&mut self) -> &mut Self {
+    fn register_widget<T: Component + Widget + GetTypeRegistration>(&mut self) -> &mut Self {
         self.register_component_as::<dyn Widget, T>();
+        self.register_type::<T>();
         let mut context = self
             .world_mut()
             .get_resource_or_insert_with::<WoodpeckerContext>(WoodpeckerContext::default);

@@ -1,10 +1,17 @@
 use bevy::prelude::*;
+use bevy_mod_picking::{events::{Click, Out, Over, Pointer}, prelude::{ListenerMut, On}, PickableBundle};
 
 use crate::prelude::*;
 
-#[derive(Component, Widget, PartialEq, Clone, Debug)]
+#[derive(Component, Reflect, PartialEq, Clone, Debug)]
+pub struct ModalState {
+    previous_visibility: bool,
+}
+
+#[derive(Component, Widget, Reflect, PartialEq, Clone, Debug)]
 #[auto_update(render)]
 #[props(Modal)]
+#[state(ModalState)]
 pub struct Modal {
     /// The text to display in the modal's title bar
     pub title: String,
@@ -82,24 +89,10 @@ impl Default for ModalBundle {
     }
 }
 
-// fn update<'a>(
-//     mut commands: Commands,
-//     current_widget: Res<CurrentWidget>,
-//     mut hook_helper: ResMut<HookHelper>,
-//     query: Query<(&'a Modal, &'a WoodpeckerStyle), Without<PreviousWidget>>,
-//     prev_query: Query<(&'a Modal, &'a WoodpeckerStyle), With<PreviousWidget>>,
-//     children_query: Query<&WidgetChildren>,
-// ) -> bool {
-
-//         || children_query
-//             .get(**current_widget)
-//             .map(|c| c.children_changed())
-//             .unwrap_or_default()
-// }
-
 fn render(
-    entity: Res<CurrentWidget>,
-    mut visible_changed: Local<bool>,
+    mut commands: Commands,
+    current_widget: Res<CurrentWidget>,
+    mut hooks: ResMut<HookHelper>,
     mut query: Query<(
         &Modal,
         &mut WidgetChildren,
@@ -107,10 +100,19 @@ fn render(
         &mut WoodpeckerStyle,
         &mut Transition,
     )>,
+    mut modal_state: Query<&mut ModalState>,
 ) {
     let Ok((modal, mut internal_children, passed_children, mut styles, mut transition)) =
-        query.get_mut(**entity)
+        query.get_mut(**current_widget)
     else {
+        return;
+    };
+
+    let state_entity = hooks.use_state(&mut commands, *current_widget, ModalState {
+        previous_visibility: modal.visible,
+    });
+
+    let Ok(mut state) = modal_state.get_mut(state_entity) else {
         return;
     };
 
@@ -120,7 +122,7 @@ fn render(
         ..transition.clone()
     };
 
-    if *visible_changed != modal.visible {
+    if state.previous_visibility != modal.visible {
         if transition.reversing {
             transition.start_reverse()
         } else {
@@ -128,30 +130,44 @@ fn render(
         }
         // Make sure initial state is correct.
         *styles = transition.update();
-        *visible_changed = modal.visible;
+        state.previous_visibility = modal.visible;
     }
 
-    if !transition.is_playing() && !modal.visible {
+
+    // *internal_children = WidgetChildren::default();
+
+    let should_render = transition.is_playing() || modal.visible;
+    if !should_render {
         return;
     }
 
-    *internal_children = WidgetChildren::default()
+    internal_children
         // Overlay
-        .with_child::<Element>((
+        .add::<Element>((
             ElementBundle {
                 styles: WoodpeckerStyle {
                     background_color: Srgba::new(0.0, 0.0, 0.0, modal.overlay_alpha).into(),
-                    // width: Units::Percentage(100.0),
-                    // height: Units::Percentage(100.0),
+                    width: Units::Percentage(100.0),
+                    height: Units::Percentage(100.0),
                     position: WidgetPosition::Absolute,
                     ..Default::default()
                 },
                 ..Default::default()
             },
+            PickableBundle::default(),
+            On::<Pointer<Over>>::run(|mut event: ListenerMut<Pointer<Over>>| {
+                event.stop_propagation();
+            }),
+            On::<Pointer<Out>>::run(|mut event: ListenerMut<Pointer<Out>>| {
+                event.stop_propagation();
+            }),
+            On::<Pointer<Click>>::run(|mut event: ListenerMut<Pointer<Click>>| {
+                event.stop_propagation();
+            }),
             WidgetRender::Quad,
         ))
         // Window
-        .with_child::<Element>((
+        .add::<Element>((
             ElementBundle {
                 styles: WoodpeckerStyle {
                     background_color: Srgba::new(0.188, 0.203, 0.274, 1.0).into(),
@@ -203,7 +219,7 @@ fn render(
                         WidgetRender::Quad,
                     ))
                     // Content
-                    .with_child::<Clip>(ClipBundle {
+                    .with_child::<Element>(ElementBundle {
                         children: passed_children.0.clone(),
                         ..Default::default()
                     }),
@@ -212,5 +228,5 @@ fn render(
             WidgetRender::Quad,
         ));
 
-    internal_children.apply(entity.as_parent());
+    internal_children.apply(current_widget.as_parent());
 }

@@ -263,7 +263,7 @@ title: Woodpecker UI internals
 flowchart TD
     runner[Runner] --> update[Widget Update System] --> render[Widget Render System] --> child[Process children - inserts children into the bevy world] --> remove[Remove widgets not rendered that were rendered before] --> update 
 ```
-be
+
 ```mermaid
 ---
 title: Woodpecker UI Children

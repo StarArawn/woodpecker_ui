@@ -13,7 +13,7 @@ use std::collections::BTreeSet;
 use crate::{
     children::WidgetChildren,
     context::Widget,
-    prelude::{PreviousWidget, WidgetMapper},
+    prelude::{HookHelper, PreviousWidget, WidgetMapper},
     CurrentWidget, WoodpeckerContext,
 };
 
