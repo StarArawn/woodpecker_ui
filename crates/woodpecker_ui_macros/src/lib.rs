@@ -126,6 +126,14 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
         let (prop_diff, prop_names_a, prop_names_b, prop_type_names) =
             get_diff(props_span.unwrap(), diff_props, true);
 
+        if prop_type_names.iter().any(|tn| tn.to_string().contains("Transition")) {
+            let prop_name = prop_type_names.iter().find(|tn| tn.to_string().contains("Transition")).unwrap();
+            
+            return syn::Error::new(prop_name.span(), "Transitions are automatically diffed internally. As they are handled specially to avoid re-renders unless the animation starts/finishes. Please remove the Transition from the `props` attribute.")
+            .to_compile_error()
+            .into();
+        }
+
         let (state_query_statements, state_query_lookups) = if is_auto_diff_state {
             let (compiler_error, state_names_a, state_names_b, state_type_names) =
                 get_diff(state_span.unwrap(), diff_state, false);
