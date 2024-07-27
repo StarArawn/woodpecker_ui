@@ -6,7 +6,7 @@ use woodpecker_ui::prelude::*;
 // We can derive widget here and pass in our systems
 // passing in the widget_systems is optional and if we don't pass
 // them in we need to call `app.add_widget_systems`!
-#[derive(Component, Widget, Clone)]
+#[derive(Component, Widget, Reflect, Clone)]
 #[widget_systems(foo_update, foo_render)]
 pub struct FooWidget;
 
@@ -45,7 +45,7 @@ pub struct BarWidgetBundle {
     pub children: WidgetChildren,
 }
 
-#[derive(Component, Widget, Default, Clone)]
+#[derive(Component, Widget, Reflect, Default, Clone)]
 #[widget_systems(bar_update, bar_render)]
 pub struct BarWidget;
 
@@ -64,7 +64,7 @@ fn bar_render(entity: Res<CurrentWidget>, mut query: Query<&mut WidgetChildren>)
     children.apply(entity.as_parent());
 }
 
-#[derive(Component, Widget, Default, Clone)]
+#[derive(Component, Widget, Reflect, Default, Clone)]
 #[widget_systems(baz_update, baz_render)]
 pub struct BazWidget {
     pub value: f32,

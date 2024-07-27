@@ -73,7 +73,11 @@ impl WidgetChildren {
                         None,
                         index,
                     );
-                    world.entity_mut(child_widget).insert(bundle.clone()).insert(Mounted).insert(Name::new(format!("{}", widget_type_name)));
+                    world
+                        .entity_mut(child_widget)
+                        .insert(bundle.clone())
+                        .insert(Mounted)
+                        .insert(Name::new(widget_type_name.clone()));
                 },
             ),
         ));

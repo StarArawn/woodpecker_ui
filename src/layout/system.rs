@@ -151,7 +151,10 @@ pub(crate) fn run(
     state_marker_query: Query<&StateMarker>,
     prev_marker_query: Query<&PreviousWidget>,
     layout_query: Query<&WidgetLayout>,
-    children_query: Query<(Entity, &Children, One<&dyn Widget>), (Changed<Children>, Without<PreviousWidget>)>,
+    children_query: Query<
+        (Entity, &Children, One<&dyn Widget>),
+        (Changed<Children>, Without<PreviousWidget>),
+    >,
     mut vello_query: Query<&mut VelloScene>,
     widget_render: Query<&WidgetRender>,
     context: Res<WoodpeckerContext>,

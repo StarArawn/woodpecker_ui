@@ -7,7 +7,7 @@ use woodpecker_ui::prelude::*;
 
 use crate::TodoListData;
 
-#[derive(Widget, Component, Clone, Default)]
+#[derive(Widget, Component, Reflect, Clone, Default)]
 #[widget_systems(update, render)]
 pub struct TodoInput {
     current_value: String,

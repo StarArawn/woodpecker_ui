@@ -186,7 +186,7 @@ pub fn render(
         TextBoxState {
             current_value: text_box.initial_value.clone(),
             ..Default::default()
-        }
+        },
     );
 
     let Ok(mut state) = state_query.get_mut(state_entity) else {

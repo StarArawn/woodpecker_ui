@@ -11,7 +11,7 @@ pub struct CounterState {
     count: u32,
 }
 
-#[derive(Widget, Component, PartialEq, Default, Debug, Clone)]
+#[derive(Widget, Component, Reflect, PartialEq, Default, Debug, Clone)]
 #[auto_update(render)]
 #[props(CounterWidget)]
 #[state(CounterState)]

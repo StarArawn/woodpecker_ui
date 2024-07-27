@@ -1,5 +1,9 @@
 use bevy::prelude::*;
-use bevy_mod_picking::{events::{Click, Out, Over, Pointer}, prelude::{ListenerMut, On}, PickableBundle};
+use bevy_mod_picking::{
+    events::{Click, Out, Over, Pointer},
+    prelude::{ListenerMut, On},
+    PickableBundle,
+};
 
 use crate::prelude::*;
 
@@ -108,9 +112,13 @@ fn render(
         return;
     };
 
-    let state_entity = hooks.use_state(&mut commands, *current_widget, ModalState {
-        previous_visibility: modal.visible,
-    });
+    let state_entity = hooks.use_state(
+        &mut commands,
+        *current_widget,
+        ModalState {
+            previous_visibility: modal.visible,
+        },
+    );
 
     let Ok(mut state) = modal_state.get_mut(state_entity) else {
         return;
@@ -132,7 +140,6 @@ fn render(
         *styles = transition.update();
         state.previous_visibility = modal.visible;
     }
-
 
     // *internal_children = WidgetChildren::default();
 

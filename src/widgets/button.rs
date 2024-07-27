@@ -89,23 +89,14 @@ pub fn render(
     current_widget: Res<CurrentWidget>,
     mut commands: Commands,
     mut hooks: ResMut<HookHelper>,
-    mut query: Query<(
-        &mut WoodpeckerStyle,
-        &ButtonStyles,
-        &mut WidgetChildren,
-    )>,
+    mut query: Query<(&mut WoodpeckerStyle, &ButtonStyles, &mut WidgetChildren)>,
     state_query: Query<&WButtonState>,
 ) {
-    let Ok((mut styles, button_styles, mut children)) = query.get_mut(**current_widget)
-    else {
+    let Ok((mut styles, button_styles, mut children)) = query.get_mut(**current_widget) else {
         return;
     };
 
-    let state_entity = hooks.use_state(
-        &mut commands,
-        *current_widget,
-        WButtonState::default()
-    );
+    let state_entity = hooks.use_state(&mut commands, *current_widget, WButtonState::default());
     let Ok(state) = state_query.get(state_entity) else {
         return;
     };

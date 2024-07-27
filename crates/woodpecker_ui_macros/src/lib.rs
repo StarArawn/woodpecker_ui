@@ -11,7 +11,7 @@ pub fn widget_macro(input: TokenStream) -> TokenStream {
 
     let struct_identifier = &input.ident;
 
-    const ATTR_ERROR_MESSAGE: &'static str = r#"
+    const ATTR_ERROR_MESSAGE: &str = r#"
 The `systems` attribute is the only supported argument
 
 = help: use `#[widget_systems(update, render)]`
@@ -71,7 +71,9 @@ The `systems` attribute is the only supported argument
             let system_names = list.tokens.to_string();
             let split = system_names.split(',').collect::<Vec<_>>();
             if split.is_empty() {
-                return syn::Error::new(list.span(), ATTR_ERROR_MESSAGE).to_compile_error().into();
+                return syn::Error::new(list.span(), ATTR_ERROR_MESSAGE)
+                    .to_compile_error()
+                    .into();
             }
             for component in split {
                 diff_props.push(component.to_string().replace(' ', ""));
@@ -83,7 +85,9 @@ The `systems` attribute is the only supported argument
             let system_names = list.tokens.to_string();
             let split = system_names.split(',').collect::<Vec<_>>();
             if split.is_empty() {
-                return syn::Error::new(list.span(), ATTR_ERROR_MESSAGE).to_compile_error().into();
+                return syn::Error::new(list.span(), ATTR_ERROR_MESSAGE)
+                    .to_compile_error()
+                    .into();
             }
             for component in split {
                 diff_state.push(component.to_string().replace(' ', ""));
@@ -97,7 +101,9 @@ The `systems` attribute is the only supported argument
             let system_names = list.tokens.to_string();
             let split = system_names.split(',').collect::<Vec<_>>();
             if split.is_empty() {
-                return syn::Error::new(list.span(), ATTR_ERROR_MESSAGE).to_compile_error().into();
+                return syn::Error::new(list.span(), ATTR_ERROR_MESSAGE)
+                    .to_compile_error()
+                    .into();
             }
             for component in split {
                 diff_context.push(component.to_string().replace(' ', ""));
@@ -108,86 +114,113 @@ The `systems` attribute is the only supported argument
     }
 
     if is_auto_update {
-        let (prop_diff, prop_names_a, prop_names_b, prop_type_names) = get_diff(props_span.unwrap(), diff_props, true);
-        
+        let (prop_diff, prop_names_a, prop_names_b, prop_type_names) =
+            get_diff(props_span.unwrap(), diff_props, true);
+
         let (state_query_statements, state_query_lookups) = if is_auto_diff_state {
-            let (compiler_error, state_names_a, state_names_b, state_type_names) = get_diff(state_span.unwrap(), diff_state, false);
+            let (compiler_error, state_names_a, state_names_b, state_type_names) =
+                get_diff(state_span.unwrap(), diff_state, false);
 
-            let state_names_a_query = state_names_a.iter().map(|n| Ident::new(&format!("{}_query", n.to_string()), Span::call_site())).collect::<Vec<_>>();
-            let state_names_b_query = state_names_b.iter().map(|n| Ident::new(&format!("{}_query", n.to_string()), Span::call_site())).collect::<Vec<_>>();
+            let state_names_a_query = state_names_a
+                .iter()
+                .map(|n| Ident::new(&format!("{}_query", n), Span::call_site()))
+                .collect::<Vec<_>>();
+            let state_names_b_query = state_names_b
+                .iter()
+                .map(|n| Ident::new(&format!("{}_query", n), Span::call_site()))
+                .collect::<Vec<_>>();
 
-            let state_type_names_string = state_type_names.iter().map(|tn| tn.to_string()).collect::<Vec<_>>();
+            let state_type_names_string = state_type_names
+                .iter()
+                .map(|tn| tn.to_string())
+                .collect::<Vec<_>>();
 
-            (Some(quote! {
-                #compiler_error
-                #(#state_names_a_query: Query<&#state_type_names, Without<PreviousWidget>>,)*
-                #(#state_names_b_query: Query<&#state_type_names, With<PreviousWidget>>,)*
-            }), Some(quote! {
-                #(
-                    if let Some(state_entity) = hook_helper.get_state::<#state_type_names>(*current_widget) {
-                        let Ok(#state_names_a) = #state_names_a_query.get(state_entity) else {
-                            error!("Woodpecker UI: WARNING! you are likely attempting to diff a state component on the widget {} that does not exist!", #state_type_names_string);
-                            return false;
-                        };
+            (
+                Some(quote! {
+                    #compiler_error
+                    #(#state_names_a_query: Query<&#state_type_names, Without<PreviousWidget>>,)*
+                    #(#state_names_b_query: Query<&#state_type_names, With<PreviousWidget>>,)*
+                }),
+                Some(quote! {
+                    #(
+                        if let Some(state_entity) = hook_helper.get_state::<#state_type_names>(*current_widget) {
+                            let Ok(#state_names_a) = #state_names_a_query.get(state_entity) else {
+                                error!("Woodpecker UI: WARNING! you are likely attempting to diff a state component on the widget {} that does not exist!", #state_type_names_string);
+                                return false;
+                            };
 
-                        // Replace old previous widget state component with new one
-                        commands.entity(previous_widget_entity).insert(
-                            #state_names_a.clone()
-                        );
+                            // Replace old previous widget state component with new one
+                            commands.entity(previous_widget_entity).insert(
+                                #state_names_a.clone()
+                            );
 
-                        let Ok(#state_names_b) = #state_names_b_query.get(previous_widget_entity) else {
-                            // Probably means we have fresh state created so we should re-render!
-                            return true;
-                        };
+                            let Ok(#state_names_b) = #state_names_b_query.get(previous_widget_entity) else {
+                                // Probably means we have fresh state created so we should re-render!
+                                return true;
+                            };
 
-                        if #state_names_a != #state_names_b {
-                            // State changed lets return true!
-                            return true;
+                            if #state_names_a != #state_names_b {
+                                // State changed lets return true!
+                                return true;
+                            }
                         }
-                    }
-                )*
-            }))
+                    )*
+                }),
+            )
         } else {
             (None, None)
         };
 
         let (context_query_statements, context_query_lookups) = if is_auto_diff_context {
-            let (compiler_error, context_names_a, context_names_b, context_type_names) = get_diff(context_span.unwrap(), diff_context, false);
+            let (compiler_error, context_names_a, context_names_b, context_type_names) =
+                get_diff(context_span.unwrap(), diff_context, false);
 
-            let context_names_a_query = context_names_a.iter().map(|n| Ident::new(&format!("{}_query", n.to_string()), Span::call_site())).collect::<Vec<_>>();
-            let context_names_b_query = context_names_b.iter().map(|n| Ident::new(&format!("{}_query", n.to_string()), Span::call_site())).collect::<Vec<_>>();
+            let context_names_a_query = context_names_a
+                .iter()
+                .map(|n| Ident::new(&format!("{}_query", n), Span::call_site()))
+                .collect::<Vec<_>>();
+            let context_names_b_query = context_names_b
+                .iter()
+                .map(|n| Ident::new(&format!("{}_query", n), Span::call_site()))
+                .collect::<Vec<_>>();
 
-            let context_type_names_string = context_type_names.iter().map(|tn| tn.to_string()).collect::<Vec<_>>();
+            let context_type_names_string = context_type_names
+                .iter()
+                .map(|tn| tn.to_string())
+                .collect::<Vec<_>>();
 
-            (Some(quote! {
-                #compiler_error
-                #(#context_names_a_query: Query<&#context_type_names, Without<PreviousWidget>>,)*
-                #(#context_names_b_query: Query<&#context_type_names, With<PreviousWidget>>,)*
-            }), Some(quote! {
-                #(
-                    if let Some(context_entity) = hook_helper.get_context::<#context_type_names>(*current_widget) {
-                        let Ok(#context_names_a) = #context_names_a_query.get(context_entity) else {
-                            error!("Woodpecker UI: WARNING! you are likely attempting to diff a context component on the widget {} that does not exist!", #context_type_names_string);
-                            return false;
-                        };
+            (
+                Some(quote! {
+                    #compiler_error
+                    #(#context_names_a_query: Query<&#context_type_names, Without<PreviousWidget>>,)*
+                    #(#context_names_b_query: Query<&#context_type_names, With<PreviousWidget>>,)*
+                }),
+                Some(quote! {
+                    #(
+                        if let Some(context_entity) = hook_helper.get_context::<#context_type_names>(*current_widget) {
+                            let Ok(#context_names_a) = #context_names_a_query.get(context_entity) else {
+                                error!("Woodpecker UI: WARNING! you are likely attempting to diff a context component on the widget {} that does not exist!", #context_type_names_string);
+                                return false;
+                            };
 
-                        // Replace old previous widget state component with new one
-                        commands.entity(previous_widget_entity).insert(
-                            #context_names_a.clone()
-                        );
+                            // Replace old previous widget state component with new one
+                            commands.entity(previous_widget_entity).insert(
+                                #context_names_a.clone()
+                            );
 
-                        let Ok(#context_names_b) = #context_names_b_query.get(previous_widget_entity) else {
-                            // Probably means we have fresh state created so we should re-render!
-                            return true;
-                        };
+                            let Ok(#context_names_b) = #context_names_b_query.get(previous_widget_entity) else {
+                                // Probably means we have fresh state created so we should re-render!
+                                return true;
+                            };
 
-                        if #context_names_a != #context_names_b {
-                            // State changed lets return true!
-                            return true;
+                            if #context_names_a != #context_names_b {
+                                // State changed lets return true!
+                                return true;
+                            }
                         }
-                    }
-                )*
-            }))
+                    )*
+                }),
+            )
         } else {
             (None, None)
         };
@@ -242,9 +275,9 @@ The `systems` attribute is the only supported argument
                 if let Ok(transition_a) = transition_query.get(**current_widget) {
                     commands.entity(previous_widget_entity).insert(transition_a.clone());
                     if let Ok(transition_b) = transition_query.get(previous_widget_entity) {
-                        if transition_a.is_playing() != transition_b.is_playing() {   
+                        if transition_a.is_playing() != transition_b.is_playing() {
                             return true;
-                        } 
+                        }
                     }
                 }
 
@@ -293,10 +326,9 @@ fn get_diff(
     diff_items: Vec<String>,
     include_diff: bool,
 ) -> (proc_macro2::TokenStream, Vec<Ident>, Vec<Ident>, Vec<Ident>) {
-
     let mut diff_props = diff_items
         .iter()
-        .map(|c| Ident::new(&c, Span::call_site()))
+        .map(|c| Ident::new(c, Span::call_site()))
         .collect::<Vec<_>>();
 
     diff_props.sort();
@@ -307,7 +339,7 @@ fn get_diff(
 
         if num_dups > 0 {
             return (
-                syn::Error::new(error_span, "You have duplicate components!").to_compile_error().into(),
+                syn::Error::new(error_span, "You have duplicate components!").to_compile_error(),
                 vec![],
                 vec![],
                 vec![],
