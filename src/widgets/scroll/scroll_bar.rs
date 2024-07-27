@@ -10,7 +10,9 @@ use super::{map_range, ScrollContext};
 
 /// [`ScrollBar`] widget
 #[derive(Component, Widget, Reflect, Default, Debug, PartialEq, Clone)]
-#[widget_systems(update, render)]
+#[auto_update(render)]
+#[props(ScrollBar, WidgetLayout)]
+#[context(ScrollContext)]
 pub struct ScrollBar {
     /// If true, disables the ability to drag
     pub disabled: bool,
@@ -33,31 +35,6 @@ pub struct ScrollBarBundle {
     pub scroll_bar: ScrollBar,
     pub styles: WoodpeckerStyle,
     pub children: WidgetChildren,
-}
-
-pub fn update(
-    mut commands: Commands,
-    current_widget: Res<CurrentWidget>,
-    mut context_helper: ResMut<HookHelper>,
-    query: Query<(
-        Ref<ScrollBar>,
-        Ref<WidgetChildren>,
-        Ref<WidgetLayout>,
-        Ref<WidgetPreviousLayout>,
-    )>,
-    context_query: Query<Entity, Changed<ScrollContext>>,
-) -> bool {
-    let Ok((sb, children, layout, prev_layout)) = query.get(**current_widget) else {
-        return false;
-    };
-
-    let context_entity =
-        context_helper.use_context::<ScrollContext>(&mut commands, *current_widget);
-
-    sb.is_changed()
-        || children.children_changed()
-        || *prev_layout != *layout
-        || context_query.contains(context_entity)
 }
 
 pub fn render(

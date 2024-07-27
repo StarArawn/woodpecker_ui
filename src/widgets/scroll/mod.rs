@@ -128,7 +128,8 @@ impl ScrollContext {
 }
 
 #[derive(Component, Widget, Reflect, Default, PartialEq, Clone)]
-#[widget_systems(update, render)]
+#[auto_update(render)]
+#[props(ScrollContextProvider)]
 pub struct ScrollContextProvider {
     initial_value: ScrollContext,
 }
@@ -138,17 +139,6 @@ pub struct ScrollContextProviderBundle {
     pub provider: ScrollContextProvider,
     pub children: WidgetChildren,
     pub styles: WoodpeckerStyle,
-}
-
-pub fn update(
-    current_widget: Res<CurrentWidget>,
-    query: Query<(Ref<ScrollContextProvider>, Ref<WidgetChildren>)>,
-) -> bool {
-    let Ok((sp, children)) = query.get(**current_widget) else {
-        return false;
-    };
-
-    sp.is_changed() || children.children_changed()
 }
 
 pub fn render(

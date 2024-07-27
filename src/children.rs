@@ -6,7 +6,7 @@ use crate::{context::Widget, prelude::WidgetMapper, ParentWidget};
 
 /// A commponent to pass children down the tree
 /// while also having children of its own.
-#[derive(Component, Default, Clone, Deref, DerefMut)]
+#[derive(Component, Default, Clone, Deref, DerefMut, PartialEq)]
 pub struct PassedChildren(pub WidgetChildren);
 
 /// A commponent to pass children down the tree
@@ -37,6 +37,16 @@ pub struct WidgetChildren {
     /// We need this because childen can be passed around until they
     /// are committed to a parent.
     parent_widget: Option<ParentWidget>,
+}
+
+impl PartialEq for WidgetChildren {
+    fn eq(&self, other: &Self) -> bool {
+        let queue = self.children_queue.iter().map(|(wn, _)| wn.clone()).collect::<Vec<_>>();
+        let other_queue = other.children_queue.iter().map(|(wn, _)| wn.clone()).collect::<Vec<_>>();
+        let children: Vec<String> = self.children.iter().map(|(wn, _)| wn.clone()).collect::<Vec<_>>();
+        let other_children = other.children.iter().map(|(wn, _)| wn.clone()).collect::<Vec<_>>();
+        queue == other_queue && children == other_children
+    }
 }
 
 impl WidgetChildren {

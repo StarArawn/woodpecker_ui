@@ -7,6 +7,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin)
         .add_plugins(DefaultPickingPlugins)
+        .add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new())
         .add_systems(Startup, startup)
         .run();
 }

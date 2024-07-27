@@ -227,6 +227,11 @@ fn render(
                     ))
                     // Content
                     .with_child::<Element>(ElementBundle {
+                        styles: WoodpeckerStyle {
+                            width: Units::Percentage(100.0),
+                            height: Units::Percentage(100.0),
+                            ..Default::default()
+                        },
                         children: passed_children.0.clone(),
                         ..Default::default()
                     }),
