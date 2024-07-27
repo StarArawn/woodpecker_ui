@@ -180,16 +180,16 @@ pub fn render(
         return;
     };
 
-    let state_entity = hook_helper.use_state::<TextBoxState>(
+    let state_entity = hook_helper.use_state(
         &mut commands,
         *current_widget,
+        TextBoxState {
+            current_value: text_box.initial_value.clone(),
+            ..Default::default()
+        }
     );
 
     let Ok(mut state) = state_query.get_mut(state_entity) else {
-        commands.entity(state_entity).insert(TextBoxState {
-            current_value: text_box.initial_value.clone(),
-            ..Default::default()
-        });
         return;
     };
 

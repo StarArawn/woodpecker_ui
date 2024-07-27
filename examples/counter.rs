@@ -37,13 +37,15 @@ fn render(
         return;
     };
 
-    let state_entity = hooks.use_state::<CounterState>(&mut commands, *current_widget);
+    let state_entity = hooks.use_state(
+        &mut commands,
+        *current_widget,
+        CounterState {
+            count: widget.initial_count,
+        },
+    );
 
     let Ok(state) = state_query.get(state_entity) else {
-        // Only set the state if its first been spawned.
-        commands.entity(state_entity).insert(CounterState {
-            count: widget.initial_count,
-        });
         return;
     };
 

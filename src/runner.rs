@@ -95,7 +95,7 @@ pub(crate) fn system(world: &mut World) {
 
         // STEP 4: Despawn unmounted widgets.
         world.resource_scope(|world: &mut World, mut widget_mapper: Mut<WidgetMapper>| {
-            // Note: Children here are only the imediate children attached to the parent(widget_entity).
+            // Note: Children here are only the immediate children attached to the parent(widget_entity).
             let children = widget_mapper.get_all_children(*widget_entity);
             for child in children.iter() {
                 // Only remove if the child was not added this frame.

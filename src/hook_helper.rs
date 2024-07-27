@@ -23,13 +23,14 @@ impl HookHelper {
         &mut self,
         commands: &mut Commands,
         current_widget: CurrentWidget,
+        initial_state: T,
     ) -> Entity {
         let type_name: String = std::any::type_name::<T>().into();
         if let Some(state_entity) = self.get_state::<T>(current_widget) {
             state_entity
         } else {
             let state_entity = commands
-                .spawn(StateMarker)
+                .spawn((StateMarker, initial_state))
                 .set_parent(*current_widget)
                 .id();
 

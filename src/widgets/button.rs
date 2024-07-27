@@ -101,13 +101,12 @@ pub fn render(
         return;
     };
 
-    let state_entity = hooks.use_state::<WButtonState>(
+    let state_entity = hooks.use_state(
         &mut commands,
         *current_widget,
+        WButtonState::default()
     );
     let Ok(state) = state_query.get(state_entity) else {
-        // Only spawn the state if it doesn't exist.
-        commands.entity(state_entity).insert(WButtonState::default());
         return;
     };
 

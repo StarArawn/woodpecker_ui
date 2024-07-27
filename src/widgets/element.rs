@@ -16,6 +16,19 @@ pub struct ElementBundle {
     pub styles: WoodpeckerStyle,
 }
 
+impl ElementBundle {
+    pub fn with_child<T: Widget>(mut self, bundle: impl Bundle + Clone) -> Self {
+        self.children.add::<T>(bundle);
+
+        self
+    }
+
+    pub fn with_style(mut self, style: WoodpeckerStyle) -> Self {
+        self.styles = style;
+        self
+    }
+}
+
 /// The Woodpecker UI Element
 #[derive(Component, Widget, Default, Clone)]
 #[widget_systems(update, render)]
