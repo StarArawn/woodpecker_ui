@@ -23,14 +23,13 @@ impl HookHelper {
         &mut self,
         commands: &mut Commands,
         current_widget: CurrentWidget,
-        initial_state: T,
     ) -> Entity {
         let type_name: String = std::any::type_name::<T>().into();
         if let Some(state_entity) = self.get_state::<T>(current_widget) {
             state_entity
         } else {
             let state_entity = commands
-                .spawn((StateMarker, initial_state))
+                .spawn(StateMarker)
                 .set_parent(*current_widget)
                 .id();
 
@@ -42,7 +41,9 @@ impl HookHelper {
         }
     }
 
-    /// Looks up the T state for an entity.
+    /// Looks up the T state for an entity and returns an Option<Entity>
+    /// None is returned if the state is not found. Unlike use_state this does
+    /// not create new state rather it only looks for existing state.
     /// State entities are just entities parented to the entity passed in.
     pub fn get_state<T: Component>(&self, current_widget: CurrentWidget) -> Option<Entity> {
         let type_name: String = std::any::type_name::<T>().into();
@@ -71,6 +72,16 @@ impl HookHelper {
 
             context_entity
         }
+    }
+
+    /// Like use_context but does not spawn a new context entity it only
+    /// looks for an existing one.
+    pub fn get_context<T: Component>(
+        &self,
+        current_widget: CurrentWidget,
+    ) -> Option<Entity> {
+        let type_name: String = std::any::type_name::<T>().into();
+        self.traverse_find_context_entity(&type_name, current_widget)
     }
 
     // Traverse up tree to find parent widget with the context.
@@ -126,68 +137,7 @@ impl HookHelper {
 
         *prev_state_entity
     }
-
-    // pub fn compare<'a, 'w, 's, Q: QueryData>(
-    //     &mut self,
-    //     current_widget: CurrentWidget,
-    //     commands: &mut Commands,
-    //     query1: &'a Query<'w, 's, Q, Without<PreviousWidget>>,
-    //     query2: &'a Query<'w, 's, Q, With<PreviousWidget>>,
-    // ) -> bool
-    // where
-    //     // <<Q as QueryData>::ReadOnly as WorldQuery>::Item<'a>: Component + PartialEq + Clone
-    //     <<Q as QueryData>::ReadOnly as WorldQuery>::Item<'a>: PartialEq
-    // {
-    //     let prev_state_entity = self
-    //         .prev_state_entities
-    //         .entry(*current_widget)
-    //         .or_insert_with(|| commands.spawn(PreviousWidget).id());
-    //     let should_update = {
-    //         if let Ok(item1) = query1.get(*current_widget) {
-    //             // Replace previous entity state with new state.
-
-    //             // item1.insert_components(commands, *prev_state_entity);
-    //             if let Ok(item2) = query2.get(*current_widget) {
-    //                 item1 != item2
-    //             } else {
-    //                 false
-    //             }
-    //         } else {
-    //             false
-    //         }
-    //     };
-    //     should_update
-    // }
 }
 
 #[derive(Component)]
 pub struct PreviousWidget;
-
-// trait WidgetCompareTrait {
-//     fn insert_components(&self, commands: &mut Commands, entity: Entity);
-// }
-
-// impl<T: Component> WidgetCompareTrait for &T {
-//     fn insert_components(&self, commands: &mut Commands, entity: Entity) {
-
-//     }
-// }
-
-// macro_rules! impl_tuple_query_data {
-//     ($(($name: ident, $state: ident)),*) => {
-//         #[allow(non_snake_case)]
-//         #[allow(clippy::unused_unit)]
-//         impl<$($name),*> WidgetCompareTrait for (&$($name,)*) {
-//             fn insert_components(&self, commands: &mut Commands, entity: Entity) {
-//                 let ($($name,)*) = self.clone();
-//                 commands.entity(entity);
-//                 // $(
-//                     // .insert($name.clone())
-//                 // )*;
-//             }
-//         }
-
-//     };
-// }
-
-// bevy::utils::all_tuples!(impl_tuple_query_data, 1, 15, F, S);

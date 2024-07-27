@@ -6,11 +6,17 @@ use bevy_mod_picking::{
 };
 use woodpecker_ui::prelude::*;
 
+#[derive(Component, PartialEq, Default, Debug, Clone)]
+pub struct CounterState {
+    count: u32,
+}
+
 #[derive(Widget, Component, PartialEq, Default, Debug, Clone)]
 #[auto_update(render)]
-#[diff(CounterWidget)]
+#[props(CounterWidget)]
+#[state(CounterState)]
 pub struct CounterWidget {
-    count: u32,
+    initial_count: u32,
 }
 
 #[derive(Bundle, Default, Clone)]
@@ -22,9 +28,22 @@ pub struct CounterWidgetBundle {
 
 fn render(
     current_widget: Res<CurrentWidget>,
+    mut commands: Commands,
     mut query: Query<(&CounterWidget, &mut WidgetChildren)>,
+    state_query: Query<&CounterState>,
+    mut hooks: ResMut<HookHelper>,
 ) {
     let Ok((widget, mut children)) = query.get_mut(**current_widget) else {
+        return;
+    };
+
+    let state_entity = hooks.use_state::<CounterState>(&mut commands, *current_widget);
+
+    let Ok(state) = state_query.get(state_entity) else {
+        // Only set the state if its first been spawned.
+        commands.entity(state_entity).insert(CounterState {
+            count: widget.initial_count,
+        });
         return;
     };
 
@@ -49,7 +68,7 @@ fn render(
                     ..Default::default()
                 },
                 WidgetRender::Text {
-                    content: format!("Current Count: {}", widget.count),
+                    content: format!("Current Count: {}", state.count),
                     word_wrap: false,
                 },
             ))
@@ -71,11 +90,11 @@ fn render(
                     )),
                     ..Default::default()
                 },
-                On::<Pointer<Click>>::run(move |mut query: Query<&mut CounterWidget>| {
-                    let Ok(mut widget) = query.get_mut(*current_widget) else {
+                On::<Pointer<Click>>::run(move |mut query: Query<&mut CounterState>| {
+                    let Ok(mut state) = query.get_mut(state_entity) else {
                         return;
                     };
-                    widget.count += 1;
+                    state.count += 1;
                 }),
             )),
         ..Default::default()
@@ -89,6 +108,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin)
         .add_plugins(DefaultPickingPlugins)
+        .add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new())
         .add_systems(Startup, startup)
         .register_widget::<CounterWidget>()
         .run();

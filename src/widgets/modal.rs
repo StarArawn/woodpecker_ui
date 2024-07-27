@@ -4,7 +4,7 @@ use crate::prelude::*;
 
 #[derive(Component, Widget, PartialEq, Clone, Debug)]
 #[auto_update(render)]
-#[diff(Modal)]
+#[props(Modal)]
 pub struct Modal {
     /// The text to display in the modal's title bar
     pub title: String,

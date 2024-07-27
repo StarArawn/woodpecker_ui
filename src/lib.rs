@@ -27,7 +27,7 @@ mod widgets;
 
 /// A module that exports all publicly exposed types.
 pub mod prelude {
-    pub use crate::children::{PassedChildren, WidgetChildren};
+    pub use crate::children::{PassedChildren, WidgetChildren, Mounted};
     pub use crate::context::*;
     pub use crate::entity_mapping::*;
     pub use crate::focus::*;
