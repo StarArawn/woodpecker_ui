@@ -26,7 +26,7 @@ pub struct Modal {
     /// Animation timeout in milliseconds.
     pub timeout: f32,
     /// The overlay background alpha value
-    pub overlay_alpha: f32,
+    pub overlay_color: Color,
     /// State for animation play
     pub transition_play: bool,
     /// The min size of the modal,
@@ -40,7 +40,7 @@ impl Default for Modal {
             children_styles: Default::default(),
             visible: false,
             timeout: 250.0,
-            overlay_alpha: 0.95,
+            overlay_color: Srgba::new(0.0, 0.0, 0.0, 0.95).into(),
             transition_play: false,
             min_size: Vec2::new(400.0, 250.0),
         }
@@ -153,7 +153,7 @@ fn render(
         .add::<Element>((
             ElementBundle {
                 styles: WoodpeckerStyle {
-                    background_color: Srgba::new(0.0, 0.0, 0.0, modal.overlay_alpha).into(),
+                    background_color: modal.overlay_color,
                     width: Units::Percentage(100.0),
                     height: Units::Percentage(100.0),
                     position: WidgetPosition::Absolute,

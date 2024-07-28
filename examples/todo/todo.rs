@@ -42,7 +42,6 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                 modal: Modal {
                     visible: true,
                     title: "Todo Example".into(),
-                    overlay_alpha: 0.85,
                     min_size: Vec2::new(500.0, 350.0),
                     ..Default::default()
                 },

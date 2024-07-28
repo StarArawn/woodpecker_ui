@@ -32,7 +32,6 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras sed tellus neque. 
                 modal: Modal {
                     visible: true,
                     title: "Scrolling example".into(),
-                    overlay_alpha: 0.85,
                     ..Default::default()
                 },
                 children: PassedChildren(

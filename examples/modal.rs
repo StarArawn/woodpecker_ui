@@ -81,7 +81,6 @@ fn render(
         modal: Modal {
             visible: state.show_modal,
             title: "I am a modal".into(),
-            overlay_alpha: 0.85,
             ..Default::default()
         },
         children: PassedChildren(
