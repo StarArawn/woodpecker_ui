@@ -35,6 +35,9 @@ pub(crate) fn system(world: &mut World) {
         .into_iter()
         .chain(get_all_children(world, root_widget))
         .filter(|e| {
+            if world.get_entity(*e).is_none() {
+                return false;
+            }
             !world.entity(*e).contains::<PreviousWidget>()
                 && !world
                     .entity(*e)
