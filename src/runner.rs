@@ -19,7 +19,7 @@ use crate::{
 
 pub(crate) fn system(world: &mut World) {
     let mut context = world.remove_resource::<WoodpeckerContext>().unwrap();
-    let _root_widget = context.get_root_widget();
+    let root_widget = context.get_root_widget();
 
     // Ordering is important so lets use a BTreeSet!
     let mut re_render_list = BTreeSet::default();
@@ -31,12 +31,18 @@ pub(crate) fn system(world: &mut World) {
         widget_mapper.clear_added_this_frame();
     });
 
-    for widget_entity in world
-        .query_filtered::<(Entity, One<&dyn Widget>), Without<PreviousWidget>>()
-        .iter(world)
-        .map(|(e, _)| e)
-        .collect::<Vec<_>>()
-    {
+    let widgets_list = vec![root_widget]
+        .into_iter()
+        .chain(get_all_children(world, root_widget))
+        .filter(|e| {
+            !world.entity(*e).contains::<PreviousWidget>()
+                && !world
+                    .entity(*e)
+                    .contains::<crate::hook_helper::StateMarker>()
+        })
+        .collect::<Vec<_>>();
+
+    for widget_entity in widgets_list {
         update_widgets(
             world,
             widget_entity,
@@ -50,7 +56,6 @@ pub(crate) fn system(world: &mut World) {
 
     // STEP 2: Run render systems which should spawn new widgets.
     for widget_entity in re_render_list.iter() {
-        trace!("re-rendering: {}", widget_entity);
         // Skip removed widgets.
         if removed_list.contains(widget_entity) {
             continue;
@@ -73,6 +78,7 @@ pub(crate) fn system(world: &mut World) {
             render.initialize(world);
         }
 
+        trace!("re-rendering: {}-{}", widget_name, widget_entity);
         // Run the render function and apply changes to the bevy world.
         world.insert_resource(CurrentWidget(*widget_entity));
         let old_tick = render.get_last_run();
@@ -145,36 +151,12 @@ fn update_widgets(
     re_render_list: &mut BTreeSet<Entity>,
     new_ticks: &mut HashMap<String, Tick>,
 ) {
-    let mut widget_query = world.query_filtered::<One<&dyn Widget>, Without<PreviousWidget>>();
-    let Ok(widget) = widget_query.get(world, widget_entity) else {
-        error!("Woodpecker UI: Missing widget data!");
-        return;
-    };
-
-    let local_name = widget.get_name_local();
-    let is_uninitialized = context.get_uninitialized(local_name.clone());
-    let Some(update) = context.get_update_system(local_name.clone()) else {
-        error!("Woodpecker UI: Please register widgets and their systems!");
-        return;
-    };
-
-    if is_uninitialized {
-        update.initialize(world);
-    }
-
-    world.insert_resource(CurrentWidget(widget_entity));
-    let old_tick = update.get_last_run();
-    if update.run((), world) {
-        update.apply_deferred(world);
+    if run_update_system(world, widget_entity, context, new_ticks) {
         re_render_list.insert(widget_entity);
         // Mark children for re-render.
-        let children = get_all_children(world, widget_entity);
-        re_render_list.extend(children);
+        // let children = get_all_children(world, widget_entity);
+        // re_render_list.extend(children);
     }
-    let new_tick = update.get_last_run();
-    new_ticks.insert(local_name, new_tick);
-    update.set_last_run(old_tick);
-    world.remove_resource::<CurrentWidget>();
 }
 
 // Recursively gets all widget children down the tree for a given entity.
@@ -195,8 +177,43 @@ fn get_all_children(world: &mut World, parent_entity: Entity) -> Vec<Entity> {
             .is_ok()
         {
             children.push(child);
-            get_all_children(world, child);
+            children.extend(get_all_children(world, child));
         }
     }
     children
+}
+
+fn run_update_system(
+    world: &mut World,
+    widget_entity: Entity,
+    context: &mut WoodpeckerContext,
+    new_ticks: &mut HashMap<String, Tick>,
+) -> bool {
+    let mut widget_query = world.query_filtered::<One<&dyn Widget>, Without<PreviousWidget>>();
+    let Ok(widget) = widget_query.get(world, widget_entity) else {
+        error!("Woodpecker UI: Missing widget data!");
+        return false;
+    };
+
+    let local_name = widget.get_name_local();
+    let is_uninitialized = context.get_uninitialized(local_name.clone());
+    let Some(update) = context.get_update_system(local_name.clone()) else {
+        error!("Woodpecker UI: Please register widgets and their systems!");
+        return false;
+    };
+
+    if is_uninitialized {
+        update.initialize(world);
+    }
+
+    world.insert_resource(CurrentWidget(widget_entity));
+    let old_tick = update.get_last_run();
+    let should_update = update.run((), world);
+    update.apply_deferred(world);
+    let new_tick = update.get_last_run();
+    new_ticks.insert(local_name, new_tick);
+    update.set_last_run(old_tick);
+    world.remove_resource::<CurrentWidget>();
+
+    should_update
 }

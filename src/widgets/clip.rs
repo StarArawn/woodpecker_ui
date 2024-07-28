@@ -35,7 +35,6 @@ impl Default for ClipBundle {
 #[props(Clip)]
 pub struct Clip {}
 
-
 pub fn render(entity: Res<CurrentWidget>, mut query: Query<&mut WidgetChildren>) {
     let Ok(mut children) = query.get_mut(**entity) else {
         return;

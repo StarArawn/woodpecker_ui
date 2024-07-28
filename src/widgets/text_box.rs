@@ -1,6 +1,10 @@
 use std::time::Instant;
 
-use crate::{keyboard_input::{WidgetKeyboardButtonEvent, WidgetPasteEvent}, prelude::*, DefaultFont};
+use crate::{
+    keyboard_input::{WidgetKeyboardButtonEvent, WidgetPasteEvent},
+    prelude::*,
+    DefaultFont,
+};
 use bevy::prelude::*;
 use bevy_mod_picking::{
     events::{Out, Over, Pointer},

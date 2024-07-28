@@ -34,7 +34,7 @@ impl Default for TodoListBundle {
 fn update(
     current_widget: Res<CurrentWidget>,
     todo_list_data: Res<TodoListData>,
-    query: Query<Entity, Changed<TodoList>>,
+    query: Query<Entity, Added<TodoList>>,
 ) -> bool {
     todo_list_data.is_changed() || query.contains(**current_widget)
 }

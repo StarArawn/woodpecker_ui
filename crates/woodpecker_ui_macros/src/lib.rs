@@ -116,7 +116,6 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
     }
 
     if is_auto_update {
-
         if !is_diff_props {
             return syn::Error::new(input.span(), "`auto_update` attribute used but no props were specified please use #[props(Component)] and specify at least one component to diff.")
                 .to_compile_error()
@@ -126,9 +125,15 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
         let (prop_diff, prop_names_a, prop_names_b, prop_type_names) =
             get_diff(props_span.unwrap(), diff_props, true);
 
-        if prop_type_names.iter().any(|tn| tn.to_string().contains("Transition")) {
-            let prop_name = prop_type_names.iter().find(|tn| tn.to_string().contains("Transition")).unwrap();
-            
+        if prop_type_names
+            .iter()
+            .any(|tn| tn.to_string().contains("Transition"))
+        {
+            let prop_name = prop_type_names
+                .iter()
+                .find(|tn| tn.to_string().contains("Transition"))
+                .unwrap();
+
             return syn::Error::new(prop_name.span(), "Transitions are automatically diffed internally. As they are handled specially to avoid re-renders unless the animation starts/finishes. Please remove the Transition from the `props` attribute.")
             .to_compile_error()
             .into();

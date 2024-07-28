@@ -41,10 +41,26 @@ pub struct WidgetChildren {
 
 impl PartialEq for WidgetChildren {
     fn eq(&self, other: &Self) -> bool {
-        let queue = self.children_queue.iter().map(|(wn, _)| wn.clone()).collect::<Vec<_>>();
-        let other_queue = other.children_queue.iter().map(|(wn, _)| wn.clone()).collect::<Vec<_>>();
-        let children: Vec<String> = self.children.iter().map(|(wn, _)| wn.clone()).collect::<Vec<_>>();
-        let other_children = other.children.iter().map(|(wn, _)| wn.clone()).collect::<Vec<_>>();
+        let queue = self
+            .children_queue
+            .iter()
+            .map(|(wn, _)| wn.clone())
+            .collect::<Vec<_>>();
+        let other_queue = other
+            .children_queue
+            .iter()
+            .map(|(wn, _)| wn.clone())
+            .collect::<Vec<_>>();
+        let children: Vec<String> = self
+            .children
+            .iter()
+            .map(|(wn, _)| wn.clone())
+            .collect::<Vec<_>>();
+        let other_children = other
+            .children
+            .iter()
+            .map(|(wn, _)| wn.clone())
+            .collect::<Vec<_>>();
         queue == other_queue && children == other_children
     }
 }

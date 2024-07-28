@@ -40,7 +40,7 @@ impl Default for TodoInputBundle {
 fn update(
     current_widget: Res<CurrentWidget>,
     todo_list_data: Res<TodoListData>,
-    query: Query<Entity, Changed<TodoInput>>,
+    query: Query<Entity, Added<TodoInput>>,
 ) -> bool {
     todo_list_data.is_changed() || query.contains(**current_widget)
 }
