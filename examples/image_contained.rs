@@ -111,6 +111,7 @@ fn render(
                         },
                         WidgetRender::Svg {
                             handle: asset_server.load("woodpecker_svg/woodpecker.svg"),
+                            path_color: Some(Srgba::RED.into()),
                         },
                     ))
                     .with_child::<WButton>((

@@ -2,15 +2,23 @@ use std::sync::Arc;
 
 use bevy::prelude::*;
 use bevy_vello::{
-    prelude::VelloAsset, text::VelloFont, vello::{
+    text::VelloFont,
+    vello::{
         self,
         glyph::{skrifa::MetadataProvider, Glyph},
         kurbo::{self, Affine, RoundedRectRadii},
         peniko::{self, Brush},
-    }, VelloScene
+    },
+    VelloScene,
 };
 
-use crate::{font::FontManager, metrics::WidgetMetrics, prelude::WoodpeckerStyle, DefaultFont};
+use crate::{
+    font::FontManager,
+    metrics::WidgetMetrics,
+    prelude::WoodpeckerStyle,
+    svg::{SvgAsset, SvgManager},
+    DefaultFont,
+};
 
 pub(crate) const VARIATIONS: &[(&str, f32)] = &[];
 
@@ -47,13 +55,28 @@ pub enum WidgetRender {
         /// A handle to a bevy image.
         handle: Handle<Image>,
     },
-    // A SVG asset. 
+    // A SVG asset.
     Svg {
-        handle: Handle<VelloAsset>,
+        handle: Handle<SvgAsset>,
+        path_color: Option<Color>,
     },
 }
 
 impl WidgetRender {
+    /// Sets the color of SVGs and other WidgetRender's that accept colors.
+    pub fn set_color(&mut self, color: Color) {
+        match self {
+            WidgetRender::Quad => {}
+            WidgetRender::Text { .. } => {}
+            WidgetRender::Custom { .. } => {}
+            WidgetRender::Layer => todo!(),
+            WidgetRender::Image { .. } => {}
+            WidgetRender::Svg { path_color, .. } => {
+                *path_color = Some(color);
+            }
+        }
+    }
+
     pub(crate) fn render(
         &self,
         vello_scene: &mut VelloScene,
@@ -62,8 +85,9 @@ impl WidgetRender {
         default_font: &DefaultFont,
         font_assets: &Assets<VelloFont>,
         image_assets: &Assets<Image>,
-        vello_assets: &Assets<VelloAsset>,
+        svg_assets: &Assets<SvgAsset>,
         font_manager: &mut FontManager,
+        svg_manager: &mut SvgManager,
         metrics: &mut WidgetMetrics,
         widget_style: &WoodpeckerStyle,
     ) -> bool {
@@ -211,7 +235,9 @@ impl WidgetRender {
                 );
                 did_layer = true;
             }
-            WidgetRender::Image { handle: image_handle } => {
+            WidgetRender::Image {
+                handle: image_handle,
+            } => {
                 let Some(image) = image_assets.get(image_handle) else {
                     return false;
                 };
@@ -234,14 +260,13 @@ impl WidgetRender {
                 );
 
                 vello_scene.draw_image(&vello_image, transform);
-            },
-            WidgetRender::Svg { handle } => {
-                let Some(vello_asset) = vello_assets.get(handle) else {
+            }
+            WidgetRender::Svg { handle, path_color } => {
+                let Some(svg_asset) = svg_assets.get(handle) else {
                     return false;
                 };
 
-                let (width, height) = (vello_asset.width, vello_asset.height);
-
+                let (width, height) = (svg_asset.width, svg_asset.height);
 
                 let transform = vello::kurbo::Affine::scale(fit_image(
                     Vec2::new(width, height),
@@ -252,14 +277,12 @@ impl WidgetRender {
                     layout.location.y as f64,
                 ));
 
-                match &vello_asset.file {
-                    bevy_vello::prelude::VectorFile::Svg(svg_scene) => {
-                        vello_scene.append(svg_scene, Some(transform));
-                    }
-                    // Allow this incase we ever want to turn on lottie and not break things..
-                    #[allow(unreachable_patterns)]
-                    _ => {}
-                }
+                let Some(svg_scene) = svg_manager.get_cached(handle, svg_assets, *path_color)
+                else {
+                    return false;
+                };
+
+                vello_scene.append(&svg_scene, Some(transform));
             }
         }
         did_layer

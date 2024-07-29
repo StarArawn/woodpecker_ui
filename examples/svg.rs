@@ -23,6 +23,7 @@ fn startup(
             WoodpeckerAppBundle::default(),
             WidgetRender::Svg {
                 handle: asset_server.load("woodpecker_svg/woodpecker.svg"),
+                path_color: Some(Srgba::GREEN.into()),
             },
         ))
         .id();

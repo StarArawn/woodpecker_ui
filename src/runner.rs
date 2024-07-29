@@ -11,7 +11,11 @@ use bevy_trait_query::One;
 use std::collections::BTreeSet;
 
 use crate::{
-    children::WidgetChildren, context::Widget, metrics::WidgetMetrics, prelude::{PreviousWidget, WidgetMapper}, CurrentWidget, WoodpeckerContext
+    children::WidgetChildren,
+    context::Widget,
+    metrics::WidgetMetrics,
+    prelude::{PreviousWidget, WidgetMapper},
+    CurrentWidget, WoodpeckerContext,
 };
 
 pub(crate) fn system(world: &mut World) {

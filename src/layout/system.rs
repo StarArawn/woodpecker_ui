@@ -1,12 +1,19 @@
 #![allow(dead_code)]
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{ecs::system::SystemParam, prelude::*, utils::HashMap};
 use bevy_trait_query::One;
-use bevy_vello::{prelude::VelloAsset, text::VelloFont, VelloScene};
+use bevy_vello::{text::VelloFont, VelloScene};
 use taffy::Layout;
 
 use crate::{
-    context::{Widget, WoodpeckerContext}, font::FontManager, hook_helper::StateMarker, metrics::WidgetMetrics, prelude::{PreviousWidget, WidgetPosition, WidgetRender}, styles::Edge, DefaultFont
+    context::{Widget, WoodpeckerContext},
+    font::FontManager,
+    hook_helper::StateMarker,
+    metrics::WidgetMetrics,
+    prelude::{PreviousWidget, WidgetPosition, WidgetRender},
+    styles::Edge,
+    svg::{SvgAsset, SvgManager},
+    DefaultFont,
 };
 
 use super::{measure::LayoutMeasure, UiLayout, WoodpeckerStyle};
@@ -127,37 +134,65 @@ impl PartialEq for WidgetPreviousLayout {
     }
 }
 
-// TODO: Document how layouting works..
-pub(crate) fn run(
-    mut commands: Commands,
-    default_font: Res<DefaultFont>,
-    mut font_manager: ResMut<FontManager>,
-    mut ui_layout: ResMut<UiLayout>,
-    mut query: Query<
+#[derive(SystemParam)]
+pub(crate) struct LayoutSystemParam<'w, 's> {
+    commands: Commands<'w, 's>,
+    default_font: Res<'w, DefaultFont>,
+    font_manager: ResMut<'w, FontManager>,
+    svg_manager: ResMut<'w, SvgManager>,
+    ui_layout: ResMut<'w, UiLayout>,
+    query: Query<
+        'w,
+        's,
         (
             Entity,
-            One<&dyn Widget>,
-            &WoodpeckerStyle,
-            Option<&Parent>,
-            Option<&Children>,
+            One<&'static dyn Widget>,
+            &'static WoodpeckerStyle,
+            Option<&'static Parent>,
+            Option<&'static Children>,
         ),
         (Without<StateMarker>, Without<PreviousWidget>),
     >,
-    state_marker_query: Query<&StateMarker>,
-    prev_marker_query: Query<&PreviousWidget>,
-    layout_query: Query<&WidgetLayout>,
+    state_marker_query: Query<'w, 's, &'static StateMarker>,
+    prev_marker_query: Query<'w, 's, &'static PreviousWidget>,
+    layout_query: Query<'w, 's, &'static WidgetLayout>,
     children_query: Query<
-        (Entity, &Children, One<&dyn Widget>),
+        'w,
+        's,
+        (Entity, &'static Children, One<&'static dyn Widget>),
         (Changed<Children>, Without<PreviousWidget>),
     >,
-    mut vello_query: Query<&mut VelloScene>,
-    widget_render: Query<&WidgetRender>,
-    context: Res<WoodpeckerContext>,
-    font_assets: Res<Assets<VelloFont>>,
-    image_assets: Res<Assets<Image>>,
-    vello_assets: Res<Assets<VelloAsset>>,
-    mut metrics: ResMut<WidgetMetrics>,
-) {
+    vello_query: Query<'w, 's, &'static mut VelloScene>,
+    widget_render: Query<'w, 's, &'static WidgetRender>,
+    context: Res<'w, WoodpeckerContext>,
+    font_assets: Res<'w, Assets<VelloFont>>,
+    image_assets: Res<'w, Assets<Image>>,
+    svg_assets: Res<'w, Assets<SvgAsset>>,
+    metrics: ResMut<'w, WidgetMetrics>,
+}
+
+// TODO: Document how layouting works..
+pub(crate) fn run(layout_system_param: LayoutSystemParam) {
+    let LayoutSystemParam {
+        mut commands,
+        default_font,
+        mut font_manager,
+        mut svg_manager,
+        mut ui_layout,
+        mut query,
+        state_marker_query,
+        prev_marker_query,
+        layout_query,
+        children_query,
+        mut vello_query,
+        widget_render,
+        context,
+        font_assets,
+        image_assets,
+        svg_assets,
+        mut metrics,
+    } = layout_system_param;
+
     let Ok(mut vello_scene) = vello_query.get_single_mut() else {
         error!("Woodpecker UI: No vello scene spawned!");
         return;
@@ -176,7 +211,7 @@ pub(crate) fn run(
         &default_font,
         &mut font_manager,
         &image_assets,
-        &vello_assets,
+        &svg_assets,
         &mut ui_layout,
         root_node,
     );
@@ -230,13 +265,14 @@ pub(crate) fn run(
         &mut query,
         &default_font,
         &mut font_manager,
+        &mut svg_manager,
         &mut metrics,
         &widget_render,
         &mut cached_layout,
         &mut vello_scene,
         &font_assets,
         &image_assets,
-        &vello_assets,
+        &svg_assets,
         &ui_layout,
         root_node,
         &mut order,
@@ -268,13 +304,14 @@ fn traverse_render_tree(
     >,
     default_font: &DefaultFont,
     font_manager: &mut FontManager,
+    svg_manager: &mut SvgManager,
     metrics: &mut WidgetMetrics,
     widget_render: &Query<&WidgetRender>,
     cached_layout: &mut HashMap<Entity, Layout>,
     vello_scene: &mut VelloScene,
     font_assets: &Assets<VelloFont>,
     image_assets: &Assets<Image>,
-    vello_assets: &Assets<VelloAsset>,
+    svg_assets: &Assets<SvgAsset>,
     ui_layout: &UiLayout,
     current_node: Entity,
     order: &mut u32,
@@ -317,8 +354,9 @@ fn traverse_render_tree(
                 default_font,
                 font_assets,
                 image_assets,
-                vello_assets,
+                svg_assets,
                 font_manager,
+                svg_manager,
                 metrics,
                 styles,
             );
@@ -340,13 +378,14 @@ fn traverse_render_tree(
             query,
             default_font,
             font_manager,
+            svg_manager,
             metrics,
             widget_render,
             cached_layout,
             vello_scene,
             font_assets,
             image_assets,
-            vello_assets,
+            svg_assets,
             ui_layout,
             *child,
             order,
@@ -375,7 +414,7 @@ fn traverse_upsert_node(
     default_font: &DefaultFont,
     font_manager: &mut FontManager,
     image_assets: &Assets<Image>,
-    vello_assets: &Assets<VelloAsset>,
+    svg_assets: &Assets<SvgAsset>,
     layout: &mut UiLayout,
     current_node: Entity,
 ) {
@@ -392,7 +431,7 @@ fn traverse_upsert_node(
             match_render_size(
                 font_manager,
                 image_assets,
-                vello_assets,
+                svg_assets,
                 default_font,
                 widget_render,
                 styles,
@@ -417,7 +456,7 @@ fn traverse_upsert_node(
             default_font,
             font_manager,
             image_assets,
-            vello_assets,
+            svg_assets,
             layout,
             *child,
         );
@@ -427,7 +466,7 @@ fn traverse_upsert_node(
 fn match_render_size(
     font_manager: &mut FontManager,
     image_assets: &Assets<Image>,
-    vello_assets: &Assets<VelloAsset>,
+    svg_assets: &Assets<SvgAsset>,
     default_font: &DefaultFont,
     widget_render: &WidgetRender,
     styles: &WoodpeckerStyle,
@@ -435,25 +474,17 @@ fn match_render_size(
 ) -> Option<LayoutMeasure> {
     match widget_render {
         WidgetRender::Image { handle } => {
-            let Some(image) = image_assets.get(handle) else {
-                return None;
-            };
+            let image = image_assets.get(handle)?;
 
             let size = image.size().as_vec2();
 
-            Some(LayoutMeasure::Image(super::measure::ImageMeasure {
-                size,
-            }))
+            Some(LayoutMeasure::Image(super::measure::ImageMeasure { size }))
         }
-        WidgetRender::Svg { handle } => {
-            let Some(vello_asset) = vello_assets.get(handle) else {
-                return None;
-            };
+        WidgetRender::Svg { handle, .. } => {
+            let svg_asset = svg_assets.get(handle)?;
 
-            let size = Vec2::new(vello_asset.width, vello_asset.height);
-            Some(LayoutMeasure::Image(super::measure::ImageMeasure {
-                size,
-            }))
+            let size = Vec2::new(svg_asset.width, svg_asset.height);
+            Some(LayoutMeasure::Image(super::measure::ImageMeasure { size }))
         }
         WidgetRender::Text { content, word_wrap } => {
             // Measure text
