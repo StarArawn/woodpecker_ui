@@ -6,12 +6,7 @@ use bevy_vello::{prelude::VelloAsset, text::VelloFont, VelloScene};
 use taffy::Layout;
 
 use crate::{
-    context::{Widget, WoodpeckerContext},
-    font::FontManager,
-    hook_helper::StateMarker,
-    prelude::{PreviousWidget, WidgetPosition, WidgetRender},
-    styles::Edge,
-    DefaultFont,
+    context::{Widget, WoodpeckerContext}, font::FontManager, hook_helper::StateMarker, metrics::WidgetMetrics, prelude::{PreviousWidget, WidgetPosition, WidgetRender}, styles::Edge, DefaultFont
 };
 
 use super::{measure::LayoutMeasure, UiLayout, WoodpeckerStyle};
@@ -161,12 +156,15 @@ pub(crate) fn run(
     font_assets: Res<Assets<VelloFont>>,
     image_assets: Res<Assets<Image>>,
     vello_assets: Res<Assets<VelloAsset>>,
+    mut metrics: ResMut<WidgetMetrics>,
 ) {
     let Ok(mut vello_scene) = vello_query.get_single_mut() else {
         error!("Woodpecker UI: No vello scene spawned!");
         return;
     };
     vello_scene.reset();
+
+    metrics.clear_quad_last_frame();
 
     let root_node = context.get_root_widget();
     // This needs to be in the correct order
@@ -232,6 +230,7 @@ pub(crate) fn run(
         &mut query,
         &default_font,
         &mut font_manager,
+        &mut metrics,
         &widget_render,
         &mut cached_layout,
         &mut vello_scene,
@@ -251,6 +250,8 @@ pub(crate) fn run(
         }
         commands.entity(*entity).insert(WidgetLayout(layout.into()));
     }
+
+    metrics.commit_quad_frame();
 }
 
 fn traverse_render_tree(
@@ -267,6 +268,7 @@ fn traverse_render_tree(
     >,
     default_font: &DefaultFont,
     font_manager: &mut FontManager,
+    metrics: &mut WidgetMetrics,
     widget_render: &Query<&WidgetRender>,
     cached_layout: &mut HashMap<Entity, Layout>,
     vello_scene: &mut VelloScene,
@@ -317,6 +319,7 @@ fn traverse_render_tree(
                 image_assets,
                 vello_assets,
                 font_manager,
+                metrics,
                 styles,
             );
         }
@@ -337,6 +340,7 @@ fn traverse_render_tree(
             query,
             default_font,
             font_manager,
+            metrics,
             widget_render,
             cached_layout,
             vello_scene,

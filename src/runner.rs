@@ -11,10 +11,7 @@ use bevy_trait_query::One;
 use std::collections::BTreeSet;
 
 use crate::{
-    children::WidgetChildren,
-    context::Widget,
-    prelude::{PreviousWidget, WidgetMapper},
-    CurrentWidget, WoodpeckerContext,
+    children::WidgetChildren, context::Widget, metrics::WidgetMetrics, prelude::{PreviousWidget, WidgetMapper}, CurrentWidget, WoodpeckerContext
 };
 
 pub(crate) fn system(world: &mut World) {
@@ -57,6 +54,9 @@ pub(crate) fn system(world: &mut World) {
 
     let mut removed_list = BTreeSet::default();
 
+    let mut metrics = world.remove_resource::<WidgetMetrics>().unwrap();
+    metrics.clear_last_frame();
+
     // STEP 2: Run render systems which should spawn new widgets.
     for widget_entity in re_render_list.iter() {
         // Skip removed widgets.
@@ -82,6 +82,7 @@ pub(crate) fn system(world: &mut World) {
         }
 
         trace!("re-rendering: {}-{}", widget_name, widget_entity);
+        metrics.increase_counts();
         // Run the render function and apply changes to the bevy world.
         world.insert_resource(CurrentWidget(*widget_entity));
         let old_tick = render.get_last_run();
@@ -130,6 +131,9 @@ pub(crate) fn system(world: &mut World) {
             context.remove_uninitialized(widget_name);
         }
     }
+
+    metrics.commit_frame();
+    world.insert_resource(metrics);
 
     // Step 5: Restore system ticks
     let tick = world.read_change_tick();
