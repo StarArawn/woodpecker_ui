@@ -28,8 +28,8 @@ fn startup(
                 },
                 ..Default::default()
             },
-            WidgetRender::Image {
-                handle: asset_server.load("woodpecker.jpg"),
+            WidgetRender::Svg {
+                handle: asset_server.load("woodpecker_svg/woodpecker.svg"),
             },
         ))
         .id();

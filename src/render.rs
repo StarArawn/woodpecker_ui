@@ -2,14 +2,12 @@ use std::sync::Arc;
 
 use bevy::prelude::*;
 use bevy_vello::{
-    text::VelloFont,
-    vello::{
+    prelude::VelloAsset, text::VelloFont, vello::{
         self,
         glyph::{skrifa::MetadataProvider, Glyph},
         kurbo::{self, Affine, RoundedRectRadii},
         peniko::{self, Brush},
-    },
-    VelloScene,
+    }, VelloScene
 };
 
 use crate::{font::FontManager, prelude::WoodpeckerStyle, DefaultFont};
@@ -47,7 +45,11 @@ pub enum WidgetRender {
     /// A simple image renderer
     Image {
         /// A handle to a bevy image.
-        image_handle: Handle<Image>,
+        handle: Handle<Image>,
+    },
+    // A SVG asset. 
+    Svg {
+        handle: Handle<VelloAsset>,
     },
 }
 
@@ -59,8 +61,9 @@ impl WidgetRender {
         parent_layout: &taffy::Layout,
         default_font: &DefaultFont,
         font_assets: &Assets<VelloFont>,
-        font_manager: &mut FontManager,
         image_assets: &Assets<Image>,
+        vello_assets: &Assets<VelloAsset>,
+        font_manager: &mut FontManager,
         widget_style: &WoodpeckerStyle,
     ) -> bool {
         let mut did_layer = false;
@@ -206,21 +209,10 @@ impl WidgetRender {
                 );
                 did_layer = true;
             }
-            WidgetRender::Image { image_handle } => {
+            WidgetRender::Image { handle: image_handle } => {
                 let Some(image) = image_assets.get(image_handle) else {
                     return false;
                 };
-
-                fn fit_image(size_to_fit: Vec2, container_size: Vec2) -> f32 {
-                    let multipler = size_to_fit.x * size_to_fit.y;
-                    let width_scale = container_size.x / size_to_fit.x;
-                    let height_scale = container_size.y / size_to_fit.y;
-                    if (width_scale * multipler) < (height_scale * multipler) {
-                        width_scale
-                    } else {
-                        height_scale
-                    }
-                }
 
                 let transform = vello::kurbo::Affine::translate((
                     layout.location.x as f64,
@@ -241,9 +233,47 @@ impl WidgetRender {
                 );
 
                 vello_scene.draw_image(&vello_image, transform);
+            },
+            WidgetRender::Svg { handle } => {
+                let Some(vello_asset) = vello_assets.get(handle) else {
+                    return false;
+                };
+
+                let (width, height) = (vello_asset.width, vello_asset.height);
+
+
+                let transform = vello::kurbo::Affine::translate((
+                    layout.location.x as f64,
+                    layout.location.y as f64,
+                ))
+                // TODO: Make scale fit optional via styles.
+                .then_scale(fit_image(
+                    Vec2::new(width, height),
+                    Vec2::new(layout.size.width, layout.size.height),
+                ) as f64);
+
+                match &vello_asset.file {
+                    bevy_vello::prelude::VectorFile::Svg(svg_scene) => {
+                        vello_scene.append(svg_scene, Some(transform));
+                    }
+                    // Allow this incase we ever want to turn on lottie and not break things..
+                    #[allow(unreachable_patterns)]
+                    _ => {}
+                }
             }
         }
         did_layer
+    }
+}
+
+fn fit_image(size_to_fit: Vec2, container_size: Vec2) -> f32 {
+    let multipler = size_to_fit.x * size_to_fit.y;
+    let width_scale = container_size.x / size_to_fit.x;
+    let height_scale = container_size.y / size_to_fit.y;
+    if (width_scale * multipler) < (height_scale * multipler) {
+        width_scale
+    } else {
+        height_scale
     }
 }
 

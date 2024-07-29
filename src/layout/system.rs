@@ -2,7 +2,7 @@
 
 use bevy::{prelude::*, utils::HashMap};
 use bevy_trait_query::One;
-use bevy_vello::{text::VelloFont, VelloScene};
+use bevy_vello::{prelude::VelloAsset, text::VelloFont, VelloScene};
 use taffy::Layout;
 
 use crate::{
@@ -160,6 +160,7 @@ pub(crate) fn run(
     context: Res<WoodpeckerContext>,
     font_assets: Res<Assets<VelloFont>>,
     image_assets: Res<Assets<Image>>,
+    vello_assets: Res<Assets<VelloAsset>>,
 ) {
     let Ok(mut vello_scene) = vello_query.get_single_mut() else {
         error!("Woodpecker UI: No vello scene spawned!");
@@ -234,6 +235,7 @@ pub(crate) fn run(
         &mut vello_scene,
         &font_assets,
         &image_assets,
+        &vello_assets,
         &ui_layout,
         root_node,
         &mut order,
@@ -268,6 +270,7 @@ fn traverse_render_tree(
     vello_scene: &mut VelloScene,
     font_assets: &Assets<VelloFont>,
     image_assets: &Assets<Image>,
+    vello_assets: &Assets<VelloAsset>,
     ui_layout: &UiLayout,
     current_node: Entity,
     order: &mut u32,
@@ -309,8 +312,9 @@ fn traverse_render_tree(
                 &parent_layout.unwrap_or_default(),
                 default_font,
                 font_assets,
-                font_manager,
                 image_assets,
+                vello_assets,
+                font_manager,
                 styles,
             );
         }
@@ -336,6 +340,7 @@ fn traverse_render_tree(
             vello_scene,
             font_assets,
             image_assets,
+            vello_assets,
             ui_layout,
             *child,
             order,
