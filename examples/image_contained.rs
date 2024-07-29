@@ -15,10 +15,7 @@ pub struct MyWidgetState {
 #[auto_update(render)]
 #[props(MyWidget)]
 #[state(MyWidgetState)]
-struct MyWidget {
-    depth: usize,
-    total: usize,
-}
+struct MyWidget;
 
 #[derive(Bundle, Default, Clone)]
 struct MyWidgetBundle {
@@ -33,19 +30,16 @@ fn render(
     current_widget: Res<CurrentWidget>,
     mut query: Query<(&MyWidget, &mut WidgetChildren)>,
     state_query: Query<&mut MyWidgetState>,
+    asset_server: Res<AssetServer>,
 ) {
-    let Ok((my_widget, mut widget_children)) = query.get_mut(**current_widget) else {
+    let Ok((_, mut widget_children)) = query.get_mut(**current_widget) else {
         return;
     };
-
-    if my_widget.depth == 0 {
-        return;
-    }
 
     let state_entity = hooks.use_state(
         &mut commands,
         *current_widget,
-        MyWidgetState { show_modal: false },
+        MyWidgetState { show_modal: true },
     );
 
     let Ok(state) = state_query.get(state_entity) else {
@@ -63,7 +57,7 @@ fn render(
                     ..Default::default()
                 },
                 WidgetRender::Text {
-                    content: format!("Open Modal {}", my_widget.total - my_widget.depth),
+                    content: "Open Modal".into(),
                     word_wrap: false,
                 },
             )),
@@ -79,32 +73,44 @@ fn render(
     widget_children.add::<Modal>(ModalBundle {
         modal: Modal {
             visible: state.show_modal,
-            title: "I am a modal".into(),
+            title: "Image/SVG fits to content.".into(),
             ..Default::default()
         },
         children: PassedChildren(
-            WidgetChildren::default()
-                .with_child::<Element>(ElementBundle {
-                    styles: WoodpeckerStyle {
-                        align_items: Some(WidgetAlignItems::Center),
-                        flex_direction: WidgetFlexDirection::Column,
-                        padding: Edge::all(10.0),
-                        width: Units::Percentage(100.0),
-                        ..Default::default()
-                    },
-                    children: WidgetChildren::default().with_child::<Element>((
+            WidgetChildren::default().with_child::<Element>(ElementBundle {
+                styles: WoodpeckerStyle {
+                    align_items: Some(WidgetAlignItems::Center),
+                    flex_direction: WidgetFlexDirection::Column,
+                    padding: Edge::all(10.0),
+                    width: Units::Percentage(100.0),
+                    ..Default::default()
+                },
+                children: WidgetChildren::default()
+                    .with_child::<Element>((
                         ElementBundle {
                             styles: WoodpeckerStyle {
-                                font_size: 20.0,
+                                width: Units::Auto,
+                                height: Units::Pixels(200.0),
+                                margin: Edge::all(0.0).bottom(10.0),
                                 ..Default::default()
                             },
                             ..Default::default()
                         },
-                        WidgetRender::Text {
-                            content:
-                                "Hello World! I am Woodpecker UI! This is an example of a modal window!"
-                                    .into(),
-                            word_wrap: true,
+                        WidgetRender::Image {
+                            handle: asset_server.load("woodpecker.jpg"),
+                        },
+                    ))
+                    .with_child::<Element>((
+                        ElementBundle {
+                            styles: WoodpeckerStyle {
+                                width: Units::Auto,
+                                height: Units::Pixels(200.0),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        WidgetRender::Svg {
+                            handle: asset_server.load("woodpecker_svg/woodpecker.svg"),
                         },
                     ))
                     .with_child::<WButton>((
@@ -120,7 +126,7 @@ fn render(
                                     ..Default::default()
                                 },
                                 WidgetRender::Text {
-                                    content: format!("Close Modal {}", my_widget.total - my_widget.depth),
+                                    content: "Close Modal".into(),
                                     word_wrap: true,
                                 },
                             )),
@@ -131,18 +137,9 @@ fn render(
                                 state.show_modal = false;
                             }
                         }),
-                    ))
-                    .with_child::<MyWidget>(MyWidgetBundle {
-                        my_widget: MyWidget { depth: my_widget.depth - 1, total: my_widget.total },
-                        styles: WoodpeckerStyle {
-                            width: Units::Percentage(100.0),
-                            justify_content: Some(WidgetAlignContent::Center),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    }),
-                    ..Default::default()
-                })
+                    )),
+                ..Default::default()
+            }),
         ),
         ..Default::default()
     });
@@ -163,8 +160,6 @@ fn main() {
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     commands.spawn(Camera2dBundle::default());
 
-    let number_of_modals = 5;
-
     let root = commands
         .spawn(WoodpeckerAppBundle {
             children: WidgetChildren::default().with_child::<MyWidget>(MyWidgetBundle {
@@ -172,10 +167,6 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                     width: Units::Percentage(100.0),
                     justify_content: Some(WidgetAlignContent::Center),
                     ..Default::default()
-                },
-                my_widget: MyWidget {
-                    depth: number_of_modals,
-                    total: number_of_modals,
                 },
                 ..Default::default()
             }),

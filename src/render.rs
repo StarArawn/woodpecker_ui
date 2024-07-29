@@ -214,15 +214,14 @@ impl WidgetRender {
                     return false;
                 };
 
-                let transform = vello::kurbo::Affine::translate((
-                    layout.location.x as f64,
-                    layout.location.y as f64,
-                ))
-                // TODO: Make scale fit optional via styles.
-                .then_scale(fit_image(
+                let transform = vello::kurbo::Affine::scale(fit_image(
                     image.size().as_vec2(),
                     Vec2::new(layout.size.width, layout.size.height),
-                ) as f64);
+                ) as f64)
+                .with_translation(bevy_vello::prelude::kurbo::Vec2::new(
+                    layout.location.x as f64,
+                    layout.location.y as f64,
+                ));
 
                 // TODO: Cache these..
                 let vello_image = peniko::Image::new(
@@ -242,15 +241,14 @@ impl WidgetRender {
                 let (width, height) = (vello_asset.width, vello_asset.height);
 
 
-                let transform = vello::kurbo::Affine::translate((
-                    layout.location.x as f64,
-                    layout.location.y as f64,
-                ))
-                // TODO: Make scale fit optional via styles.
-                .then_scale(fit_image(
+                let transform = vello::kurbo::Affine::scale(fit_image(
                     Vec2::new(width, height),
                     Vec2::new(layout.size.width, layout.size.height),
-                ) as f64);
+                ) as f64)
+                .with_translation(bevy_vello::prelude::kurbo::Vec2::new(
+                    layout.location.x as f64,
+                    layout.location.y as f64,
+                ));
 
                 match &vello_asset.file {
                     bevy_vello::prelude::VectorFile::Svg(svg_scene) => {
@@ -266,7 +264,7 @@ impl WidgetRender {
     }
 }
 
-fn fit_image(size_to_fit: Vec2, container_size: Vec2) -> f32 {
+pub(crate) fn fit_image(size_to_fit: Vec2, container_size: Vec2) -> f32 {
     let multipler = size_to_fit.x * size_to_fit.y;
     let width_scale = container_size.x / size_to_fit.x;
     let height_scale = container_size.y / size_to_fit.y;

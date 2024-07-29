@@ -20,14 +20,7 @@ fn startup(
 
     let root = commands
         .spawn((
-            WoodpeckerAppBundle {
-                styles: WoodpeckerStyle {
-                    font_size: 50.0,
-                    color: Srgba::RED.into(),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
+            WoodpeckerAppBundle::default(),
             WidgetRender::Image {
                 handle: asset_server.load("woodpecker.jpg"),
             },
