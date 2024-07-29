@@ -2,7 +2,7 @@
 
 use bevy::{prelude::*, utils::HashMap};
 use bevy_trait_query::One;
-use bevy_vello::{text::VelloFont, VelloScene};
+use bevy_vello::{prelude::VelloAsset, text::VelloFont, VelloScene};
 use taffy::Layout;
 
 use crate::{
@@ -160,6 +160,7 @@ pub(crate) fn run(
     context: Res<WoodpeckerContext>,
     font_assets: Res<Assets<VelloFont>>,
     image_assets: Res<Assets<Image>>,
+    vello_assets: Res<Assets<VelloAsset>>,
 ) {
     let Ok(mut vello_scene) = vello_query.get_single_mut() else {
         error!("Woodpecker UI: No vello scene spawned!");
@@ -176,6 +177,8 @@ pub(crate) fn run(
         &widget_render,
         &default_font,
         &mut font_manager,
+        &image_assets,
+        &vello_assets,
         &mut ui_layout,
         root_node,
     );
@@ -234,6 +237,7 @@ pub(crate) fn run(
         &mut vello_scene,
         &font_assets,
         &image_assets,
+        &vello_assets,
         &ui_layout,
         root_node,
         &mut order,
@@ -268,6 +272,7 @@ fn traverse_render_tree(
     vello_scene: &mut VelloScene,
     font_assets: &Assets<VelloFont>,
     image_assets: &Assets<Image>,
+    vello_assets: &Assets<VelloAsset>,
     ui_layout: &UiLayout,
     current_node: Entity,
     order: &mut u32,
@@ -309,8 +314,9 @@ fn traverse_render_tree(
                 &parent_layout.unwrap_or_default(),
                 default_font,
                 font_assets,
-                font_manager,
                 image_assets,
+                vello_assets,
+                font_manager,
                 styles,
             );
         }
@@ -336,6 +342,7 @@ fn traverse_render_tree(
             vello_scene,
             font_assets,
             image_assets,
+            vello_assets,
             ui_layout,
             *child,
             order,
@@ -363,6 +370,8 @@ fn traverse_upsert_node(
     query_widget_render: &Query<&WidgetRender>,
     default_font: &DefaultFont,
     font_manager: &mut FontManager,
+    image_assets: &Assets<Image>,
+    vello_assets: &Assets<VelloAsset>,
     layout: &mut UiLayout,
     current_node: Entity,
 ) {
@@ -376,36 +385,15 @@ fn traverse_upsert_node(
         } else {
             layout.get_layout(root_node)
         } {
-            // TODO: Move to a function so we can get rid of this stupid nesting...
-            if let WidgetRender::Text { content, word_wrap } = widget_render {
-                // Measure text
-                let font_handle = styles
-                    .font
-                    .as_ref()
-                    .map(|a| Handle::Weak(*a))
-                    .unwrap_or(default_font.0.clone());
-                if let Some(buffer) = font_manager.layout(
-                    Vec2::new(
-                        parent_layout.size.width,
-                        parent_layout.size.height + 100000.0,
-                    ),
-                    styles,
-                    &font_handle,
-                    content,
-                    *word_wrap,
-                ) {
-                    let mut size = Vec2::new(0.0, 0.0);
-                    buffer.layout_runs().for_each(|r| {
-                        size.x = size.x.max(r.line_w);
-                        size.y += r.line_height;
-                    });
-                    Some(LayoutMeasure::Fixed(super::measure::FixedMeasure { size }))
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
+            match_render_size(
+                font_manager,
+                image_assets,
+                vello_assets,
+                default_font,
+                widget_render,
+                styles,
+                parent_layout,
+            )
         } else {
             None
         }
@@ -424,8 +412,72 @@ fn traverse_upsert_node(
             query_widget_render,
             default_font,
             font_manager,
+            image_assets,
+            vello_assets,
             layout,
             *child,
         );
+    }
+}
+
+fn match_render_size(
+    font_manager: &mut FontManager,
+    image_assets: &Assets<Image>,
+    vello_assets: &Assets<VelloAsset>,
+    default_font: &DefaultFont,
+    widget_render: &WidgetRender,
+    styles: &WoodpeckerStyle,
+    parent_layout: &Layout,
+) -> Option<LayoutMeasure> {
+    match widget_render {
+        WidgetRender::Image { handle } => {
+            let Some(image) = image_assets.get(handle) else {
+                return None;
+            };
+
+            let size = image.size().as_vec2();
+
+            Some(LayoutMeasure::Image(super::measure::ImageMeasure {
+                size,
+            }))
+        }
+        WidgetRender::Svg { handle } => {
+            let Some(vello_asset) = vello_assets.get(handle) else {
+                return None;
+            };
+
+            let size = Vec2::new(vello_asset.width, vello_asset.height);
+            Some(LayoutMeasure::Image(super::measure::ImageMeasure {
+                size,
+            }))
+        }
+        WidgetRender::Text { content, word_wrap } => {
+            // Measure text
+            let font_handle = styles
+                .font
+                .as_ref()
+                .map(|a| Handle::Weak(*a))
+                .unwrap_or(default_font.0.clone());
+            if let Some(buffer) = font_manager.layout(
+                Vec2::new(
+                    parent_layout.size.width,
+                    parent_layout.size.height + 100000.0,
+                ),
+                styles,
+                &font_handle,
+                content,
+                *word_wrap,
+            ) {
+                let mut size = Vec2::new(0.0, 0.0);
+                buffer.layout_runs().for_each(|r| {
+                    size.x = size.x.max(r.line_w);
+                    size.y += r.line_height;
+                });
+                Some(LayoutMeasure::Fixed(super::measure::FixedMeasure { size }))
+            } else {
+                None
+            }
+        }
+        _ => None,
     }
 }
