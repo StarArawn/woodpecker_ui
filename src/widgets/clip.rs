@@ -1,8 +1,4 @@
-use crate::{
-    children::WidgetChildren,
-    prelude::{Units, Widget, WidgetRender, WoodpeckerStyle},
-    CurrentWidget,
-};
+use crate::prelude::*;
 use bevy::prelude::*;
 
 /// A generic element widget used for layouts.
@@ -34,22 +30,10 @@ impl Default for ClipBundle {
 }
 
 /// The Woodpecker UI Element
-#[derive(Component, Widget, Default, Clone)]
-#[widget_systems(update, render)]
+#[derive(Component, Widget, Reflect, PartialEq, Default, Clone)]
+#[auto_update(render)]
+#[props(Clip)]
 pub struct Clip {}
-
-pub fn update(
-    entity: Res<CurrentWidget>,
-    query: Query<Entity, Or<(Added<Clip>, Changed<WoodpeckerStyle>)>>,
-    children_query: Query<&WidgetChildren>,
-) -> bool {
-    query.contains(**entity)
-        || children_query
-            .iter()
-            .next()
-            .map(|c| c.children_changed())
-            .unwrap_or_default()
-}
 
 pub fn render(entity: Res<CurrentWidget>, mut query: Query<&mut WidgetChildren>) {
     let Ok(mut children) = query.get_mut(**entity) else {

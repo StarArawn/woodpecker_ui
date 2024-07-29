@@ -12,8 +12,10 @@ use bevy_mod_picking::{
 
 use super::ScrollContext;
 
-#[derive(Widget, Component, Default, Clone, PartialEq)]
-#[widget_systems(update, render)]
+#[derive(Widget, Component, Reflect, Default, Clone, PartialEq)]
+#[auto_update(render)]
+#[props(ScrollBox, PassedChildren, WidgetLayout)]
+#[context(ScrollContext)]
 pub struct ScrollBox {
     /// If true, always shows scrollbars even when there's nothing to scroll
     ///
@@ -48,31 +50,6 @@ pub struct ScrollBoxBundle {
     pub styles: WoodpeckerStyle,
     pub internal_children: WidgetChildren,
     pub children: PassedChildren,
-}
-
-pub fn update(
-    mut commands: Commands,
-    current_widget: Res<CurrentWidget>,
-    mut context_helper: ResMut<HookHelper>,
-    query: Query<(
-        Ref<ScrollBox>,
-        Ref<PassedChildren>,
-        Ref<WidgetLayout>,
-        Ref<WidgetPreviousLayout>,
-    )>,
-    context_query: Query<Entity, Changed<ScrollContext>>,
-) -> bool {
-    let Ok((scroll, children, layout, prev_layout)) = query.get(**current_widget) else {
-        return false;
-    };
-
-    let context_entity =
-        context_helper.use_context::<ScrollContext>(&mut commands, *current_widget);
-
-    scroll.is_changed()
-        || children.is_changed()
-        || *prev_layout != *layout
-        || context_query.contains(context_entity)
 }
 
 pub fn render(

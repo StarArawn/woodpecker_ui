@@ -6,8 +6,13 @@ use crate::{context::Widget, prelude::WidgetMapper, ParentWidget};
 
 /// A commponent to pass children down the tree
 /// while also having children of its own.
-#[derive(Component, Default, Clone, Deref, DerefMut)]
+#[derive(Component, Default, Clone, Deref, DerefMut, PartialEq)]
 pub struct PassedChildren(pub WidgetChildren);
+
+/// A commponent to pass children down the tree
+/// while also having children of its own.
+#[derive(Component, Default, Clone)]
+pub struct Mounted;
 
 /// A bevy component that keeps track of Woodpecker UI widget children.
 /// This is very similar to bevy commands as in it lets you spawn bundles
@@ -34,6 +39,32 @@ pub struct WidgetChildren {
     parent_widget: Option<ParentWidget>,
 }
 
+impl PartialEq for WidgetChildren {
+    fn eq(&self, other: &Self) -> bool {
+        let queue = self
+            .children_queue
+            .iter()
+            .map(|(wn, _)| wn.clone())
+            .collect::<Vec<_>>();
+        let other_queue = other
+            .children_queue
+            .iter()
+            .map(|(wn, _)| wn.clone())
+            .collect::<Vec<_>>();
+        let children: Vec<String> = self
+            .children
+            .iter()
+            .map(|(wn, _)| wn.clone())
+            .collect::<Vec<_>>();
+        let other_children = other
+            .children
+            .iter()
+            .map(|(wn, _)| wn.clone())
+            .collect::<Vec<_>>();
+        queue == other_queue && children == other_children
+    }
+}
+
 impl WidgetChildren {
     /// Builder pattern for adding children when you initially create the component.
     pub fn with_child<T: Widget>(mut self, bundle: impl Bundle + Clone) -> Self {
@@ -53,6 +84,7 @@ impl WidgetChildren {
     /// otherwise the entities will not be spawned! This will NOT spawn the bundles.
     pub fn add<T: Widget>(&mut self, bundle: impl Bundle + Clone) -> &mut Self {
         let widget_name = T::get_name();
+        let widget_type_name = widget_name.clone().split("::").last().unwrap().to_string();
         self.children_queue.push((
             T::get_name(),
             Arc::new(
@@ -67,7 +99,11 @@ impl WidgetChildren {
                         None,
                         index,
                     );
-                    world.entity_mut(child_widget).insert(bundle.clone());
+                    world
+                        .entity_mut(child_widget)
+                        .insert(bundle.clone())
+                        .insert(Mounted)
+                        .insert(Name::new(widget_type_name.clone()));
                 },
             ),
         ));
@@ -105,7 +141,8 @@ impl WidgetChildren {
             // They are ensured to have the same entity id for a given child index and
             // widget type name. The type name is passed into the closure in [`Self::add`].
             // TODO: Maybe just pass it in here to make it clearer?
-            for (i, (_, child)) in self.children.iter().enumerate() {
+            for (i, (name, child)) in self.children.iter().enumerate() {
+                trace!("Adding as child: {}", name);
                 child(world, &mut widget_mapper, parent_widget, i);
             }
         });

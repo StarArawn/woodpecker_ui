@@ -1,34 +1,58 @@
 use bevy::prelude::*;
 use bevy_mod_picking::{
+    debug::DebugPickingMode,
     events::{Click, Pointer},
     prelude::On,
     DefaultPickingPlugins,
 };
 use woodpecker_ui::prelude::*;
 
-#[derive(Component, Widget, Clone, Default, Copy, PartialEq)]
-#[widget_systems(update, render)]
-struct MyWidget {
+#[derive(Component, Clone, Default, Debug, Copy, PartialEq)]
+pub struct MyWidgetState {
     show_modal: bool,
+}
+
+#[derive(Widget, Component, Clone, Default, Reflect, Copy, PartialEq)]
+#[auto_update(render)]
+#[props(MyWidget)]
+#[state(MyWidgetState)]
+struct MyWidget {
+    depth: usize,
+    total: usize,
 }
 
 #[derive(Bundle, Default, Clone)]
 struct MyWidgetBundle {
-    count: MyWidget,
+    my_widget: MyWidget,
     styles: WoodpeckerStyle,
     children: WidgetChildren,
 }
 
-fn update(current_widget: Res<CurrentWidget>, query: Query<Entity, Changed<MyWidget>>) -> bool {
-    query.contains(**current_widget)
-}
-
-fn render(current_widget: Res<CurrentWidget>, mut query: Query<(&MyWidget, &mut WidgetChildren)>) {
+fn render(
+    mut commands: Commands,
+    mut hooks: ResMut<HookHelper>,
+    current_widget: Res<CurrentWidget>,
+    mut query: Query<(&MyWidget, &mut WidgetChildren)>,
+    state_query: Query<&mut MyWidgetState>,
+) {
     let Ok((my_widget, mut widget_children)) = query.get_mut(**current_widget) else {
         return;
     };
 
-    let my_widget_entity = **current_widget;
+    if my_widget.depth == 0 {
+        return;
+    }
+
+    let state_entity = hooks.use_state(
+        &mut commands,
+        *current_widget,
+        MyWidgetState { show_modal: false },
+    );
+
+    let Ok(state) = state_query.get(state_entity) else {
+        return;
+    };
+
     widget_children.add::<WButton>((
         WButtonBundle {
             children: WidgetChildren::default().with_child::<Element>((
@@ -40,24 +64,23 @@ fn render(current_widget: Res<CurrentWidget>, mut query: Query<(&MyWidget, &mut 
                     ..Default::default()
                 },
                 WidgetRender::Text {
-                    content: "Open Modal".into(),
+                    content: format!("Open Modal {}", my_widget.total - my_widget.depth),
                     word_wrap: false,
                 },
             )),
             ..Default::default()
         },
-        On::<Pointer<Click>>::run(move |mut query: Query<&mut MyWidget>| {
-            if let Ok(mut my_widget) = query.get_mut(my_widget_entity) {
-                my_widget.show_modal = true;
+        On::<Pointer<Click>>::run(move |mut query: Query<&mut MyWidgetState>| {
+            if let Ok(mut state) = query.get_mut(state_entity) {
+                state.show_modal = true;
             }
         }),
     ));
 
     widget_children.add::<Modal>(ModalBundle {
         modal: Modal {
-            visible: my_widget.show_modal,
+            visible: state.show_modal,
             title: "I am a modal".into(),
-            overlay_alpha: 0.85,
             ..Default::default()
         },
         children: PassedChildren(
@@ -98,18 +121,27 @@ fn render(current_widget: Res<CurrentWidget>, mut query: Query<(&MyWidget, &mut 
                                     ..Default::default()
                                 },
                                 WidgetRender::Text {
-                                    content: "Close Modal".into(),
+                                    content: format!("Close Modal {}", my_widget.total - my_widget.depth),
                                     word_wrap: true,
                                 },
                             )),
                             ..Default::default()
                         },
-                        On::<Pointer<Click>>::run(move |mut query: Query<&mut MyWidget>| {
-                            if let Ok(mut my_widget) = query.get_mut(my_widget_entity) {
-                                my_widget.show_modal = false;
+                        On::<Pointer<Click>>::run(move |mut query: Query<&mut MyWidgetState>| {
+                            if let Ok(mut state) = query.get_mut(state_entity) {
+                                state.show_modal = false;
                             }
                         }),
-                    )),
+                    ))
+                    .with_child::<MyWidget>(MyWidgetBundle {
+                        my_widget: MyWidget { depth: my_widget.depth - 1, total: my_widget.total },
+                        styles: WoodpeckerStyle {
+                            width: Units::Percentage(100.0),
+                            justify_content: Some(WidgetAlignContent::Center),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
                     ..Default::default()
                 })
         ),
@@ -124,6 +156,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin)
         .add_plugins(DefaultPickingPlugins)
+        .insert_resource(DebugPickingMode::Normal)
         .register_widget::<MyWidget>()
         .add_systems(Startup, startup)
         .run();
@@ -132,6 +165,8 @@ fn main() {
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     commands.spawn(Camera2dBundle::default());
 
+    let number_of_modals = 5;
+
     let root = commands
         .spawn(WoodpeckerAppBundle {
             children: WidgetChildren::default().with_child::<MyWidget>(MyWidgetBundle {
@@ -139,6 +174,10 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                     width: Units::Percentage(100.0),
                     justify_content: Some(WidgetAlignContent::Center),
                     ..Default::default()
+                },
+                my_widget: MyWidget {
+                    depth: number_of_modals,
+                    total: number_of_modals,
                 },
                 ..Default::default()
             }),

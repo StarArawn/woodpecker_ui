@@ -7,7 +7,7 @@ use bevy_mod_picking::{
     prelude::On,
 };
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, PartialEq)]
 pub struct ButtonStyles {
     pub normal: WoodpeckerStyle,
     pub hovered: WoodpeckerStyle,
@@ -57,12 +57,6 @@ pub struct WButtonBundle {
     pub pickable: Pickable,
     /// Tracks entity interaction state.
     pub interaction: PickingInteraction,
-    /// On over event listener
-    /// Note: If you override the default you will need to manually handle widget state.
-    pub on_over: On<Pointer<Over>>,
-    /// On out event listener
-    /// Note: If you override the default you will need to manually handle widget state.
-    pub on_out: On<Pointer<Out>>,
 }
 
 impl Default for WButtonBundle {
@@ -71,58 +65,66 @@ impl Default for WButtonBundle {
             button: Default::default(),
             render: WidgetRender::Quad,
             children: Default::default(),
-            styles: Default::default(),
+            styles: ButtonStyles::default().normal,
             pickable: Default::default(),
             interaction: Default::default(),
-            on_over: On::<Pointer<Over>>::listener_component_mut::<WButton>(|_, button| {
-                button.hovering = true;
-            }),
-            on_out: On::<Pointer<Out>>::listener_component_mut::<WButton>(|_, button| {
-                button.hovering = false;
-            }),
             button_styles: ButtonStyles::default(), // TODO: Add default button styles..
         }
     }
 }
 
-/// The Woodpecker UI Button
-#[derive(Component, Widget, Default, Clone)]
-#[widget_systems(update, render)]
-pub struct WButton {
+#[derive(Component, Default, PartialEq, Clone)]
+pub struct WButtonState {
     pub hovering: bool,
 }
 
-pub fn update(
-    entity: Res<CurrentWidget>,
-    query: Query<Entity, Or<(Changed<WButton>, Changed<ButtonStyles>)>>,
-    children_query: Query<&WidgetChildren>,
-) -> bool {
-    query.contains(**entity)
-        || children_query
-            .iter()
-            .next()
-            .map(|c| c.children_changed())
-            .unwrap_or_default()
-}
+/// The Woodpecker UI Button
+#[derive(Component, Widget, Default, Reflect, PartialEq, Clone)]
+#[auto_update(render)]
+#[props(WButton, ButtonStyles)]
+#[state(WButtonState)]
+pub struct WButton;
 
 pub fn render(
-    entity: Res<CurrentWidget>,
-    mut query: Query<(
-        &WButton,
-        &mut WoodpeckerStyle,
-        &ButtonStyles,
-        &mut WidgetChildren,
-    )>,
+    current_widget: Res<CurrentWidget>,
+    mut commands: Commands,
+    mut hooks: ResMut<HookHelper>,
+    mut query: Query<(&mut WoodpeckerStyle, &ButtonStyles, &mut WidgetChildren)>,
+    state_query: Query<&WButtonState>,
 ) {
-    let Ok((button, mut styles, button_styles, mut children)) = query.get_mut(**entity) else {
+    let Ok((mut styles, button_styles, mut children)) = query.get_mut(**current_widget) else {
         return;
     };
 
-    if button.hovering {
+    let state_entity = hooks.use_state(&mut commands, *current_widget, WButtonState::default());
+    let Ok(state) = state_query.get(state_entity) else {
+        return;
+    };
+
+    if state.hovering {
         *styles = button_styles.hovered;
     } else {
         *styles = button_styles.normal;
     }
 
-    children.apply(entity.as_parent());
+    commands
+        .entity(**current_widget)
+        .insert(On::<Pointer<Over>>::run(
+            move |mut state_query: Query<&mut WButtonState>| {
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
+                state.hovering = true;
+            },
+        ))
+        .insert(On::<Pointer<Out>>::run(
+            move |mut state_query: Query<&mut WButtonState>| {
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
+                state.hovering = false;
+            },
+        ));
+
+    children.apply(current_widget.as_parent());
 }

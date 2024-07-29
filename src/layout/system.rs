@@ -9,32 +9,79 @@ use crate::{
     context::{Widget, WoodpeckerContext},
     font::FontManager,
     hook_helper::StateMarker,
-    prelude::{WidgetPosition, WidgetRender},
+    prelude::{PreviousWidget, WidgetPosition, WidgetRender},
+    styles::Edge,
     DefaultFont,
 };
 
 use super::{measure::LayoutMeasure, UiLayout, WoodpeckerStyle};
 
+#[derive(Debug, Copy, Clone, Reflect)]
+pub struct ReflectedLayout {
+    /// The relative ordering of the node
+    ///
+    /// Nodes with a higher order should be rendered on top of those with a lower order.
+    /// This is effectively a topological sort of each tree.
+    pub order: u32,
+    /// The top-left corner of the node
+    pub location: Vec2,
+    /// The width and height of the node
+    pub size: Vec2,
+    /// The width and height of the content inside the node. This may be larger than the size of the node in the case of
+    /// overflowing content and is useful for computing a "scroll width/height" for scrollable nodes
+    pub content_size: Vec2,
+    /// The size of the scrollbars in each dimension. If there is no scrollbar then the size will be zero.
+    pub scrollbar_size: Vec2,
+    /// The size of the borders of the node
+    pub border: Edge,
+    /// The size of the padding of the node
+    pub padding: Edge,
+}
+
+impl From<&Layout> for ReflectedLayout {
+    fn from(value: &Layout) -> Self {
+        Self {
+            order: value.order,
+            location: Vec2::new(value.location.x, value.location.y),
+            size: Vec2::new(value.size.width, value.size.height),
+            content_size: Vec2::new(value.content_size.width, value.content_size.height),
+            scrollbar_size: Vec2::new(value.scrollbar_size.width, value.scrollbar_size.height),
+            border: Edge::new(
+                value.border.top,
+                value.border.right,
+                value.border.bottom,
+                value.border.left,
+            ),
+            padding: Edge::new(
+                value.padding.top,
+                value.padding.right,
+                value.padding.bottom,
+                value.padding.left,
+            ),
+        }
+    }
+}
+
 /// A widget's layout
 /// This is built by taffy and included as a component on
 /// your widgets automatically when taffy computes layout logic.
-#[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
-pub struct WidgetLayout(Layout);
+#[derive(Component, Debug, Clone, Copy, Deref, DerefMut, Reflect)]
+pub struct WidgetLayout(ReflectedLayout);
 
 impl WidgetLayout {
     /// The position of the widget in pixels
     pub fn position(&self) -> Vec2 {
-        Vec2::new(self.0.location.x, self.0.location.y)
+        self.location
     }
 
     /// The width of the layout in pixels
     pub fn width(&self) -> f32 {
-        self.0.size.width
+        self.0.size.x
     }
 
     /// The height of the layout in pixels
     pub fn height(&self) -> f32 {
-        self.0.size.height
+        self.0.size.y
     }
 
     /// The content width of the layout in pixels
@@ -42,7 +89,7 @@ impl WidgetLayout {
     /// Not to be confused with width or height this measurement is the amount of space
     /// the children take up.
     pub fn content_width(&self) -> f32 {
-        self.0.content_size.width
+        self.0.content_size.x
     }
 
     /// The content height of the layout in pixels
@@ -50,12 +97,12 @@ impl WidgetLayout {
     /// Not to be confused with width or height this measurement is the amount of space
     /// the children take up.
     pub fn content_height(&self) -> f32 {
-        self.0.content_size.height
+        self.0.content_size.y
     }
 }
 
 // TODO: Add more here..
-fn layout_equality(layout_a: &Layout, layout_b: &Layout) -> bool {
+fn layout_equality(layout_a: &ReflectedLayout, layout_b: &ReflectedLayout) -> bool {
     layout_a.size == layout_b.size
         && layout_a.location == layout_b.location
         && layout_a.content_size == layout_b.content_size
@@ -76,8 +123,8 @@ impl PartialEq for WidgetLayout {
 /// The previous layout from the last frame.
 /// Useful in some cases to see if a widget's layout has
 /// changed.
-#[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
-pub struct WidgetPreviousLayout(Layout);
+#[derive(Component, Debug, Clone, Copy, Deref, DerefMut, Reflect)]
+pub struct WidgetPreviousLayout(ReflectedLayout);
 
 impl PartialEq for WidgetPreviousLayout {
     fn eq(&self, other: &Self) -> bool {
@@ -99,11 +146,15 @@ pub(crate) fn run(
             Option<&Parent>,
             Option<&Children>,
         ),
-        Without<StateMarker>,
+        (Without<StateMarker>, Without<PreviousWidget>),
     >,
     state_marker_query: Query<&StateMarker>,
+    prev_marker_query: Query<&PreviousWidget>,
     layout_query: Query<&WidgetLayout>,
-    children_query: Query<(Entity, &Children, One<&dyn Widget>), Changed<Children>>,
+    children_query: Query<
+        (Entity, &Children, One<&dyn Widget>),
+        (Changed<Children>, Without<PreviousWidget>),
+    >,
     mut vello_query: Query<&mut VelloScene>,
     widget_render: Query<&WidgetRender>,
     context: Res<WoodpeckerContext>,
@@ -139,7 +190,9 @@ pub(crate) fn run(
                 };
                 !matches!(styles.position, WidgetPosition::Fixed)
             })
-            .filter(|child| !state_marker_query.contains(**child))
+            .filter(|child| {
+                !state_marker_query.contains(**child) && !prev_marker_query.contains(**child)
+            })
             .copied()
             .collect::<Vec<_>>();
         ui_layout.add_children(entity, &normal_children);
@@ -166,6 +219,8 @@ pub(crate) fn run(
 
     let mut cached_layout = HashMap::default();
 
+    let mut order = 0;
+
     // After layout computations update layouts and render scene.
     // Needs to be done in the correct order..
     // We also need to know if we are going back up the tree so we can pop the clipping and opacity layers.
@@ -181,7 +236,7 @@ pub(crate) fn run(
         &image_assets,
         &ui_layout,
         root_node,
-        0,
+        &mut order,
     );
 
     for (entity, layout) in cached_layout.iter() {
@@ -190,7 +245,7 @@ pub(crate) fn run(
                 .entity(*entity)
                 .insert(WidgetPreviousLayout(prev_layout.0));
         }
-        commands.entity(*entity).insert(WidgetLayout(*layout));
+        commands.entity(*entity).insert(WidgetLayout(layout.into()));
     }
 }
 
@@ -204,7 +259,7 @@ fn traverse_render_tree(
             Option<&Parent>,
             Option<&Children>,
         ),
-        Without<StateMarker>,
+        (Without<StateMarker>, Without<PreviousWidget>),
     >,
     default_font: &DefaultFont,
     font_manager: &mut FontManager,
@@ -215,7 +270,7 @@ fn traverse_render_tree(
     image_assets: &Assets<Image>,
     ui_layout: &UiLayout,
     current_node: Entity,
-    mut order: u32,
+    order: &mut u32,
 ) {
     let Ok((entity, _, styles, parent, children)) = query.get_mut(current_node) else {
         return;
@@ -237,7 +292,7 @@ fn traverse_render_tree(
         }
     }
 
-    layout.order = order;
+    layout.order = *order;
 
     let mut did_layer = false;
     if let Ok(widget_render) = widget_render.get(entity) {
@@ -270,7 +325,7 @@ fn traverse_render_tree(
     };
 
     for child in children.iter() {
-        order += 1;
+        *order += 1;
         traverse_render_tree(
             root_node,
             query,
@@ -285,6 +340,7 @@ fn traverse_render_tree(
             *child,
             order,
         );
+        *order -= 1;
     }
 
     if did_layer {
@@ -302,7 +358,7 @@ fn traverse_upsert_node(
             Option<&Parent>,
             Option<&Children>,
         ),
-        Without<StateMarker>,
+        (Without<StateMarker>, Without<PreviousWidget>),
     >,
     query_widget_render: &Query<&WidgetRender>,
     default_font: &DefaultFont,

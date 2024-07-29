@@ -7,7 +7,7 @@ use woodpecker_ui::prelude::*;
 
 use crate::TodoListData;
 
-#[derive(Widget, Component, Clone, Default)]
+#[derive(Widget, Component, Reflect, Clone, Default)]
 #[widget_systems(update, render)]
 pub struct TodoInput {
     current_value: String,
@@ -40,7 +40,7 @@ impl Default for TodoInputBundle {
 fn update(
     current_widget: Res<CurrentWidget>,
     todo_list_data: Res<TodoListData>,
-    query: Query<Entity, Changed<TodoInput>>,
+    query: Query<Entity, Added<TodoInput>>,
 ) -> bool {
     todo_list_data.is_changed() || query.contains(**current_widget)
 }

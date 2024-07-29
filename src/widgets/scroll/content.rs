@@ -6,8 +6,10 @@ use bevy::prelude::*;
 
 use super::ScrollContext;
 
-#[derive(Component, Widget, Default, PartialEq, Eq, Clone)]
-#[widget_systems(update, render)]
+#[derive(Component, Widget, Reflect, Default, PartialEq, Eq, Clone)]
+#[auto_update(render)]
+#[props(ScrollContent, WidgetLayout)]
+#[context(ScrollContext)]
 pub struct ScrollContent;
 
 #[derive(Bundle, Default, Clone)]
@@ -16,31 +18,6 @@ pub struct ScrollContentBundle {
     pub styles: WoodpeckerStyleProp,
     pub children: WidgetChildren,
     pub internal_styles: WoodpeckerStyle,
-}
-
-pub fn update(
-    mut commands: Commands,
-    current_widget: Res<CurrentWidget>,
-    mut context_helper: ResMut<HookHelper>,
-    query: Query<(
-        Ref<ScrollContent>,
-        Ref<WidgetChildren>,
-        Ref<WidgetLayout>,
-        Ref<WidgetPreviousLayout>,
-    )>,
-    context_query: Query<Entity, Changed<ScrollContext>>,
-) -> bool {
-    let Ok((sp, children, layout, prev_layout)) = query.get(**current_widget) else {
-        return false;
-    };
-
-    let context_entity =
-        context_helper.use_context::<ScrollContext>(&mut commands, *current_widget);
-
-    sp.is_changed()
-        || children.children_changed()
-        || *prev_layout != *layout
-        || context_query.contains(context_entity)
 }
 
 pub fn render(
@@ -79,6 +56,7 @@ pub fn render(
         top: context.scroll_y().into(),
         left: context.scroll_x().into(),
         width: Units::Pixels(context.scrollable_width()),
+        height: context.content_height.into(),
         ..*styles
     };
 

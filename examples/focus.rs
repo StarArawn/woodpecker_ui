@@ -7,7 +7,7 @@ use bevy_mod_picking::{
 };
 use woodpecker_ui::prelude::*;
 
-#[derive(Component, Widget, Default, Clone, PartialEq)]
+#[derive(Component, Widget, Reflect, Default, Clone, PartialEq)]
 #[widget_systems(focus_update, focus_render)]
 pub struct FocusWidget {
     focused: bool,

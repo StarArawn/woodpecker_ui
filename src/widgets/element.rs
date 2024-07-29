@@ -1,8 +1,4 @@
-use crate::{
-    children::WidgetChildren,
-    prelude::{Widget, WoodpeckerStyle},
-    CurrentWidget,
-};
+use crate::prelude::*;
 use bevy::prelude::*;
 
 /// A generic element widget used for layouts.
@@ -16,23 +12,24 @@ pub struct ElementBundle {
     pub styles: WoodpeckerStyle,
 }
 
-/// The Woodpecker UI Element
-#[derive(Component, Widget, Default, Clone)]
-#[widget_systems(update, render)]
-pub struct Element {}
+impl ElementBundle {
+    pub fn with_child<T: Widget>(mut self, bundle: impl Bundle + Clone) -> Self {
+        self.children.add::<T>(bundle);
 
-pub fn update(
-    entity: Res<CurrentWidget>,
-    query: Query<Entity, Or<(Added<Element>, Changed<WoodpeckerStyle>)>>,
-    children_query: Query<&WidgetChildren>,
-) -> bool {
-    query.contains(**entity)
-        || children_query
-            .iter()
-            .next()
-            .map(|c| c.children_changed())
-            .unwrap_or_default()
+        self
+    }
+
+    pub fn with_style(mut self, style: WoodpeckerStyle) -> Self {
+        self.styles = style;
+        self
+    }
 }
+
+/// The Woodpecker UI Element
+#[derive(Component, Widget, PartialEq, Reflect, Default, Clone)]
+#[auto_update(render)]
+#[props(Element, WoodpeckerStyle)]
+pub struct Element {}
 
 pub fn render(entity: Res<CurrentWidget>, mut query: Query<&mut WidgetChildren>) {
     let Ok(mut children) = query.get_mut(**entity) else {

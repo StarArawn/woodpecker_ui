@@ -18,7 +18,7 @@ pub struct WoodpeckerAppBundle {
 }
 
 /// The Woodpecker UI App component
-#[derive(Component, Widget, Default, Clone)]
+#[derive(Component, Widget, Reflect, Default, Clone)]
 #[widget_systems(update, render)]
 pub struct WoodpeckerApp {}
 

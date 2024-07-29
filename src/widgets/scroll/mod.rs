@@ -7,7 +7,7 @@ use crate::prelude::*;
 use bevy::prelude::*;
 
 /// Context data provided by a [`ScrollBox`](crate::ScrollBox) widget
-#[derive(Component, Default, Debug, Copy, Clone, PartialEq)]
+#[derive(Component, Default, Reflect, Debug, Copy, Clone, PartialEq)]
 pub struct ScrollContext {
     pub(super) scroll_x: f32,
     pub(super) scroll_y: f32,
@@ -24,7 +24,7 @@ pub struct ScrollContext {
 }
 
 #[non_exhaustive]
-#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Reflect, Copy, Clone, PartialEq, Eq)]
 pub enum ScrollMode {
     /// Clamps the scroll offset to stay within the scroll range
     #[default]
@@ -127,8 +127,9 @@ impl ScrollContext {
     }
 }
 
-#[derive(Component, Widget, Default, PartialEq, Clone)]
-#[widget_systems(update, render)]
+#[derive(Component, Widget, Reflect, Default, PartialEq, Clone)]
+#[auto_update(render)]
+#[props(ScrollContextProvider)]
 pub struct ScrollContextProvider {
     initial_value: ScrollContext,
 }
@@ -138,17 +139,6 @@ pub struct ScrollContextProviderBundle {
     pub provider: ScrollContextProvider,
     pub children: WidgetChildren,
     pub styles: WoodpeckerStyle,
-}
-
-pub fn update(
-    current_widget: Res<CurrentWidget>,
-    query: Query<(Ref<ScrollContextProvider>, Ref<WidgetChildren>)>,
-) -> bool {
-    let Ok((sp, children)) = query.get(**current_widget) else {
-        return false;
-    };
-
-    sp.is_changed() || children.children_changed()
 }
 
 pub fn render(

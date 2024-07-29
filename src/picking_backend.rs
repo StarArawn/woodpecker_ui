@@ -18,6 +18,7 @@ pub(crate) fn system(
     primary_window: Query<Entity, With<PrimaryWindow>>,
     layout_query: Query<(Entity, &WidgetLayout), With<Pickable>>,
     mut output: EventWriter<PointerHits>,
+    #[cfg(feature = "debug-render")] mut gizmos: Gizmos,
 ) {
     let mut sorted_layouts: Vec<_> = layout_query.iter().collect();
     sorted_layouts.sort_by(|a, b| {
@@ -25,6 +26,8 @@ pub(crate) fn system(
             .partial_cmp(&a.1.order)
             .unwrap_or(Ordering::Equal)
     });
+
+    let total = sorted_layouts.len();
 
     for (pointer, location) in pointers.iter().filter_map(|(pointer, pointer_location)| {
         pointer_location.location().map(|loc| (pointer, loc))
@@ -52,21 +55,41 @@ pub(crate) fn system(
             continue;
         };
 
-        let half_size = camera.logical_target_size().unwrap() / 2.0;
-        cursor_pos_world.x += half_size.x;
-        cursor_pos_world.y = -cursor_pos_world.y + half_size.y;
+        let screen_half_size = camera.logical_target_size().unwrap() / 2.0;
+        cursor_pos_world.x += screen_half_size.x;
+        cursor_pos_world.y = -cursor_pos_world.y + screen_half_size.y;
 
         let picks = layout_query
             .iter()
             .filter_map(|(entity, layout)| {
                 let x = layout.location.x;
                 let y = layout.location.y;
-                let rect = Rect::new(x, y, x + layout.size.width, y + layout.size.height);
+                let rect = Rect::new(x, y, x + layout.size.x, y + layout.size.y);
                 if rect.contains(cursor_pos_world) {
+                    // Draw lines
+                    #[cfg(feature = "debug-render")]
+                    {
+                        let half_size = rect.size() / 2.;
+                        fn rect_inner(size: Vec2) -> [Vec2; 4] {
+                            let half_size = size / 2.;
+                            let tl = Vec2::new(-half_size.x, half_size.y);
+                            let tr = Vec2::new(half_size.x, half_size.y);
+                            let bl = Vec2::new(-half_size.x, -half_size.y);
+                            let br = Vec2::new(half_size.x, -half_size.y);
+                            [tl, tr, br, bl]
+                        }
+                        let [tl, tr, br, bl] = rect_inner(rect.size()).map(|vec2| {
+                            let pos = rect.min + half_size + vec2;
+                            Vec2::new(pos.x, -pos.y)
+                                + Vec2::new(-screen_half_size.x, screen_half_size.y)
+                        });
+                        gizmos.linestrip_2d([tl, tr, br, bl, tl], Srgba::RED);
+                    }
+
                     Some((
                         entity,
                         // Is 10k entities enough? :shrug:
-                        HitData::new(cam_entity, 10000.0 - layout.order as f32, None, None),
+                        HitData::new(cam_entity, total as f32 - layout.order as f32, None, None),
                     ))
                 } else {
                     None

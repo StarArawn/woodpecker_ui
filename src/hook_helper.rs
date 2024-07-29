@@ -9,6 +9,7 @@ pub struct HookHelper {
     internal_context: HashMap<Entity, HashMap<String, Entity>>,
     parents: HashMap<Entity, Entity>,
     state: HashMap<Entity, HashMap<String, Entity>>,
+    prev_state_entities: HashMap<Entity, Entity>,
 }
 
 #[derive(Component)]
@@ -41,7 +42,9 @@ impl HookHelper {
         }
     }
 
-    /// Looks up the T state for an entity.
+    /// Looks up the T state for an entity and returns an Option<Entity>
+    /// None is returned if the state is not found. Unlike use_state this does
+    /// not create new state rather it only looks for existing state.
     /// State entities are just entities parented to the entity passed in.
     pub fn get_state<T: Component>(&self, current_widget: CurrentWidget) -> Option<Entity> {
         let type_name: String = std::any::type_name::<T>().into();
@@ -72,6 +75,13 @@ impl HookHelper {
         }
     }
 
+    /// Like use_context but does not spawn a new context entity it only
+    /// looks for an existing one.
+    pub fn get_context<T: Component>(&self, current_widget: CurrentWidget) -> Option<Entity> {
+        let type_name: String = std::any::type_name::<T>().into();
+        self.traverse_find_context_entity(&type_name, current_widget)
+    }
+
     // Traverse up tree to find parent widget with the context.
     fn traverse_find_context_entity(
         &self,
@@ -96,7 +106,10 @@ impl HookHelper {
 
     pub(crate) fn update_context_helper(
         mut context_helper: ResMut<HookHelper>,
-        query: Query<(Entity, &Parent, One<&dyn Widget>), Changed<Parent>>,
+        query: Query<
+            (Entity, &Parent, One<&dyn Widget>),
+            (Changed<Parent>, Without<PreviousWidget>),
+        >,
         mut removed: RemovedComponents<Parent>,
     ) {
         // Add any that were added or changed.
@@ -109,4 +122,25 @@ impl HookHelper {
             context_helper.parents.remove(&entity);
         }
     }
+
+    pub fn get_previous_widget(
+        &mut self,
+        commands: &mut Commands,
+        current_widget: CurrentWidget,
+    ) -> Entity {
+        let prev_state_entity = self
+            .prev_state_entities
+            .entry(*current_widget)
+            .or_insert_with(|| {
+                commands
+                    .spawn(PreviousWidget)
+                    .set_parent(*current_widget)
+                    .id()
+            });
+
+        *prev_state_entity
+    }
 }
+
+#[derive(Component)]
+pub struct PreviousWidget;
