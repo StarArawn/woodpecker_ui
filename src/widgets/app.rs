@@ -44,7 +44,6 @@ pub fn update(
     true
 }
 
-// TODO: Add camera logical size when we add layouting.
 pub fn render(
     entity: Res<CurrentWidget>,
     mut query: Query<(&mut WidgetChildren, &mut WoodpeckerStyle)>,

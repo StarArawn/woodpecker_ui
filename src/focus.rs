@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_mod_picking::{focus::PickingInteraction, prelude::EntityEvent};
+use bevy_mod_picking::{focus::PickingInteraction, prelude::{EntityEvent, PointerPress}};
 
 /// Marks an entity as focusable
 #[derive(Component, Default, Debug, Clone, Copy)]
@@ -45,9 +45,8 @@ impl CurrentFocus {
         >,
         mut focus_writer: EventWriter<WidgetFocus>,
         mut blur_writer: EventWriter<WidgetBlur>,
-        mouse_input: Res<ButtonInput<MouseButton>>,
+        pointer_query: Query<&PointerPress>,
     ) {
-        // TODO: This probably wont work well for our UI hierarchy. Enough for now..
         let mut none_selected = true;
         for (entity, picking_interaction) in query.iter() {
             if let Some(picking_interaction) = picking_interaction {
@@ -66,8 +65,8 @@ impl CurrentFocus {
                 }
             }
         }
-        // TODO: Allow users to define "primary" button.
-        if none_selected && mouse_input.pressed(MouseButton::Left) {
+        
+        if none_selected && pointer_query.iter().any(|press| press.is_primary_pressed()) {
             // Blur if we have a focused entity because we had no "hits" this frame.
             if current_focus.get() != Entity::PLACEHOLDER {
                 blur_writer.send(WidgetBlur {

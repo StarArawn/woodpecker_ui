@@ -80,36 +80,6 @@ impl WidgetMapper {
         self.new_this_tick.contains(&entity)
     }
 
-    /// Get's the existing entity or creates a new one.
-    /// TODO: Investigate possible removing this?
-    #[allow(unused)]
-    pub(crate) fn get_or_insert_entity<T: Widget>(
-        &mut self,
-        commands: &mut Commands,
-        parent: ParentWidget,
-        child_key: Option<String>,
-        child_position_index: usize,
-    ) -> Entity {
-        let key = Self::get_key::<T>(child_key.clone());
-        if let Some(child_vec) = self.parent_entity_to_child.get(&parent) {
-            if let Some(mapping) = child_vec.get(child_position_index) {
-                if key == mapping.key {
-                    self.new_this_tick.insert(mapping.entity);
-                    return mapping.entity;
-                } else {
-                    commands.entity(mapping.entity).despawn_recursive();
-                }
-            }
-        }
-
-        let child_entity = commands.spawn_empty().set_parent(*parent).id();
-        self.add(key, parent, child_entity, child_position_index);
-
-        self.new_this_tick.insert(child_entity);
-
-        child_entity
-    }
-
     pub(crate) fn get_or_insert_entity_world(
         &mut self,
         world: &mut World,

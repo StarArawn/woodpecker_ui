@@ -6,14 +6,7 @@ use bevy_vello::{text::VelloFont, VelloScene};
 use taffy::Layout;
 
 use crate::{
-    context::{Widget, WoodpeckerContext},
-    font::FontManager,
-    hook_helper::StateMarker,
-    metrics::WidgetMetrics,
-    prelude::{PreviousWidget, WidgetPosition, WidgetRender},
-    styles::Edge,
-    svg::{SvgAsset, SvgManager},
-    DefaultFont,
+    context::{Widget, WoodpeckerContext}, font::FontManager, hook_helper::StateMarker, image::ImageManager, metrics::WidgetMetrics, prelude::{PreviousWidget, WidgetPosition, WidgetRender}, styles::Edge, svg::{SvgAsset, SvgManager}, DefaultFont
 };
 
 use super::{measure::LayoutMeasure, UiLayout, WoodpeckerStyle};
@@ -140,6 +133,7 @@ pub(crate) struct LayoutSystemParam<'w, 's> {
     default_font: Res<'w, DefaultFont>,
     font_manager: ResMut<'w, FontManager>,
     svg_manager: ResMut<'w, SvgManager>,
+    image_manager: ResMut<'w, ImageManager>,
     ui_layout: ResMut<'w, UiLayout>,
     query: Query<
         'w,
@@ -178,6 +172,7 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
         default_font,
         mut font_manager,
         mut svg_manager,
+        mut image_manager,
         mut ui_layout,
         mut query,
         state_marker_query,
@@ -202,8 +197,8 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
     metrics.clear_quad_last_frame();
 
     let root_node = context.get_root_widget();
+    ui_layout.root_entity = root_node;
     // This needs to be in the correct order
-    // TODO: This probably doesn't need to be in the correct order..
     traverse_upsert_node(
         root_node,
         &query,
@@ -266,6 +261,7 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
         &default_font,
         &mut font_manager,
         &mut svg_manager,
+        &mut image_manager,
         &mut metrics,
         &widget_render,
         &mut cached_layout,
@@ -305,6 +301,7 @@ fn traverse_render_tree(
     default_font: &DefaultFont,
     font_manager: &mut FontManager,
     svg_manager: &mut SvgManager,
+    image_manager: &mut ImageManager,
     metrics: &mut WidgetMetrics,
     widget_render: &Query<&WidgetRender>,
     cached_layout: &mut HashMap<Entity, Layout>,
@@ -357,6 +354,7 @@ fn traverse_render_tree(
                 svg_assets,
                 font_manager,
                 svg_manager,
+                image_manager,
                 metrics,
                 styles,
             );
@@ -379,6 +377,7 @@ fn traverse_render_tree(
             default_font,
             font_manager,
             svg_manager,
+            image_manager,
             metrics,
             widget_render,
             cached_layout,
