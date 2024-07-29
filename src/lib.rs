@@ -7,6 +7,7 @@ use entity_mapping::WidgetMapper;
 use font::FontManager;
 use hook_helper::HookHelper;
 use layout::WoodpeckerLayoutPlugin;
+use metrics::WidgetMetrics;
 use picking_backend::MouseWheelScroll;
 use widgets::WoodpeckerUIWidgetPlugin;
 
@@ -18,6 +19,7 @@ mod font;
 mod hook_helper;
 mod keyboard_input;
 mod layout;
+mod metrics;
 mod on_change;
 mod picking_backend;
 mod render;
@@ -35,6 +37,7 @@ pub mod prelude {
     pub use crate::hook_helper::{HookHelper, PreviousWidget};
     pub use crate::keyboard_input::WidgetKeyboardCharEvent;
     pub use crate::layout::system::{WidgetLayout, WidgetPreviousLayout};
+    pub use crate::metrics::WidgetMetrics;
     pub use crate::on_change::OnChange;
     pub use crate::render::WidgetRender;
     pub use crate::styles::*;
@@ -102,6 +105,7 @@ impl Plugin for WoodpeckerUIPlugin {
             .init_resource::<WoodpeckerContext>()
             .init_resource::<WidgetMapper>()
             .init_resource::<DefaultFont>()
+            .init_resource::<WidgetMetrics>()
             .add_systems(
                 Update,
                 (
@@ -118,6 +122,8 @@ impl Plugin for WoodpeckerUIPlugin {
                     font::load_fonts,
                     picking_backend::mouse_wheel_system,
                     picking_backend::system.after(crate::layout::system::run),
+                    #[cfg(feature = "metrics")]
+                    metrics::WidgetMetrics::print_metrics_x_seconds
                 ),
             )
             .add_systems(Startup, startup)

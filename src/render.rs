@@ -10,7 +10,7 @@ use bevy_vello::{
     }, VelloScene
 };
 
-use crate::{font::FontManager, prelude::WoodpeckerStyle, DefaultFont};
+use crate::{font::FontManager, metrics::WidgetMetrics, prelude::WoodpeckerStyle, DefaultFont};
 
 pub(crate) const VARIATIONS: &[(&str, f32)] = &[];
 
@@ -64,6 +64,7 @@ impl WidgetRender {
         image_assets: &Assets<Image>,
         vello_assets: &Assets<VelloAsset>,
         font_manager: &mut FontManager,
+        metrics: &mut WidgetMetrics,
         widget_style: &WoodpeckerStyle,
     ) -> bool {
         let mut did_layer = false;
@@ -126,6 +127,7 @@ impl WidgetRender {
                     None,
                     &rect,
                 );
+                metrics.increase_quad_counts();
             }
             WidgetRender::Text { content, word_wrap } => {
                 let font_handle = widget_style
