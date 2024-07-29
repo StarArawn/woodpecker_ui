@@ -8,43 +8,36 @@ use bevy_mod_picking::{
 };
 
 #[derive(Component, Clone, PartialEq)]
-pub struct ButtonStyles {
+pub struct IconButtonStyles {
     pub normal: WoodpeckerStyle,
     pub hovered: WoodpeckerStyle,
+    pub width: Units,
+    pub height: Units,
 }
 
-impl Default for ButtonStyles {
+impl Default for IconButtonStyles {
     fn default() -> Self {
         let normal = WoodpeckerStyle {
             background_color: Srgba::new(0.254, 0.270, 0.349, 1.0).into(),
-            border_color: Srgba::new(0.254, 0.270, 0.349, 1.0).into(),
-            border: Edge::all(2.0),
-            border_radius: Corner::all(10.0),
-            margin: Edge::new(20.0, 0.0, 0.0, 0.0),
-            padding: Edge::all(0.0).left(5.0).right(5.0),
-            font_size: 16.0,
-            height: 28.0.into(),
-            text_alignment: Some(TextAlign::Center),
-            width: Units::Pixels(200.0),
-            justify_content: Some(WidgetAlignContent::Center),
-            align_items: Some(WidgetAlignItems::Center),
             ..Default::default()
         };
         Self {
             normal,
             hovered: WoodpeckerStyle {
-                border_color: Srgba::new(0.592, 0.627, 0.749, 1.0).into(),
+                background_color: Srgba::new(0.933, 0.745, 0.745, 1.0).into(),
                 ..normal
             },
+            width: 32.0.into(),
+            height: 32.0.into(),
         }
     }
 }
 
 /// A generic button widget used for easy buttons!
 #[derive(Bundle, Clone)]
-pub struct WButtonBundle {
+pub struct IconButtonBundle {
     /// The button component itself.
-    pub button: WButton,
+    pub button: IconButton,
     /// The rendering of the button widget.
     pub render: WidgetRender,
     /// A widget children component
@@ -52,14 +45,14 @@ pub struct WButtonBundle {
     /// The widget styles,
     pub styles: WoodpeckerStyle,
     /// The button styles
-    pub button_styles: ButtonStyles,
+    pub button_styles: IconButtonStyles,
     /// Provides overrides for picking behavior.
     pub pickable: Pickable,
     /// Tracks entity interaction state.
     pub interaction: PickingInteraction,
 }
 
-impl Default for WButtonBundle {
+impl Default for IconButtonBundle {
     fn default() -> Self {
         Self {
             button: Default::default(),
@@ -68,49 +61,65 @@ impl Default for WButtonBundle {
             styles: ButtonStyles::default().normal,
             pickable: Default::default(),
             interaction: Default::default(),
-            button_styles: ButtonStyles::default(),
+            button_styles: IconButtonStyles::default(),
         }
     }
 }
 
 #[derive(Component, Default, PartialEq, Clone)]
-pub struct WButtonState {
+pub struct IconButtonState {
     pub hovering: bool,
 }
 
 /// The Woodpecker UI Button
 #[derive(Component, Widget, Default, Reflect, PartialEq, Clone)]
 #[auto_update(render)]
-#[props(WButton, ButtonStyles)]
-#[state(WButtonState)]
-pub struct WButton;
+#[props(IconButton, IconButtonStyles)]
+#[state(IconButtonState)]
+pub struct IconButton;
 
 pub fn render(
     current_widget: Res<CurrentWidget>,
     mut commands: Commands,
     mut hooks: ResMut<HookHelper>,
-    mut query: Query<(&mut WoodpeckerStyle, &ButtonStyles, &mut WidgetChildren)>,
-    state_query: Query<&WButtonState>,
+    mut query: Query<(
+        &mut WoodpeckerStyle,
+        &IconButtonStyles,
+        &mut WidgetChildren,
+        &mut WidgetRender,
+    )>,
+    state_query: Query<&IconButtonState>,
 ) {
-    let Ok((mut styles, button_styles, mut children)) = query.get_mut(**current_widget) else {
+    let Ok((mut styles, button_styles, mut children, mut render)) = query.get_mut(**current_widget)
+    else {
         return;
     };
 
-    let state_entity = hooks.use_state(&mut commands, *current_widget, WButtonState::default());
-    let Ok(state) = state_query.get(state_entity) else {
-        return;
-    };
+    let state_entity = hooks.use_state(&mut commands, *current_widget, IconButtonState::default());
+
+    let default_state = IconButtonState::default();
+    let state = state_query.get(state_entity).unwrap_or(&default_state);
 
     if state.hovering {
-        *styles = button_styles.hovered;
+        render.set_color(button_styles.hovered.background_color);
+        *styles = WoodpeckerStyle {
+            width: button_styles.width,
+            height: button_styles.height,
+            ..button_styles.hovered
+        };
     } else {
-        *styles = button_styles.normal;
+        render.set_color(button_styles.normal.background_color);
+        *styles = WoodpeckerStyle {
+            width: button_styles.width,
+            height: button_styles.height,
+            ..button_styles.normal
+        };
     }
 
     commands
         .entity(**current_widget)
         .insert(On::<Pointer<Over>>::run(
-            move |mut state_query: Query<&mut WButtonState>| {
+            move |mut state_query: Query<&mut IconButtonState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
@@ -118,7 +127,7 @@ pub fn render(
             },
         ))
         .insert(On::<Pointer<Out>>::run(
-            move |mut state_query: Query<&mut WButtonState>| {
+            move |mut state_query: Query<&mut IconButtonState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };

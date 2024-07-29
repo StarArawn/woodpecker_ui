@@ -9,6 +9,7 @@ use hook_helper::HookHelper;
 use layout::WoodpeckerLayoutPlugin;
 use metrics::WidgetMetrics;
 use picking_backend::MouseWheelScroll;
+use svg::{SvgAsset, SvgLoader, SvgManager};
 use widgets::WoodpeckerUIWidgetPlugin;
 
 mod children;
@@ -25,6 +26,8 @@ mod picking_backend;
 mod render;
 mod runner;
 mod styles;
+mod svg;
+mod vello_svg;
 mod widgets;
 
 /// A module that exports all publicly exposed types.
@@ -106,6 +109,9 @@ impl Plugin for WoodpeckerUIPlugin {
             .init_resource::<WidgetMapper>()
             .init_resource::<DefaultFont>()
             .init_resource::<WidgetMetrics>()
+            .init_resource::<SvgManager>()
+            .init_asset::<SvgAsset>()
+            .init_asset_loader::<SvgLoader>()
             .add_systems(
                 Update,
                 (
@@ -123,7 +129,7 @@ impl Plugin for WoodpeckerUIPlugin {
                     picking_backend::mouse_wheel_system,
                     picking_backend::system.after(crate::layout::system::run),
                     #[cfg(feature = "metrics")]
-                    metrics::WidgetMetrics::print_metrics_x_seconds
+                    metrics::WidgetMetrics::print_metrics_x_seconds,
                 ),
             )
             .add_systems(Startup, startup)

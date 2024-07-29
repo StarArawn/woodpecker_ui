@@ -56,10 +56,10 @@ impl Measure for LayoutMeasure {
             }
             LayoutMeasure::Custom(custom) => {
                 custom.measure(width, height, available_width, available_height, style)
-            },
+            }
             LayoutMeasure::Image(image) => {
                 image.measure(width, height, available_width, available_height, style)
-            },
+            }
         }
     }
 }
@@ -98,7 +98,6 @@ impl Measure for ImageMeasure {
         available_height: AvailableSpace,
         style: &taffy::Style,
     ) -> Vec2 {
-
         // Convert available width/height into an option
         let parent_width = available_width.into_option();
         let parent_height = available_height.into_option();

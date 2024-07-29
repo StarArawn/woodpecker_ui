@@ -14,7 +14,6 @@ pub struct WidgetMetrics {
     quads_avg_buffer: Vec<usize>,
 }
 
-
 pub struct LastUpdated(Instant);
 impl Default for LastUpdated {
     fn default() -> Self {
@@ -32,7 +31,11 @@ impl WidgetMetrics {
     }
 
     pub fn get_average_widgets_rendered_per_frame(&self) -> f32 {
-        self.rendered_avg_buffer.iter().map(|v| *v as f32).sum::<f32>() / self.rendered_avg_buffer.len() as f32
+        self.rendered_avg_buffer
+            .iter()
+            .map(|v| *v as f32)
+            .sum::<f32>()
+            / self.rendered_avg_buffer.len() as f32
     }
 
     pub(crate) fn increase_counts(&mut self) {
@@ -48,7 +51,8 @@ impl WidgetMetrics {
         if self.rendered_avg_buffer.len() > 100 {
             self.rendered_avg_buffer.remove(0);
         }
-        self.rendered_avg_buffer.push(self.total_widgets_rendered_last_frame);
+        self.rendered_avg_buffer
+            .push(self.total_widgets_rendered_last_frame);
     }
 
     pub fn get_quads_displayed(&self) -> usize {
@@ -60,7 +64,8 @@ impl WidgetMetrics {
     }
 
     pub fn get_average_quads_displayed_per_frame(&self) -> f32 {
-        self.quads_avg_buffer.iter().map(|v| *v as f32).sum::<f32>() / self.quads_avg_buffer.len() as f32
+        self.quads_avg_buffer.iter().map(|v| *v as f32).sum::<f32>()
+            / self.quads_avg_buffer.len() as f32
     }
 
     pub(crate) fn increase_quad_counts(&mut self) {
@@ -76,15 +81,19 @@ impl WidgetMetrics {
         if self.quads_avg_buffer.len() > 100 {
             self.quads_avg_buffer.remove(0);
         }
-        self.quads_avg_buffer.push(self.quads_displayed_since_last_frame);
+        self.quads_avg_buffer
+            .push(self.quads_displayed_since_last_frame);
     }
 
     /// A system that prints widget metrics!
-    pub fn print_metrics_x_seconds(metrics: Res<WidgetMetrics>, mut last_update: Local<LastUpdated>) {
+    pub fn print_metrics_x_seconds(
+        metrics: Res<WidgetMetrics>,
+        mut last_update: Local<LastUpdated>,
+    ) {
         if last_update.0.elapsed().as_secs_f32() > 5.0 {
             last_update.0 = Instant::now();
             info!(
-r#"
+                r#"
 ========================Woodpecker UI Metrics========================
 Total Widgets Rendered: {},
 Widgets Rendered Last Frame: {},
@@ -103,6 +112,6 @@ it was visible on screen. "Displayed" means shown on screen.
                 metrics.get_quads_displayed_since_last_frame(),
                 metrics.get_average_quads_displayed_per_frame()
             );
-    }
+        }
     }
 }

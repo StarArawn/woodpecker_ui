@@ -6,6 +6,7 @@ mod app;
 mod button;
 mod clip;
 mod element;
+mod icon_button;
 mod modal;
 mod scroll;
 mod text_box;
@@ -16,6 +17,7 @@ use bevy_mod_picking::prelude::EventListenerPlugin;
 pub use button::{ButtonStyles, WButton, WButtonBundle};
 pub use clip::{Clip, ClipBundle};
 pub use element::{Element, ElementBundle};
+pub use icon_button::{IconButton, IconButtonBundle, IconButtonStyles};
 pub use modal::{Modal, ModalBundle};
 pub use scroll::content::{ScrollContent, ScrollContentBundle};
 pub use scroll::scroll_bar::{ScrollBar, ScrollBarBundle};
@@ -40,6 +42,7 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
             .register_widget::<ScrollContent>()
             .register_widget::<ScrollBox>()
             .register_widget::<ScrollBar>()
+            .register_widget::<IconButton>()
             .add_systems(
                 Update,
                 (
