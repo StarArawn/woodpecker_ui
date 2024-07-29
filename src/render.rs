@@ -13,11 +13,7 @@ use bevy_vello::{
 };
 
 use crate::{
-    font::FontManager,
-    metrics::WidgetMetrics,
-    prelude::WoodpeckerStyle,
-    svg::{SvgAsset, SvgManager},
-    DefaultFont,
+    font::FontManager, image::ImageManager, metrics::WidgetMetrics, prelude::WoodpeckerStyle, svg::{SvgAsset, SvgManager}, DefaultFont
 };
 
 pub(crate) const VARIATIONS: &[(&str, f32)] = &[];
@@ -48,7 +44,7 @@ pub enum WidgetRender {
     /// 1. They clip child content that overflows outside of their own bounds(shape).
     /// 2. They stick children into a new opacity layer. This allows the children to have opacity
     /// as a group instead of individually.
-    /// TODO: Allow users to define custom clip shapes (supported by vellow we just need to expose somehow)
+    /// TODO: Allow users to define custom clip shapes (supported by vello we just need to expose somehow)
     Layer,
     /// A simple image renderer
     Image {
@@ -88,6 +84,7 @@ impl WidgetRender {
         svg_assets: &Assets<SvgAsset>,
         font_manager: &mut FontManager,
         svg_manager: &mut SvgManager,
+        image_manager: &mut ImageManager,
         metrics: &mut WidgetMetrics,
         widget_style: &WoodpeckerStyle,
     ) -> bool {
@@ -251,13 +248,12 @@ impl WidgetRender {
                     layout.location.y as f64,
                 ));
 
-                // TODO: Cache these..
-                let vello_image = peniko::Image::new(
+                let vello_image = image_manager.images.entry(image_handle.into()).or_insert_with(|| peniko::Image::new(
                     image.data.clone().into(),
                     peniko::Format::Rgba8,
                     image.size().x,
                     image.size().y,
-                );
+                ));
 
                 vello_scene.draw_image(&vello_image, transform);
             }

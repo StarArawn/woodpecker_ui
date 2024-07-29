@@ -83,7 +83,6 @@ impl FontManager {
         // Per mozilla the default line height is roughly font_size * 1.2
         let line_height = style.line_height.unwrap_or(style.font_size * 1.2);
 
-        // TODO: This might not be the best hash method..
         let mut hasher = DefaultHasher::default();
         content.hash(&mut hasher);
         (avaliable_space.x as u32).hash(&mut hasher);

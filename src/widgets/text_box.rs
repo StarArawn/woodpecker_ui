@@ -166,11 +166,10 @@ pub fn render(
 
         state.cursor_position = state.cursor_position.min(state.graphemes.len());
 
-        // TODO: Use style font?
         set_new_cursor_position(
             &mut state,
             &mut font_manager,
-            &default_font.0,
+            &styles.normal.font.map(|a| Handle::Weak(a)).unwrap_or(default_font.0.clone_weak()),
             styles.normal.font_size,
         );
     }
@@ -212,11 +211,10 @@ pub fn render(
                     // Update graphemes
                     set_graphemes(&mut state);
 
-                    // TODO: Use style font?
                     set_new_cursor_position(
                         &mut state,
                         &mut font_manager,
-                        &default_font.0,
+                        &styles.font.map(|a| Handle::Weak(a)).unwrap_or(default_font.0.clone_weak()),
                         styles.font_size,
                     );
                 },
@@ -280,11 +278,10 @@ pub fn render(
 
                 // Update graphemes
                 set_graphemes(&mut state);
-                // TODO: Use style font?
                 set_new_cursor_position(
                     &mut state,
                     &mut font_manager,
-                    &default_font.0,
+                    &styles.font.map(|a| Handle::Weak(a)).unwrap_or(default_font.0.clone_weak()),
                     styles.font_size,
                 );
             },
@@ -327,11 +324,10 @@ pub fn render(
                             state.cursor_position += 1;
                         }
                     }
-                    // TODO: Use style font?
                     set_new_cursor_position(
                         &mut state,
                         &mut font_manager,
-                        &default_font.0,
+                        &styles.font.map(|a| Handle::Weak(a)).unwrap_or(default_font.0.clone_weak()),
                         styles.font_size,
                     );
                 }
@@ -367,11 +363,10 @@ pub fn render(
                         state.cursor_position -= 1;
                     }
 
-                    // TODO: Use style font?
                     set_new_cursor_position(
                         &mut state,
                         &mut font_manager,
-                        &default_font.0,
+                        &styles.font.map(|a| Handle::Weak(a)).unwrap_or(default_font.0.clone_weak()),
                         styles.font_size,
                     );
                 }
@@ -402,11 +397,10 @@ pub fn render(
                         // Update graphemes
                         set_graphemes(&mut state);
 
-                        // TODO: Use style font?
                         set_new_cursor_position(
                             &mut state,
                             &mut font_manager,
-                            &default_font.0,
+                            &styles.font.map(|a| Handle::Weak(a)).unwrap_or(default_font.0.clone_weak()),
                             styles.font_size,
                         );
                     }

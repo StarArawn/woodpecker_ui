@@ -20,16 +20,16 @@ pub struct Mounted;
 /// [`WidgetChildren::process`] is called.
 #[derive(Component, Default, Clone)]
 pub struct WidgetChildren {
-    // Strings here are widget type names. TODO: Maybe give the strings a wrapper name so that is clear?
+    // Strings here are widget type names.
     // First children are stored in a queue.
     children_queue: Vec<(
         String,
-        Arc<dyn Fn(&mut World, &mut WidgetMapper, ParentWidget, usize) + Sync + Send>,
+        Arc<dyn Fn(&mut World, &mut WidgetMapper, ParentWidget, usize, String) + Sync + Send>,
     )>,
     // When a widget is processed onto a parent they get stored here and removed from the queue.
     children: Vec<(
         String,
-        Arc<dyn Fn(&mut World, &mut WidgetMapper, ParentWidget, usize) + Sync + Send>,
+        Arc<dyn Fn(&mut World, &mut WidgetMapper, ParentWidget, usize, String) + Sync + Send>,
     )>,
     /// Stores a list of previous children.
     prev_children: Vec<String>,
@@ -83,18 +83,18 @@ impl WidgetChildren {
     /// Note: Make sure to call [`WidgetChildren::process`] in the render system of the parent
     /// otherwise the entities will not be spawned! This will NOT spawn the bundles.
     pub fn add<T: Widget>(&mut self, bundle: impl Bundle + Clone) -> &mut Self {
-        let widget_name = T::get_name();
-        let widget_type_name = widget_name.clone().split("::").last().unwrap().to_string();
+        let widget_type = T::get_name();
         self.children_queue.push((
-            T::get_name(),
+            widget_type,
             Arc::new(
                 move |world: &mut World,
-                      widget_mapper: &mut WidgetMapper,
-                      parent: ParentWidget,
-                      index: usize| {
+                widget_mapper: &mut WidgetMapper,
+                parent: ParentWidget,
+                index: usize, widget_type: String| {
+                    let type_name_without_path = widget_type.clone().split("::").last().unwrap().to_string();
                     let child_widget = widget_mapper.get_or_insert_entity_world(
                         world,
-                        widget_name.clone(),
+                        widget_type,
                         parent,
                         None,
                         index,
@@ -103,7 +103,7 @@ impl WidgetChildren {
                         .entity_mut(child_widget)
                         .insert(bundle.clone())
                         .insert(Mounted)
-                        .insert(Name::new(widget_type_name.clone()));
+                        .insert(Name::new(type_name_without_path.clone()));
                 },
             ),
         ));
@@ -139,11 +139,10 @@ impl WidgetChildren {
             // Loop through each child and spawn the bundles.
             // The widget mapper helps keep track of which entities go with which child.
             // They are ensured to have the same entity id for a given child index and
-            // widget type name. The type name is passed into the closure in [`Self::add`].
-            // TODO: Maybe just pass it in here to make it clearer?
-            for (i, (name, child)) in self.children.iter().enumerate() {
-                trace!("Adding as child: {}", name);
-                child(world, &mut widget_mapper, parent_widget, i);
+            // widget type name. The type name is passed in here from the children vec.
+            for (i, (widget_type, child)) in self.children.iter().enumerate() {
+                trace!("Adding as child: {}", widget_type);
+                child(world, &mut widget_mapper, parent_widget, i, widget_type.clone());
             }
         });
 

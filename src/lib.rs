@@ -6,6 +6,7 @@ use context::{Widget, WoodpeckerContext};
 use entity_mapping::WidgetMapper;
 use font::FontManager;
 use hook_helper::HookHelper;
+use image::ImageManager;
 use layout::WoodpeckerLayoutPlugin;
 use metrics::WidgetMetrics;
 use picking_backend::MouseWheelScroll;
@@ -29,6 +30,7 @@ mod styles;
 mod svg;
 mod vello_svg;
 mod widgets;
+mod image;
 
 /// A module that exports all publicly exposed types.
 pub mod prelude {
@@ -110,6 +112,7 @@ impl Plugin for WoodpeckerUIPlugin {
             .init_resource::<DefaultFont>()
             .init_resource::<WidgetMetrics>()
             .init_resource::<SvgManager>()
+            .init_resource::<ImageManager>()
             .init_asset::<SvgAsset>()
             .init_asset_loader::<SvgLoader>()
             .add_systems(

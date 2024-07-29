@@ -19,6 +19,7 @@ impl Plugin for WoodpeckerLayoutPlugin {
 
 #[derive(Resource)]
 pub(crate) struct UiLayout {
+    pub(crate) root_entity: Entity,
     entity_to_taffy: EntityHashMap<Entity, taffy::NodeId>,
     taffy: TaffyTree<LayoutMeasure>,
 }
@@ -26,6 +27,7 @@ pub(crate) struct UiLayout {
 impl Default for UiLayout {
     fn default() -> Self {
         Self {
+            root_entity: Entity::PLACEHOLDER,
             entity_to_taffy: Default::default(),
             taffy: TaffyTree::new(),
         }
@@ -97,10 +99,12 @@ impl UiLayout {
         if let Some(taffy_node) = self.entity_to_taffy.get(&entity) {
             self.taffy.layout(*taffy_node).ok()
         } else {
-            warn!(
-                "Styled child in a non-UI entity hierarchy. You are using an entity \
-with UI components as a child of an entity without UI components, results may be unexpected."
-            );
+            if entity != self.root_entity {
+                warn!(
+                    "Styled child in a non-UI entity hierarchy. You are using an entity \
+    with UI components as a child of an entity without UI components, results may be unexpected."
+                );
+            }
             None
         }
     }
