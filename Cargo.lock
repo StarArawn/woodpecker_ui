@@ -5782,6 +5782,7 @@ dependencies = [
  "thiserror",
  "unicode-segmentation",
  "usvg",
+ "web-time",
  "woodpecker_ui_macros",
 ]
 

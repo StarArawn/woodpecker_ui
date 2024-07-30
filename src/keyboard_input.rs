@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use web_time::{Duration, Instant};
 
 use bevy::{
     input::{
@@ -97,12 +97,19 @@ pub(crate) fn runner(
                 if time_since_last_paste.elapsed().as_secs_f32() < 0.1 {
                     return;
                 }
+                // temporary disable clipboard usage on wasm for
+                // first wasm-support implementation.
+                // functionality is possibly recoverable.
+                #[cfg(not(target_arch = "wasm32"))]
                 let Ok(mut clipboard) = arboard::Clipboard::new() else {
                     return;
                 };
+                #[cfg(not(target_arch = "wasm32"))]
                 let Ok(text) = clipboard.get_text() else {
                     return;
                 };
+                #[cfg(target_arch = "wasm32")]
+                let text = "";
                 *time_since_last_paste = TimeSinceLastPaste::default();
                 paste_event_writer.send(WidgetPasteEvent {
                     target: current_focus.get(),

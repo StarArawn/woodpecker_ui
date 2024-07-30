@@ -13,8 +13,6 @@ debug-render = []
 metrics = []
 
 [dependencies]
-arboard = "3.4"
-bevy = "0.14"
 bevy_mod_picking = "0.20"
 bevy_vello = { version = "0.5", features = ["svg"] }
 bevy-inspector-egui = "0.25"
@@ -27,9 +25,18 @@ taffy = { version = "0.5", features = ["flexbox", "grid"] }
 thiserror = "1.0"
 unicode-segmentation = "1.10.0"
 usvg = "0.42"
+web-time = "1.1"
 
 # Local
 woodpecker_ui_macros.path = "crates/woodpecker_ui_macros" # TODO: Make this crates.io friendly..
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+arboard = "3.4"
+bevy = "0.14"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+bevy = { version = "0.14", default-features = false, features = ["webgpu"] }
+
 
 [dev-dependencies]
 calc = { version = "0.4.0", default-features = false }
