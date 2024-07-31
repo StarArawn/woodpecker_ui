@@ -5782,6 +5782,8 @@ dependencies = [
  "thiserror",
  "unicode-segmentation",
  "usvg",
+ "wasm-bindgen-futures",
+ "web-sys",
  "web-time",
  "woodpecker_ui_macros",
 ]

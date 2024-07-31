@@ -97,25 +97,54 @@ pub(crate) fn runner(
                 if time_since_last_paste.elapsed().as_secs_f32() < 0.1 {
                     return;
                 }
-                // temporary disable clipboard usage on wasm for
-                // first wasm-support implementation.
-                // functionality is possibly recoverable.
+
                 #[cfg(not(target_arch = "wasm32"))]
-                let Ok(mut clipboard) = arboard::Clipboard::new() else {
+                {
+                    let Ok(mut clipboard) = arboard::Clipboard::new() else {
+                        return;
+                    };
+                    let Ok(text) = clipboard.get_text() else {
+                        return;
+                    };
+                    *time_since_last_paste = TimeSinceLastPaste::default();
+                    paste_event_writer.send(WidgetPasteEvent {
+                        target: current_focus.get(),
+                        paste: smol_str::SmolStr::new(text),
+                    });
                     return;
-                };
-                #[cfg(not(target_arch = "wasm32"))]
-                let Ok(text) = clipboard.get_text() else {
-                    return;
-                };
+                }
+
                 #[cfg(target_arch = "wasm32")]
-                let text = "";
-                *time_since_last_paste = TimeSinceLastPaste::default();
-                paste_event_writer.send(WidgetPasteEvent {
-                    target: current_focus.get(),
-                    paste: smol_str::SmolStr::new(text),
-                });
-                return;
+                {
+                    let Some(clipboard) =
+                        web_sys::window().and_then(|window| window.navigator().clipboard())
+                    else {
+                        warn!("no clipboard");
+                        return;
+                    };
+                    let promise = clipboard.read_text();
+                    let future = wasm_bindgen_futures::JsFuture::from(promise);
+
+                    let pool = bevy::tasks::TaskPool::new();
+                    pool.spawn(async move {
+                        let Ok(text) = future.await else {
+                            return;
+                        };
+                        let Some(text) = text.as_string() else {
+                            return;
+                        };
+                        info!("{:?}", text);
+                    });
+
+                    let text = "".to_string();
+                    *time_since_last_paste = TimeSinceLastPaste::default();
+                    paste_event_writer.send(WidgetPasteEvent {
+                        target: current_focus.get(),
+                        paste: smol_str::SmolStr::new(text.to_string()),
+                    });
+
+                    return;
+                }
             }
             match &event.logical_key {
                 Key::Character(c) => {
