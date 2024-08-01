@@ -5,7 +5,7 @@ use web_time::Instant;
 
 use crate::prelude::*;
 
-#[derive(Default, Copy, Clone, PartialEq)]
+#[derive(Default, Debug, Copy, Reflect, Clone, PartialEq)]
 pub enum TransitionEasing {
     #[default]
     Linear,
@@ -79,7 +79,7 @@ impl TransitionEasing {
     }
 }
 
-#[derive(Component, Widget, Clone, PartialEq)]
+#[derive(Component, Debug, Reflect, Clone, Copy)]
 pub struct Transition {
     pub playing: bool,
     /// The easing function that dictates the interpolation factor.
@@ -98,6 +98,18 @@ pub struct Transition {
     pub style_a: WoodpeckerStyle,
     /// The ending styles of the widget.
     pub style_b: WoodpeckerStyle,
+}
+
+impl PartialEq for Transition {
+    fn eq(&self, other: &Self) -> bool {
+        self.playing == other.playing
+            && self.easing == other.easing
+            && self.reversing == other.reversing
+            && self.timeout == other.timeout
+            && self.looping == other.looping
+            && self.style_a == other.style_a
+            && self.style_b == other.style_b
+    }
 }
 
 impl Default for Transition {

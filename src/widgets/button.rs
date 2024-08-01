@@ -7,7 +7,9 @@ use bevy_mod_picking::{
     prelude::On,
 };
 
-#[derive(Component, Clone, PartialEq)]
+use super::colors;
+
+#[derive(Component, Reflect, Clone, Copy, PartialEq)]
 pub struct ButtonStyles {
     pub normal: WoodpeckerStyle,
     pub hovered: WoodpeckerStyle,
@@ -16,8 +18,8 @@ pub struct ButtonStyles {
 impl Default for ButtonStyles {
     fn default() -> Self {
         let normal = WoodpeckerStyle {
-            background_color: Srgba::new(0.254, 0.270, 0.349, 1.0).into(),
-            border_color: Srgba::new(0.254, 0.270, 0.349, 1.0).into(),
+            background_color: colors::BACKGROUND_LIGHT,
+            border_color: colors::BACKGROUND_LIGHT,
             border: Edge::all(2.0),
             border_radius: Corner::all(10.0),
             margin: Edge::new(20.0, 0.0, 0.0, 0.0),
