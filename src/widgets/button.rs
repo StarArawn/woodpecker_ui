@@ -9,9 +9,12 @@ use bevy_mod_picking::{
 
 use super::colors;
 
+/// A set of styles used to style a button.
 #[derive(Component, Reflect, Clone, Copy, PartialEq)]
 pub struct ButtonStyles {
+    /// Normal styles(not hovered).
     pub normal: WoodpeckerStyle,
+    /// Styles to apply when hovered.
     pub hovered: WoodpeckerStyle,
 }
 

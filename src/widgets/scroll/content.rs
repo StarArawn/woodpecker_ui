@@ -6,17 +6,26 @@ use bevy::prelude::*;
 
 use super::ScrollContext;
 
+/// A widget that is used to keep track of the layout of the content that 
+/// the scroll box wraps so that we can correctly calculate the amount of
+/// scroll necessary. 
 #[derive(Component, Widget, Reflect, Default, PartialEq, Eq, Clone)]
 #[auto_update(render)]
 #[props(ScrollContent, WidgetLayout)]
 #[context(ScrollContext)]
 pub struct ScrollContent;
 
+/// A bundle for convince when creating the widget.
 #[derive(Bundle, Default, Clone)]
 pub struct ScrollContentBundle {
+    /// The scroll content
     pub scroll_content: ScrollContent,
+    /// The styles
     pub styles: WoodpeckerStyleProp,
+    /// The children
     pub children: WidgetChildren,
+    /// The styles that are actually used after render.
+    // TODO: Now that we have proper diffing we can remove this.
     pub internal_styles: WoodpeckerStyle,
 }
 

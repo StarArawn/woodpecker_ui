@@ -58,13 +58,13 @@ pub struct WoodpeckerStyle {
     pub overflow: WidgetOverflow,
     /// The positioning strategy for this item.
     ///
-    /// This controls both how the origin is determined for the [`Style::position`] field,
+    /// This controls both how the origin is determined for the [`WoodpeckerStyle::position`] field,
     /// and whether or not the item will be controlled by flexbox's layout algorithm.
     ///
     /// WARNING: this enum follows the behavior of [CSS's `position` property](https://developer.mozilla.org/en-US/docs/Web/CSS/position),
     /// which can be unintuitive.
     ///
-    /// [`Position::Relative`] is the default value, in contrast to the default behavior in CSS.
+    /// [`WidgetPosition::Relative`] is the default value, in contrast to the default behavior in CSS.
     pub position: WidgetPosition,
     /// Position Left
     pub left: Units,
@@ -148,39 +148,36 @@ pub struct WoodpeckerStyle {
     /************************ Rendering ************************/
     /// The background color of this widget
     ///
-    /// Only applies to widgets marked [`RenderCommand::Quad`]
+    /// Only applies to widgets marked [`crate::prelude::WidgetRender::Quad`]
     pub background_color: Color,
     /// The color of the border around this widget
     ///
     /// Currently, this controls all border sides.
     ///
-    /// Only applies to widgets marked [`RenderCommand::Quad`]
+    /// Only applies to widgets marked [`crate::prelude::WidgetRender::Quad`]
     pub border_color: Color,
     /// The radius of the corners (in pixels)
     ///
     /// The order is (Top, Right, Bottom, Left).
     ///
-    /// Only applies to widgets marked [`RenderCommand::Quad`] and [`RenderCommand::Image`]
+    /// Only applies to widgets with [`crate::prelude::WidgetRender::Quad`]
     pub border_radius: Corner,
     /// The widths of the borders (in pixels)
     ///
     /// The order is (Top, Right, Bottom, Left).
     ///
-    /// Only applies to widgets marked [`RenderCommand::Quad`]
+    /// Only applies to widgets with [`crate::prelude::WidgetRender::Quad`]
     pub border: Edge,
     /// The text color for this widget
     ///
-    /// This property defaults to [`StyleProp::Inherit`] meaning that setting this field to some value will
-    /// cause all descendents to receive that value, up to the next set value.
-    ///
-    /// Only applies to widgets marked [`RenderCommand::Text`]
+    /// Only applies to widgets with the [`crate::prelude::WidgetRender::Text`] component.
     pub color: Color,
     /// Font handle if none is set the [`crate::DefaultFont`] is used.
     /// We use AssetId here because it can be copied thus it makes styles easier.
     pub font: Option<AssetId<VelloFont>>,
     /// The font size for this widget, in pixels
     ///
-    /// Only applies to [`RenderCommand::Text`]
+    /// Only applies to [`crate::prelude::WidgetRender::Text`]
     pub font_size: f32,
     /// The layout method for children of this widget
     /// The line height for this widget, in pixels

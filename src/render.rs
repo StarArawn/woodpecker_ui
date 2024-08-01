@@ -35,7 +35,7 @@ pub enum WidgetRender {
     /// A custom vello renderer.
     /// TODO: Untested, write an example?
     Custom {
-        // A custom widget render function
+        /// A custom widget render function
         render: WidgetRenderCustom,
     },
     /// A render layer
@@ -51,9 +51,11 @@ pub enum WidgetRender {
         /// A handle to a bevy image.
         handle: Handle<Image>,
     },
-    // A SVG asset.
+    /// A SVG asset.
     Svg {
+        /// A handle to the SVG asset.
         handle: Handle<SvgAsset>,
+        /// An optional color that replaces paths and fills within the svg.
         path_color: Option<Color>,
     },
 }

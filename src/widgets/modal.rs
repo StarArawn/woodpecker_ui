@@ -14,6 +14,7 @@ pub struct ModalState {
     previous_visibility: bool,
 }
 
+/// A widget that displays a modal
 #[derive(Component, Widget, Reflect, PartialEq, Clone, Debug)]
 #[auto_update(render)]
 #[props(Modal)]
@@ -53,11 +54,19 @@ impl Default for Modal {
 /// A simple widget that renders a modal.
 #[derive(Bundle, Clone)]
 pub struct ModalBundle {
+    /// The modal widget
     pub modal: Modal,
+    /// The styles of the modal
     pub styles: WoodpeckerStyle,
+    /// The children of the modal 
     pub children: PassedChildren,
+    /// The internal children of the modal
     pub internal_children: WidgetChildren,
+    /// A transition used to fade in/out the modal.
     pub transition: Transition,
+    /// Used to tell woodpecker that the modal should create its
+    /// own render layer context so our fade in/out works as a 
+    /// group.
     pub widget_render: WidgetRender,
 }
 

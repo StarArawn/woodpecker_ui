@@ -9,11 +9,16 @@ use bevy_mod_picking::{
 
 use super::colors;
 
+/// A collection of styles for icon buttons.
 #[derive(Component, Clone, PartialEq)]
 pub struct IconButtonStyles {
+    /// Normal Styles
     pub normal: WoodpeckerStyle,
+    /// Hovered Styles
     pub hovered: WoodpeckerStyle,
+    /// Width of the icon
     pub width: Units,
+    /// Height of the icon
     pub height: Units,
 }
 
@@ -73,7 +78,7 @@ pub struct IconButtonState {
     pub hovering: bool,
 }
 
-/// The Woodpecker UI Button
+/// A generic button widget used for easy buttons!
 #[derive(Component, Widget, Default, Reflect, PartialEq, Clone)]
 #[auto_update(render)]
 #[props(IconButton, IconButtonStyles)]

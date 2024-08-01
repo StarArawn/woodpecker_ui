@@ -12,6 +12,7 @@ mod scroll;
 mod text_box;
 mod transition;
 mod toggle;
+/// A set of default colors used by Woodpecker UI.
 pub mod colors;
 mod slider;
 
