@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use web_time::{Duration, Instant};
 
 use bevy::{
     input::{
@@ -53,6 +53,14 @@ pub struct WidgetPasteEvent {
     pub paste: smol_str::SmolStr,
 }
 
+#[cfg(target_arch = "wasm32")]
+#[derive(Component)]
+pub struct WidgetPasteEventWasm {
+    /// The target of this event
+    pub target: Entity,
+    pub receiver: futures_channel::oneshot::Receiver<String>,
+}
+
 #[derive(Debug, Deref, DerefMut)]
 pub(crate) struct TimeSinceLastPaste(Instant);
 impl Default for TimeSinceLastPaste {
@@ -61,13 +69,34 @@ impl Default for TimeSinceLastPaste {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn read_paste_events(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut WidgetPasteEventWasm)>,
+    mut paste_event_writer: EventWriter<WidgetPasteEvent>,
+    mut time_since_last_paste: Local<TimeSinceLastPaste>,
+) {
+    for (entity, mut event) in &mut query {
+        let Ok(Some(text)) = event.receiver.try_recv() else {
+            continue;
+        };
+        *time_since_last_paste = TimeSinceLastPaste::default();
+        paste_event_writer.send(WidgetPasteEvent {
+            target: event.target,
+            paste: smol_str::SmolStr::new(text.to_string()),
+        });
+        commands.entity(entity).despawn_recursive();
+    }
+}
+
 pub(crate) fn runner(
+    #[cfg(target_arch = "wasm32")] mut commands: Commands,
     mut time_since_last_paste: Local<TimeSinceLastPaste>,
     mut ctrl_pressed: Local<bool>,
     mut key_event: EventReader<KeyboardInput>,
     mut char_event_writer: EventWriter<WidgetKeyboardCharEvent>,
     mut button_event_writer: EventWriter<WidgetKeyboardButtonEvent>,
-    mut paste_event_writer: EventWriter<WidgetPasteEvent>,
+    #[cfg(not(target_arch = "wasm32"))] mut paste_event_writer: EventWriter<WidgetPasteEvent>,
     current_focus: Res<CurrentFocus>,
 ) {
     let mut v_pressed = false;
@@ -97,18 +126,54 @@ pub(crate) fn runner(
                 if time_since_last_paste.elapsed().as_secs_f32() < 0.1 {
                     return;
                 }
-                let Ok(mut clipboard) = arboard::Clipboard::new() else {
+
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let Ok(mut clipboard) = arboard::Clipboard::new() else {
+                        return;
+                    };
+                    let Ok(text) = clipboard.get_text() else {
+                        return;
+                    };
+                    *time_since_last_paste = TimeSinceLastPaste::default();
+                    paste_event_writer.send(WidgetPasteEvent {
+                        target: current_focus.get(),
+                        paste: smol_str::SmolStr::new(text),
+                    });
                     return;
-                };
-                let Ok(text) = clipboard.get_text() else {
+                }
+
+                #[cfg(target_arch = "wasm32")]
+                {
+                    let Some(clipboard) =
+                        web_sys::window().and_then(|window| window.navigator().clipboard())
+                    else {
+                        warn!("no clipboard");
+                        return;
+                    };
+                    let promise = clipboard.read_text();
+                    let future = wasm_bindgen_futures::JsFuture::from(promise);
+
+                    let (sender, receiver) = futures_channel::oneshot::channel::<String>();
+
+                    let pool = bevy::tasks::TaskPool::new();
+                    pool.spawn(async move {
+                        let Ok(text) = future.await else {
+                            return;
+                        };
+                        let Some(text) = text.as_string() else {
+                            return;
+                        };
+                        let _ = sender.send(text);
+                    });
+
+                    commands.spawn(WidgetPasteEventWasm {
+                        target: current_focus.get(),
+                        receiver,
+                    });
+
                     return;
-                };
-                *time_since_last_paste = TimeSinceLastPaste::default();
-                paste_event_writer.send(WidgetPasteEvent {
-                    target: current_focus.get(),
-                    paste: smol_str::SmolStr::new(text),
-                });
-                return;
+                }
             }
             match &event.logical_key {
                 Key::Character(c) => {
