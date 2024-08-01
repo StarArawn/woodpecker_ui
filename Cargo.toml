@@ -38,6 +38,7 @@ bevy = "0.14"
 bevy = { version = "0.14", default-features = false, features = ["webgpu"] }
 web-sys = "0.3"
 wasm-bindgen-futures = "0.4"
+futures-channel = "0.3"
 
 
 [dev-dependencies]
