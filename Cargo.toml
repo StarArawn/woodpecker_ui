@@ -52,3 +52,6 @@ bevy_eventlistener = { git = "https://github.com/StarArawn/bevy_eventlistener", 
 [[example]]
 name = "todo"
 path = "examples/todo/todo.rs"
+
+[target.wasm32-unknown-unknown]
+runner = "wasm-server-runner"

@@ -19,6 +19,14 @@ Woodpecker UI is a Bevy ECS driven user interface crate. Its designed to be easy
   - [Cosmic Text](https://github.com/pop-os/cosmic-text) for text layouting
   - A few helper widgets to get you started
 
+
+### Running on desktop:
+`cargo run --example todo`
+
+### Running on WASM:
+1. `cargo install wasm-server-runner`
+2. `RUSTFLAGS="--cfg=web_sys_unstable_apis" cargo run --example todo --target wasm32-unknown-unknown --release`
+
 ### Found a bug? Please open an issue!
 
 ### Basic Example [examples/text.rs](examples/text.rs):
