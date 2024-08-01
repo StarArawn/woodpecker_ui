@@ -384,8 +384,16 @@ impl From<WoodpeckerStyle> for taffy::Style {
 
 fn lerp_units(prop_a: Units, prop_b: Units, x: f32) -> Units {
     match (prop_a, prop_b) {
-        (Units::Pixels(a), Units::Pixels(b)) => Units::Pixels(lerp(a, b, x)),
-        (Units::Percentage(a), Units::Percentage(b)) => Units::Percentage(lerp(a, b, x)),
+        (Units::Pixels(a), Units::Pixels(b)) => {
+            let mut value = lerp(a, b, x);
+            if a > b  {
+                value = value.clamp(b, a);
+            } else {
+                value = value.clamp(a, b);
+            }
+            Units::Pixels(value)
+        },
+        (Units::Percentage(a), Units::Percentage(b)) => Units::Percentage(lerp(a, b, x).clamp(a, b)),
         _ => {
             bevy::prelude::trace!(
                 "Cannot lerp between non-matching units! Unit_A: {:?}, Unit_B: {:?}",

@@ -54,12 +54,12 @@ fn render(
         todo_children.add::<Element>((
             ElementBundle {
                 styles: WoodpeckerStyle {
-                    background_color: Srgba::new(0.1581, 0.1758, 0.191, 1.0).into(),
+                    background_color: colors::DARK_BACKGROUND,
                     width: Units::Percentage(100.0),
                     margin: Edge::all(5.0).bottom(15.0),
                     padding: Edge::all(15.0),
                     border: Edge::all(2.0),
-                    border_color: Srgba::new(0.592, 0.627, 0.749, 1.0).into(),
+                    border_color: colors::PRIMARY,
                     border_radius: Corner::all(5.0),
                     align_items: Some(WidgetAlignItems::Center),
                     justify_content: Some(WidgetJustifyContent::SpaceBetween),

@@ -7,6 +7,8 @@ use bevy_mod_picking::{
 
 use crate::prelude::*;
 
+use super::colors;
+
 #[derive(Component, Reflect, PartialEq, Clone, Debug)]
 pub struct ModalState {
     previous_visibility: bool,
@@ -177,8 +179,8 @@ fn render(
         .add::<Element>((
             ElementBundle {
                 styles: WoodpeckerStyle {
-                    background_color: Srgba::new(0.188, 0.203, 0.274, 1.0).into(),
-                    border_color: Srgba::new(0.933, 0.745, 0.745, 1.0).into(),
+                    background_color: colors::BACKGROUND,
+                    border_color: colors::PRIMARY,
                     border: Edge::all(2.0),
                     border_radius: Corner::all(10.0),
                     min_width: modal.min_size.x.into(),
