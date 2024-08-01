@@ -12,6 +12,8 @@ use bevy_mod_picking::{
 
 use super::ScrollContext;
 
+/// A widget that renders a scrollable "box" of content.
+/// Requires that itself be wrapped by the [`super::ScrollContextProvider`]
 #[derive(Widget, Component, Reflect, Default, Clone, PartialEq)]
 #[auto_update(render)]
 #[props(ScrollBox, PassedChildren, WidgetLayout)]
@@ -44,11 +46,18 @@ pub struct ScrollBox {
     pub track_styles: Option<WoodpeckerStyle>,
 }
 
+/// A bundle for convince when creating the widget.
 #[derive(Bundle, Default, Clone)]
 pub struct ScrollBoxBundle {
+    /// The scrollbox itself
     pub scroll_box: ScrollBox,
+    /// Internal Styles 
+    /// 
+    /// Hint: To set the styles use fields in [`ScrollBox`]
     pub styles: WoodpeckerStyle,
+    /// The internal children built by this widget.
     pub internal_children: WidgetChildren,
+    /// The widgets you'd like to be scrollable.
     pub children: PassedChildren,
 }
 

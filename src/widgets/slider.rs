@@ -6,21 +6,29 @@ use bevy_mod_picking::{
     prelude::{Listener, ListenerMut, On, Pickable},
 };
 
+/// A slider change event.
 #[derive(Reflect, Debug, Clone, PartialEq, Default)]
 
 pub struct SliderChanged {
+    /// The value of the slider
     pub value: f32,
 }
 
+/// Slider state 
 #[derive(Component, Reflect, Clone, Copy, PartialEq, Default)]
 pub struct SliderState {
+    /// The value of the slider
     pub value: f32,
 }
 
+/// A collection of slider styles
 #[derive(Component, Reflect, Clone, PartialEq)]
 pub struct SliderStyles {
+    /// The "filled" background styles.
     fill: WoodpeckerStyle,
+    /// The background styles
     bar: WoodpeckerStyle,
+    /// The draggable button styles.
     button: ButtonStyles,
 }
 
@@ -66,13 +74,17 @@ impl Default for SliderStyles {
     }
 }
 
+/// A slider widget for numerical values.
 #[derive(Widget, Component, Reflect, Clone, PartialEq)]
 #[auto_update(render)]
 #[props(Slider, SliderStyles)]
 #[state(SliderState)]
 pub struct Slider {
+    /// Start value
     pub start: f32,
+    /// End value
     pub end: f32,
+    /// Initial Value
     pub value: f32,
 }
 
@@ -86,12 +98,18 @@ impl Default for Slider {
     }
 }
 
+/// A bundle for convince when creating the widget.
 #[derive(Bundle, Clone)]
 pub struct SliderBundle {
+    /// The slider
     pub slider: Slider,
+    /// The collection of styles used by the slider
     pub slider_styles: SliderStyles,
+    /// The internal children used by the slider
     pub children: WidgetChildren,
+    /// The styles of the slider
     pub styles: WoodpeckerStyle,
+    /// The render mode of the slider. Default: Quad
     pub render: WidgetRender,
     /// Change detection event
     pub on_changed: On<OnChange<SliderChanged>>,

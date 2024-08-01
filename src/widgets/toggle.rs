@@ -8,17 +8,25 @@ use bevy_mod_picking::{
 
 use super::colors;
 
+/// A toggle change event
 #[derive(Debug, Reflect, Clone)]
 pub struct ToggleChanged {
+    /// Is the toggle "checked"?
     pub checked: bool,
 }
 
+/// The state of the toggle button
 #[derive(Component, Reflect, PartialEq, Clone)]
 pub struct ToggleState {
+    /// Is hovering
     pub is_hovering: bool,
+    /// Is checked
     pub is_checked: bool,
+    /// Previous state (Used for animations)
     pub previous_checked: bool,
+    /// Previous state (Used for animations)
     pub previous_hover: bool,
+    /// The circle button transition
     pub circle_transition: Transition,
 }
 
@@ -47,15 +55,21 @@ impl Default for ToggleState {
     }
 }
 
+/// A collection of styles of the toggle state.
 #[derive(PartialEq, Reflect, Clone)]
 pub struct ToggleStyles {
+    /// Normal
     pub normal: WoodpeckerStyle,
+    /// Hovered
     pub hovered: WoodpeckerStyle,
+    /// Checked
     pub checked: WoodpeckerStyle,
+    /// Both hovered and checked
     pub hovered_checked: WoodpeckerStyle,
 }
 
 impl ToggleStyles {
+    /// With a given toggle state it returns the correct styles.
     pub fn get_style(&self, state: &ToggleState, previous: bool) -> WoodpeckerStyle {
         let (is_checked, is_hovering) = if previous {
             (state.previous_checked, state.previous_hover)
@@ -72,9 +86,12 @@ impl ToggleStyles {
     }
 }
 
+/// A collection of styles for the toggle widget
 #[derive(Component, Reflect, PartialEq, Clone)]
 pub struct ToggleWidgetStyles {
+    /// Background styles
     pub background: ToggleStyles,
+    /// Check styles
     pub check: ToggleStyles,
 }
 
@@ -144,18 +161,26 @@ impl Default for ToggleWidgetStyles {
     }
 }
 
+/// A toggle button widget
 #[derive(Widget, Component, Reflect, PartialEq, Clone, Default)]
 #[auto_update(render)]
 #[props(Toggle, ToggleWidgetStyles)]
 #[state(ToggleState)]
 pub struct Toggle;
 
+
+/// A convince bundle for the widget
 #[derive(Bundle, Clone)]
 pub struct ToggleBundle {
+    /// The toggle
     pub toggle: Toggle,
+    /// The toggle styles
     pub toggle_styles: ToggleWidgetStyles,
+    /// The internal children
     pub children: WidgetChildren,
+    /// The internal styles
     pub styles: WoodpeckerStyle,
+    /// The render mode of the toggle. Default: Quad
     pub render: WidgetRender,
     /// Provides overrides for picking behavior.
     pub pickable: Pickable,

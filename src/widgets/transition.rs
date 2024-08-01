@@ -5,39 +5,71 @@ use web_time::Instant;
 
 use crate::prelude::*;
 
+/// A transition easing method.
 #[derive(Default, Debug, Copy, Reflect, Clone, PartialEq)]
 pub enum TransitionEasing {
     #[default]
+    /// Linear
     Linear,
+    /// QuadraticIn
     QuadraticIn,
+    /// QuadraticOut
     QuadraticOut,
+    /// QuadraticInOut
     QuadraticInOut,
+    /// CubicIn
     CubicIn,
+    /// CubicOut
     CubicOut,
+    /// CubicInOut
     CubicInOut,
+    /// QuarticIn
     QuarticIn,
+    /// QuarticOut
     QuarticOut,
+    /// QuarticInOut
     QuarticInOut,
+    /// QuinticIn
     QuinticIn,
+    /// QuinticOut
     QuinticOut,
+    /// QuinticInOut
     QuinticInOut,
+    /// SineIn
     SineIn,
+    /// SineOut
     SineOut,
+    /// SineInOut
     SineInOut,
+    /// CircularIn
     CircularIn,
+    /// CircularOut
     CircularOut,
+    /// CircularInOut
     CircularInOut,
+    /// ExponentialIn
     ExponentialIn,
+    /// ExponentialOut
     ExponentialOut,
+    /// ExponentialInOut
     ExponentialInOut,
+    /// ElasticIn
     ElasticIn,
+    /// ElasticOut
     ElasticOut,
+    /// ElasticInOut
     ElasticInOut,
+    /// BackIn
     BackIn,
+    /// BackOut
     BackOut,
+    /// BackInOut
     BackInOut,
+    /// BounceIn
     BounceIn,
+    /// BounceOut
     BounceOut,
+    /// BounceInOut
     BounceInOut,
 }
 
@@ -79,8 +111,10 @@ impl TransitionEasing {
     }
 }
 
+/// A transition bevy component that lets you animate Woodpecker UI widgets.
 #[derive(Component, Debug, Reflect, Clone, Copy)]
 pub struct Transition {
+    /// Indicating the current playing status
     pub playing: bool,
     /// The easing function that dictates the interpolation factor.
     pub easing: TransitionEasing,
@@ -181,7 +215,7 @@ impl Transition {
     }
 }
 
-pub fn update_transitions(mut query: Query<(&mut Transition, &mut WoodpeckerStyle)>) {
+pub(crate) fn update_transitions(mut query: Query<(&mut Transition, &mut WoodpeckerStyle)>) {
     for (mut transition, mut styles) in query.iter_mut() {
         let new_styles = transition.update();
         *styles = new_styles;

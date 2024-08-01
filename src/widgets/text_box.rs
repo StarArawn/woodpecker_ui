@@ -17,15 +17,21 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use super::{colors, Clip, ClipBundle, Element, ElementBundle};
 
+/// A textbox change event.
 #[derive(Debug, Clone, Reflect)]
 pub struct TextChanged {
+    /// The current text value
     pub value: String,
 }
 
+/// A collection of textbox styles.
 #[derive(Component, Clone, PartialEq)]
 pub struct TextboxStyles {
+    /// Normal styles
     pub normal: WoodpeckerStyle,
+    /// Hovered styles
     pub hovered: WoodpeckerStyle,
+    /// Focused styles
     pub focused: WoodpeckerStyle,
 }
 
@@ -95,20 +101,30 @@ impl Default for TextBoxBundle {
 #[props(TextBox, TextboxStyles)]
 #[state(TextBoxState)]
 pub struct TextBox {
+    /// An initial value
     pub initial_value: String,
 }
 
+/// The textbox state
 #[derive(Component, PartialEq, Clone)]
 pub struct TextBoxState {
-    // Mouse input state
+    // Mouse state
+    /// Is hovering?
     pub hovering: bool,
+    /// Is Focused
     pub focused: bool,
     // Keyboard input state
+    /// A list of current graphemes.
     pub graphemes: Vec<String>,
+    /// The position of the cursor in pixels
     pub cursor_x: f32,
+    /// The position of the cursor as a grapheme index.
     pub cursor_position: usize,
+    /// Visibility state
     pub cursor_visible: bool,
+    /// A last updated timer, used to blink the cursor
     pub cursor_last_update: Instant,
+    /// The current text value of the textbox.
     pub current_value: String,
 }
 

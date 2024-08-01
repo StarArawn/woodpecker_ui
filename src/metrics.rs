@@ -22,14 +22,17 @@ impl Default for LastUpdated {
 }
 
 impl WidgetMetrics {
+    /// Returns the total number of widgets rendered over the applications lifetime.
     pub fn get_widgets_rendered(&self) -> usize {
         self.total_widgets_rendered
     }
 
+    /// Returns the total number of widgets rendered since the last frame.
     pub fn get_widgets_rendered_since_last_frame(&self) -> usize {
         self.total_widgets_rendered_last_frame
     }
 
+    /// Returns the average number of widgets rendered each frame.
     pub fn get_average_widgets_rendered_per_frame(&self) -> f32 {
         self.rendered_avg_buffer
             .iter()
@@ -55,14 +58,17 @@ impl WidgetMetrics {
             .push(self.total_widgets_rendered_last_frame);
     }
 
+    /// Returns the total number of quads displayed for the lifetime of the application.
     pub fn get_quads_displayed(&self) -> usize {
         self.quads_displayed
     }
 
+    /// Returns the total number of quads displayed to the screen since the last frame.
     pub fn get_quads_displayed_since_last_frame(&self) -> usize {
         self.quads_displayed_since_last_frame
     }
 
+    /// Returns the average number of quads displayed per frame.
     pub fn get_average_quads_displayed_per_frame(&self) -> f32 {
         self.quads_avg_buffer.iter().map(|v| *v as f32).sum::<f32>()
             / self.quads_avg_buffer.len() as f32
