@@ -19,6 +19,7 @@ mod entity_mapping;
 mod focus;
 mod font;
 mod hook_helper;
+mod image;
 mod keyboard_input;
 mod layout;
 mod metrics;
@@ -30,7 +31,6 @@ mod styles;
 mod svg;
 mod vello_svg;
 mod widgets;
-mod image;
 
 /// A module that exports all publicly exposed types.
 pub mod prelude {
@@ -120,7 +120,10 @@ impl Plugin for WoodpeckerUIPlugin {
                 (
                     runner::system,
                     focus::CurrentFocus::click_focus,
+                    #[cfg(not(target_arch = "wasm32"))]
                     keyboard_input::runner,
+                    #[cfg(target_arch = "wasm32")]
+                    (keyboard_input::runner, keyboard_input::read_paste_events).chain(),
                     hook_helper::HookHelper::update_context_helper,
                 )
                     .run_if(has_root()),

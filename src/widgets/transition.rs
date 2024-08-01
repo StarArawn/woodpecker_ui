@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use interpolation::Ease;
 use interpolation::EaseFunction;
-use std::time::Instant;
+use web_time::Instant;
 
 use crate::prelude::*;
 
