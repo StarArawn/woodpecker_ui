@@ -7,11 +7,14 @@ use bevy_mod_picking::{
 
 use crate::prelude::*;
 
+use super::colors;
+
 #[derive(Component, Reflect, PartialEq, Clone, Debug)]
 pub struct ModalState {
     previous_visibility: bool,
 }
 
+/// A widget that displays a modal
 #[derive(Component, Widget, Reflect, PartialEq, Clone, Debug)]
 #[auto_update(render)]
 #[props(Modal)]
@@ -51,11 +54,19 @@ impl Default for Modal {
 /// A simple widget that renders a modal.
 #[derive(Bundle, Clone)]
 pub struct ModalBundle {
+    /// The modal widget
     pub modal: Modal,
+    /// The styles of the modal
     pub styles: WoodpeckerStyle,
+    /// The children of the modal 
     pub children: PassedChildren,
+    /// The internal children of the modal
     pub internal_children: WidgetChildren,
+    /// A transition used to fade in/out the modal.
     pub transition: Transition,
+    /// Used to tell woodpecker that the modal should create its
+    /// own render layer context so our fade in/out works as a 
+    /// group.
     pub widget_render: WidgetRender,
 }
 
@@ -177,8 +188,8 @@ fn render(
         .add::<Element>((
             ElementBundle {
                 styles: WoodpeckerStyle {
-                    background_color: Srgba::new(0.188, 0.203, 0.274, 1.0).into(),
-                    border_color: Srgba::new(0.933, 0.745, 0.745, 1.0).into(),
+                    background_color: colors::BACKGROUND,
+                    border_color: colors::PRIMARY,
                     border: Edge::all(2.0),
                     border_radius: Corner::all(10.0),
                     min_width: modal.min_size.x.into(),

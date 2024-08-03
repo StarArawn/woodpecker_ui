@@ -14,7 +14,7 @@ pub trait Widget {
         std::any::type_name::<Self>().into()
     }
 
-    /// Same as the [`T::get_name`] just does it on &self.
+    /// Same as the [`Self::get_name`] just does it on &self.
     fn get_name_local(&self) -> String {
         std::any::type_name::<Self>().into()
     }

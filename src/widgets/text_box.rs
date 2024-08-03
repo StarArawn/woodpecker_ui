@@ -1,4 +1,4 @@
-use std::time::Instant;
+use web_time::Instant;
 
 use crate::{
     keyboard_input::{WidgetKeyboardButtonEvent, WidgetPasteEvent},
@@ -15,27 +15,33 @@ use bevy_mod_picking::{
 use bevy_vello::text::VelloFont;
 use unicode_segmentation::UnicodeSegmentation;
 
-use super::{Clip, ClipBundle, Element, ElementBundle};
+use super::{colors, Clip, ClipBundle, Element, ElementBundle};
 
+/// A textbox change event.
 #[derive(Debug, Clone, Reflect)]
-pub struct ChangedText {
+pub struct TextChanged {
+    /// The current text value
     pub value: String,
 }
 
+/// A collection of textbox styles.
 #[derive(Component, Clone, PartialEq)]
 pub struct TextboxStyles {
+    /// Normal styles
     pub normal: WoodpeckerStyle,
+    /// Hovered styles
     pub hovered: WoodpeckerStyle,
+    /// Focused styles
     pub focused: WoodpeckerStyle,
 }
 
 impl Default for TextboxStyles {
     fn default() -> Self {
         let shared = WoodpeckerStyle {
-            background_color: Srgba::new(0.160, 0.172, 0.235, 1.0).into(),
+            background_color: colors::DARK_BACKGROUND,
             width: Units::Percentage(100.0),
             height: 26.0.into(),
-            border_color: Srgba::new(0.360, 0.380, 0.474, 1.0).into(),
+            border_color: colors::BACKGROUND_LIGHT,
             border: Edge::new(0.0, 0.0, 0.0, 2.0),
             padding: Edge::new(0.0, 5.0, 0.0, 5.0),
             margin: Edge::new(0.0, 0.0, 0.0, 2.0),
@@ -46,7 +52,7 @@ impl Default for TextboxStyles {
             normal: WoodpeckerStyle { ..shared },
             hovered: WoodpeckerStyle { ..shared },
             focused: WoodpeckerStyle {
-                border_color: Srgba::new(0.933, 0.745, 0.745, 1.0).into(),
+                border_color: colors::PRIMARY,
                 ..shared
             },
         }
@@ -95,20 +101,30 @@ impl Default for TextBoxBundle {
 #[props(TextBox, TextboxStyles)]
 #[state(TextBoxState)]
 pub struct TextBox {
+    /// An initial value
     pub initial_value: String,
 }
 
+/// The textbox state
 #[derive(Component, PartialEq, Clone)]
 pub struct TextBoxState {
-    // Mouse input state
+    // Mouse state
+    /// Is hovering?
     pub hovering: bool,
+    /// Is Focused
     pub focused: bool,
     // Keyboard input state
+    /// A list of current graphemes.
     pub graphemes: Vec<String>,
+    /// The position of the cursor in pixels
     pub cursor_x: f32,
+    /// The position of the cursor as a grapheme index.
     pub cursor_position: usize,
+    /// Visibility state
     pub cursor_visible: bool,
+    /// A last updated timer, used to blink the cursor
     pub cursor_last_update: Instant,
+    /// The current text value of the textbox.
     pub current_value: String,
 }
 
@@ -186,7 +202,7 @@ pub fn render(
                       mut state_query: Query<&mut TextBoxState>,
                       default_font: Res<DefaultFont>,
                       mut font_manager: ResMut<FontManager>,
-                      mut event_writer: EventWriter<OnChange<ChangedText>>| {
+                      mut event_writer: EventWriter<OnChange<TextChanged>>| {
                     let Ok(styles) = style_query.get(event.target) else {
                         return;
                     };
@@ -203,7 +219,7 @@ pub fn render(
 
                     event_writer.send(OnChange {
                         target: widget_entity,
-                        data: ChangedText {
+                        data: TextChanged {
                             value: state.current_value.clone(),
                         },
                     });
@@ -254,7 +270,7 @@ pub fn render(
                   style_query: Query<&WoodpeckerStyle>,
                   mut state_query: Query<&mut TextBoxState>,
                   mut font_manager: ResMut<FontManager>,
-                  mut event_writer: EventWriter<OnChange<ChangedText>>| {
+                  mut event_writer: EventWriter<OnChange<TextChanged>>| {
                 let Ok(styles) = style_query.get(event.target) else {
                     return;
                 };
@@ -269,7 +285,7 @@ pub fn render(
 
                 event_writer.send(OnChange {
                     target: widget_entity,
-                    data: ChangedText {
+                    data: TextChanged {
                         value: state.current_value.clone(),
                     },
                 });
@@ -292,7 +308,7 @@ pub fn render(
                   mut state_query: Query<&mut TextBoxState>,
                   default_font: Res<DefaultFont>,
                   mut font_manager: ResMut<FontManager>,
-                  mut event_writer: EventWriter<OnChange<ChangedText>>,
+                  mut event_writer: EventWriter<OnChange<TextChanged>>,
                   keyboard_input: Res<ButtonInput<KeyCode>>| {
                 if event.code == KeyCode::ArrowRight {
                     let Ok(styles) = style_query.get(event.target) else {
@@ -389,7 +405,7 @@ pub fn render(
 
                         event_writer.send(OnChange {
                             target: widget_entity,
-                            data: ChangedText {
+                            data: TextChanged {
                                 value: state.current_value.clone(),
                             },
                         });

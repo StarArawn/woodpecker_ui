@@ -13,12 +13,14 @@ pub struct ElementBundle {
 }
 
 impl ElementBundle {
+    /// A convince function that lets you add children.
     pub fn with_child<T: Widget>(mut self, bundle: impl Bundle + Clone) -> Self {
         self.children.add::<T>(bundle);
 
         self
     }
 
+    /// A convince function that lets you set the styles.
     pub fn with_style(mut self, style: WoodpeckerStyle) -> Self {
         self.styles = style;
         self

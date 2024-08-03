@@ -15,9 +15,10 @@ pub struct PassedChildren(pub WidgetChildren);
 pub struct Mounted;
 
 /// A bevy component that keeps track of Woodpecker UI widget children.
+/// 
 /// This is very similar to bevy commands as in it lets you spawn bundles
 /// but it does not create an entity until
-/// [`WidgetChildren::process`] is called.
+/// WidgetChildren::process_world is called.
 #[derive(Component, Default, Clone)]
 pub struct WidgetChildren {
     // Strings here are widget type names.
@@ -80,7 +81,7 @@ impl WidgetChildren {
 
     /// Add a new widget to the list of children. The widget should be a bevy bundle and T should implement widget.
     ///
-    /// Note: Make sure to call [`WidgetChildren::process`] in the render system of the parent
+    /// Note: Make sure to call [`WidgetChildren::apply`] in the render system of the parent
     /// otherwise the entities will not be spawned! This will NOT spawn the bundles.
     pub fn add<T: Widget>(&mut self, bundle: impl Bundle + Clone) -> &mut Self {
         let widget_type = T::get_name();

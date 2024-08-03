@@ -13,10 +13,15 @@ use crate::prelude::WoodpeckerStyle;
 #[derive(Debug, Clone, Copy, Default, Reflect, PartialEq)]
 pub enum TextAlign {
     #[default]
+    /// Align text to the left.
     Left,
+    /// Align text to the right.
     Right,
+    /// Align text in the middle.
     Center,
+    /// Align text within the content.
     Justified,
+    /// Align text at the end of the content.
     End,
 }
 

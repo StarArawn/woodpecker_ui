@@ -2355,6 +2355,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "futures-channel"
+version = "0.3.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eac8f7d7865dcb88bd4373ab671c8cf4508703796caa2b1985a9ca867b3fcb78"
+dependencies = [
+ "futures-core",
+]
+
+[[package]]
 name = "futures-core"
 version = "0.3.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5774,6 +5783,7 @@ dependencies = [
  "bevy_vello",
  "calc",
  "cosmic-text",
+ "futures-channel",
  "image 0.24.9",
  "interpolation",
  "smol_str",
@@ -5781,6 +5791,9 @@ dependencies = [
  "thiserror",
  "unicode-segmentation",
  "usvg",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "web-time",
  "woodpecker_ui_macros",
 ]
 

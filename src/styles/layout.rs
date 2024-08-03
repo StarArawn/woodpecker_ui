@@ -75,13 +75,13 @@ impl From<WidgetOverflow> for taffy::Overflow {
 
 /// The positioning strategy for this item.
 ///
-/// This controls both how the origin is determined for the [`Style::position`] field,
+/// This controls both how the origin is determined for the [`super::WoodpeckerStyle::position`] field,
 /// and whether or not the item will be controlled by flexbox's layout algorithm.
 ///
 /// WARNING: this enum follows the behavior of [CSS's `position` property](https://developer.mozilla.org/en-US/docs/Web/CSS/position),
 /// which can be unintuitive.
 ///
-/// [`Position::Relative`] is the default value, in contrast to the default behavior in CSS.
+/// [`WidgetPosition::Relative`] is the default value, in contrast to the default behavior in CSS.
 #[derive(Default, Reflect, Copy, Clone, PartialEq, Eq, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum WidgetPosition {
@@ -93,7 +93,7 @@ pub enum WidgetPosition {
     /// Otherwise, it is placed relative to the origin.
     /// No space is created for the item in the page layout, and its size will not be altered.
     ///
-    /// WARNING: to opt-out of layouting entirely, you must use [`Display::None`] instead on your [`Style`] object.
+    /// WARNING: to opt-out of layouting entirely, you must use [`WidgetDisplay::None`] instead on your [`super::WoodpeckerStyle`] object.
     Absolute,
     /// A fixed position that will match the size of the camera viewport.
     Fixed,
@@ -298,7 +298,7 @@ pub type WidgetJustifySelf = WidgetAlignItems;
 ///
 /// Items are always aligned relative to the cross axis, and justified relative to the main axis.
 ///
-/// The default behavior is [`FlexDirection::Row`].
+/// The default behavior is [`WidgetFlexDirection::Row`].
 ///
 /// [Specification](https://www.w3.org/TR/css-flexbox-1/#flex-direction-property)
 #[derive(Default, Reflect, Copy, Clone, PartialEq, Eq, Debug)]
@@ -335,7 +335,7 @@ impl From<WidgetFlexDirection> for taffy::FlexDirection {
 
 /// Controls whether flex items are forced onto one line or can wrap onto multiple lines.
 ///
-/// Defaults to [`FlexWrap::NoWrap`]
+/// Defaults to [`WidgetFlexWrap::NoWrap`]
 ///
 /// [Specification](https://www.w3.org/TR/css-flexbox-1/#flex-wrap-property)
 #[derive(Default, Reflect, Copy, Clone, PartialEq, Eq, Debug)]
@@ -343,9 +343,9 @@ pub enum WidgetFlexWrap {
     /// Items will not wrap and stay on a single line
     #[default]
     NoWrap,
-    /// Items will wrap according to this item's [`FlexDirection`]
+    /// Items will wrap according to this item's [`WidgetFlexDirection`]
     Wrap,
-    /// Items will wrap in the opposite direction to this item's [`FlexDirection`]
+    /// Items will wrap in the opposite direction to this item's [`WidgetFlexDirection`]
     WrapReverse,
 }
 

@@ -127,6 +127,9 @@ impl ScrollContext {
     }
 }
 
+/// A widget that creates and provides the scroll context.
+/// This is used by the other scrolling widgets so they can understand how to
+/// behave.
 #[derive(Component, Widget, Reflect, Default, PartialEq, Clone)]
 #[auto_update(render)]
 #[props(ScrollContextProvider)]
@@ -134,10 +137,14 @@ pub struct ScrollContextProvider {
     initial_value: ScrollContext,
 }
 
+/// A bundle for convince when creating the widget.
 #[derive(Bundle, Default, Clone)]
 pub struct ScrollContextProviderBundle {
+    /// The context provider
     pub provider: ScrollContextProvider,
+    /// The children
     pub children: WidgetChildren,
+    /// The styles
     pub styles: WoodpeckerStyle,
 }
 

@@ -7,24 +7,31 @@ use bevy_mod_picking::{
     prelude::On,
 };
 
+use super::colors;
+
+/// A collection of styles for icon buttons.
 #[derive(Component, Clone, PartialEq)]
 pub struct IconButtonStyles {
+    /// Normal Styles
     pub normal: WoodpeckerStyle,
+    /// Hovered Styles
     pub hovered: WoodpeckerStyle,
+    /// Width of the icon
     pub width: Units,
+    /// Height of the icon
     pub height: Units,
 }
 
 impl Default for IconButtonStyles {
     fn default() -> Self {
         let normal = WoodpeckerStyle {
-            background_color: Srgba::new(0.254, 0.270, 0.349, 1.0).into(),
+            background_color: colors::BACKGROUND_LIGHT,
             ..Default::default()
         };
         Self {
             normal,
             hovered: WoodpeckerStyle {
-                background_color: Srgba::new(0.933, 0.745, 0.745, 1.0).into(),
+                background_color: colors::PRIMARY,
                 ..normal
             },
             width: 32.0.into(),
@@ -71,7 +78,7 @@ pub struct IconButtonState {
     pub hovering: bool,
 }
 
-/// The Woodpecker UI Button
+/// A generic button widget used for easy buttons!
 #[derive(Component, Widget, Default, Reflect, PartialEq, Clone)]
 #[auto_update(render)]
 #[props(IconButton, IconButtonStyles)]

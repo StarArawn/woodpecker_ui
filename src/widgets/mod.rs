@@ -11,6 +11,10 @@ mod modal;
 mod scroll;
 mod text_box;
 mod transition;
+mod toggle;
+/// A set of default colors used by Woodpecker UI.
+pub mod colors;
+mod slider;
 
 pub use app::{WoodpeckerApp, WoodpeckerAppBundle};
 use bevy_mod_picking::prelude::EventListenerPlugin;
@@ -23,7 +27,9 @@ pub use scroll::content::{ScrollContent, ScrollContentBundle};
 pub use scroll::scroll_bar::{ScrollBar, ScrollBarBundle};
 pub use scroll::scroll_box::{ScrollBox, ScrollBoxBundle};
 pub use scroll::{ScrollContextProvider, ScrollContextProviderBundle};
-pub use text_box::{ChangedText, TextBox, TextBoxBundle, TextBoxState, TextboxStyles};
+pub use text_box::{TextChanged, TextBox, TextBoxBundle, TextBoxState, TextboxStyles};
+pub use toggle::{Toggle, ToggleBundle, ToggleState, ToggleWidgetStyles, ToggleStyles, ToggleChanged};
+pub use slider::{Slider, SliderChanged, SliderState, SliderStyles, SliderBundle};
 pub use transition::*;
 
 /// A core set of UI widgets that Wookpecker UI provides.
@@ -31,7 +37,9 @@ pub use transition::*;
 pub(crate) struct WoodpeckerUIWidgetPlugin;
 impl Plugin for WoodpeckerUIWidgetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(EventListenerPlugin::<OnChange<ChangedText>>::default())
+        app.add_plugins(EventListenerPlugin::<OnChange<TextChanged>>::default())
+            .add_plugins(EventListenerPlugin::<OnChange<ToggleChanged>>::default())
+            .add_plugins(EventListenerPlugin::<OnChange<SliderChanged>>::default())
             .register_widget::<WoodpeckerApp>()
             .register_widget::<Element>()
             .register_widget::<WButton>()
@@ -43,6 +51,8 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
             .register_widget::<ScrollBox>()
             .register_widget::<ScrollBar>()
             .register_widget::<IconButton>()
+            .register_widget::<Toggle>()
+            .register_widget::<Slider>()
             .add_systems(
                 Update,
                 (

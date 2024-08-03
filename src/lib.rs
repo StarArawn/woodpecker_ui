@@ -1,3 +1,66 @@
+#![warn(missing_docs)]
+//!
+//! # Woodpecker UI
+//!
+//! Woodpecker UI is a Bevy ECS driven user interface crate. Its designed to be easy to use and work seamlessly with the bevy game engine.
+//!
+//! ## Features
+//! - ECS **first** UI
+//! - Easy to use widget systems
+//! - Flexable UI rendering using [vello](https://github.com/linebender/bevy_vello)
+//! - [Taffy](https://github.com/DioxusLabs/taffy) layouting
+//! - [Cosmic Text](https://github.com/pop-os/cosmic-text) for text layouting
+//! - A few helper widgets to get you started
+//! 
+//! ## Example:
+//! ```rust
+//! fn startup(
+//!     mut commands: Commands,
+//!     mut ui_context: ResMut<WoodpeckerContext>,
+//!     mut meshes: ResMut<Assets<Mesh>>,
+//!     mut materials: ResMut<Assets<ColorMaterial>>,
+//! ) {
+//!     commands.spawn(Camera2dBundle::default());
+//!     
+//!     let material_red = materials.add(Color::Srgba(Srgba::RED.with_alpha(0.5)));
+//!     
+//!     commands.spawn(MaterialMesh2dBundle {
+//!         mesh: Mesh2dHandle(meshes.add(Circle { radius: 50.0 })),
+//!         material: material_red,
+//!         transform: Transform::from_xyz(0.0, 0.0, 0.0),
+//!         ..default()
+//!     });
+//!     
+//!     let root = commands
+//!         .spawn((WoodpeckerAppBundle {
+//!             styles: WoodpeckerStyle {
+//!                 padding: Edge::all(10.0),
+//!                 ..default()
+//!             },
+//!             children: WidgetChildren::default().with_child::<Slider>(SliderBundle {
+//!                 slider: Slider {
+//!                     start: 0.0,
+//!                     end: 1.0,
+//!                     value: 0.5,
+//!                 },
+//!                 on_changed: On::run(
+//!                     |event: Listener<OnChange<SliderChanged>>,
+//!                     mut material_assets: ResMut<Assets<ColorMaterial>>,
+//!                      query: Query<&Handle<ColorMaterial>>| {
+//!                         for material in query.iter() {
+//!                             material_assets.get_mut(material).unwrap().color.set_alpha(event.data.value)
+//!                         }
+//!                     },
+//!                 ),
+//!                 ..default()
+//!             }),
+//!             ..default()
+//!         },))
+//!         .id();
+//!     ui_context.set_root_widget(root);
+//! }
+//! 
+//! ```
 use bevy::{
     asset::embedded_asset, prelude::*, reflect::GetTypeRegistration, render::view::RenderLayers,
 };
@@ -72,6 +135,9 @@ impl FromWorld for DefaultFont {
 pub struct ParentWidget(pub Entity);
 
 impl ParentWidget {
+    /// Converts a ParentWidget into a CurrentWidget
+    /// 
+    /// Note: Really just a convince function.
     pub fn as_current(&self) -> CurrentWidget {
         CurrentWidget(self.0)
     }
@@ -84,6 +150,9 @@ impl ParentWidget {
 pub struct CurrentWidget(pub Entity);
 
 impl CurrentWidget {
+    /// Converts a CurrentWidget into a ParentWidget.
+    /// 
+    /// Note: Really just a convince function.
     pub fn as_parent(&self) -> ParentWidget {
         ParentWidget(self.0)
     }
@@ -128,7 +197,10 @@ impl Plugin for WoodpeckerUIPlugin {
                 (
                     runner::system,
                     focus::CurrentFocus::click_focus,
+                    #[cfg(not(target_arch = "wasm32"))]
                     keyboard_input::runner,
+                    #[cfg(target_arch = "wasm32")]
+                    (keyboard_input::runner, keyboard_input::read_paste_events).chain(),
                     hook_helper::HookHelper::update_context_helper,
                 )
                     .run_if(has_root()),

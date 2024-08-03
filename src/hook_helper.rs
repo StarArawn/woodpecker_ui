@@ -42,7 +42,7 @@ impl HookHelper {
         }
     }
 
-    /// Looks up the T state for an entity and returns an Option<Entity>
+    /// Looks up the T state for an entity and returns an `Option<Entity>`
     /// None is returned if the state is not found. Unlike use_state this does
     /// not create new state rather it only looks for existing state.
     /// State entities are just entities parented to the entity passed in.
@@ -123,6 +123,7 @@ impl HookHelper {
         }
     }
 
+    /// Creates and or returns an entity used for tracking a widgets previous state.
     pub fn get_previous_widget(
         &mut self,
         commands: &mut Commands,
@@ -142,5 +143,6 @@ impl HookHelper {
     }
 }
 
+/// A tag component used to mark previous widget entities.
 #[derive(Component)]
 pub struct PreviousWidget;
