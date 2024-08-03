@@ -84,7 +84,7 @@ fn focus_render(
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(WoodpeckerUIPlugin::default())
+        .add_plugins(WoodpeckerUIPlugin)
         .add_plugins(DefaultPickingPlugins)
         .insert_resource(DebugPickingMode::Normal)
         .register_widget::<FocusWidget>()

@@ -11,7 +11,7 @@
 //! - [Taffy](https://github.com/DioxusLabs/taffy) layouting
 //! - [Cosmic Text](https://github.com/pop-os/cosmic-text) for text layouting
 //! - A few helper widgets to get you started
-//! 
+//!
 //! ## Example:
 //! ```rust
 //! fn startup(
@@ -59,7 +59,7 @@
 //!         .id();
 //!     ui_context.set_root_widget(root);
 //! }
-//! 
+//!
 //! ```
 use bevy::{
     asset::embedded_asset, prelude::*, reflect::GetTypeRegistration, render::view::RenderLayers,
@@ -136,7 +136,7 @@ pub struct ParentWidget(pub Entity);
 
 impl ParentWidget {
     /// Converts a ParentWidget into a CurrentWidget
-    /// 
+    ///
     /// Note: Really just a convince function.
     pub fn as_current(&self) -> CurrentWidget {
         CurrentWidget(self.0)
@@ -151,7 +151,7 @@ pub struct CurrentWidget(pub Entity);
 
 impl CurrentWidget {
     /// Converts a CurrentWidget into a ParentWidget.
-    /// 
+    ///
     /// Note: Really just a convince function.
     pub fn as_parent(&self) -> ParentWidget {
         ParentWidget(self.0)
@@ -161,17 +161,13 @@ impl CurrentWidget {
 /// The Woodpecker UI bevy Plugin
 /// Add this to bevy to use.
 #[derive(Default)]
-pub struct WoodpeckerUIPlugin {
-    pub render_layers: Option<RenderLayers>,
-}
+pub struct WoodpeckerUIPlugin;
 
 impl Plugin for WoodpeckerUIPlugin {
     fn build(&self, app: &mut App) {
         embedded_asset!(app, "embedded_assets/Poppins-Regular.ttf");
         app.add_plugins(WoodpeckerLayoutPlugin)
-            .add_plugins(VelloPlugin {
-                canvas_render_layers: self.render_layers.clone(),
-            })
+            .add_plugins(VelloPlugin)
             .add_plugins(WoodpeckerUIWidgetPlugin)
             .add_plugins(EventListenerPlugin::<focus::WidgetFocus>::default())
             .add_plugins(EventListenerPlugin::<focus::WidgetBlur>::default())
@@ -238,7 +234,7 @@ fn has_root() -> impl Condition<(), ()> {
 
 fn startup(
     mut commands: Commands,
-    vello_render_config: Res<bevy_vello::render::VelloRenderPlugin>,
+    vello_render_config: Option<Res<bevy_vello::render::VelloRenderSettings>>,
 ) {
     let entity = commands
         .spawn(VelloSceneBundle {
@@ -246,8 +242,9 @@ fn startup(
             ..Default::default()
         })
         .id();
-    if let Some(layers) = &vello_render_config.canvas_render_layers {
-        commands.entity(entity).insert(layers.clone());
+    if let Some(layers) = vello_render_config.and_then(|config| config.canvas_render_layers.clone())
+    {
+        commands.entity(entity).insert(layers);
     }
 }
 

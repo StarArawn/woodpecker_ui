@@ -14,7 +14,7 @@ pub struct TodoListData(Vec<String>);
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(WoodpeckerUIPlugin::default())
+        .add_plugins(WoodpeckerUIPlugin)
         .add_plugins(DefaultPickingPlugins)
         .register_widget::<TodoList>()
         .register_widget::<TodoInput>()
