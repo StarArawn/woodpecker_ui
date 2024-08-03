@@ -84,7 +84,7 @@ fn baz_render(entity: Res<CurrentWidget>, query: Query<&BazWidget>) {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(WoodpeckerUIPlugin)
+        .add_plugins(WoodpeckerUIPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(DefaultPickingPlugins)
         .register_widget::<FooWidget>()

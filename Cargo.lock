@@ -1373,8 +1373,7 @@ dependencies = [
 [[package]]
 name = "bevy_vello"
 version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ecda71cb3f341a43d3a9838097dd0441b27716fba243df6bd8f4df07e8fcda12"
+source = "git+https://github.com/ChristopherBiscardi/bevy_vello?branch=renderlayer-canvas-fix#fe4b1e1c3224b73de9c76e2aa10d1c56375afb10"
 dependencies = [
  "bevy",
  "once_cell",

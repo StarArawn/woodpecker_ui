@@ -61,7 +61,9 @@
 //! }
 //! 
 //! ```
-use bevy::{asset::embedded_asset, prelude::*, reflect::GetTypeRegistration};
+use bevy::{
+    asset::embedded_asset, prelude::*, reflect::GetTypeRegistration, render::view::RenderLayers,
+};
 use bevy_mod_picking::{events::Pointer, prelude::EventListenerPlugin};
 use bevy_trait_query::RegisterExt;
 use bevy_vello::{text::VelloFont, CoordinateSpace, VelloPlugin, VelloSceneBundle};
@@ -158,12 +160,18 @@ impl CurrentWidget {
 
 /// The Woodpecker UI bevy Plugin
 /// Add this to bevy to use.
-pub struct WoodpeckerUIPlugin;
+#[derive(Default)]
+pub struct WoodpeckerUIPlugin {
+    pub render_layers: Option<RenderLayers>,
+}
+
 impl Plugin for WoodpeckerUIPlugin {
     fn build(&self, app: &mut App) {
         embedded_asset!(app, "embedded_assets/Poppins-Regular.ttf");
         app.add_plugins(WoodpeckerLayoutPlugin)
-            .add_plugins(VelloPlugin)
+            .add_plugins(VelloPlugin {
+                canvas_render_layers: self.render_layers.clone(),
+            })
             .add_plugins(WoodpeckerUIWidgetPlugin)
             .add_plugins(EventListenerPlugin::<focus::WidgetFocus>::default())
             .add_plugins(EventListenerPlugin::<focus::WidgetBlur>::default())
@@ -228,11 +236,19 @@ fn has_root() -> impl Condition<(), ()> {
     IntoSystem::into_system(|context: Res<WoodpeckerContext>| context.root_widget.is_some())
 }
 
-fn startup(mut commands: Commands) {
-    commands.spawn(VelloSceneBundle {
-        coordinate_space: CoordinateSpace::ScreenSpace,
-        ..Default::default()
-    });
+fn startup(
+    mut commands: Commands,
+    vello_render_config: Res<bevy_vello::render::VelloRenderPlugin>,
+) {
+    let entity = commands
+        .spawn(VelloSceneBundle {
+            coordinate_space: CoordinateSpace::ScreenSpace,
+            ..Default::default()
+        })
+        .id();
+    if let Some(layers) = &vello_render_config.canvas_render_layers {
+        commands.entity(entity).insert(layers.clone());
+    }
 }
 
 /// A trait that gives us some extra functionality for register widgets
