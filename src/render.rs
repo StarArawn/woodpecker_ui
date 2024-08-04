@@ -332,10 +332,10 @@ impl WidgetRender {
 
                 fn subsection_image_data(image: &mut image::DynamicImage, region: Rect) -> Vec<u8> {
                     let sub_image = image.sub_image(
-                        region.min.x as u32,
-                        region.min.y as u32,
-                        region.size().x as u32,
-                        region.size().y as u32,
+                        region.min.x.floor() as u32,
+                        region.min.y.floor() as u32,
+                        region.size().x.ceil() as u32,
+                        region.size().y.ceil() as u32,
                     ).to_image();
                     // let _ = sub_image.save_with_format(format!("image{}{}.png", region.min.x, region.min.y), image::ImageFormat::Png);
                     sub_image.as_raw().clone()
@@ -348,32 +348,30 @@ impl WidgetRender {
 
                 for slice in slices.iter() {
                     // TODO: Cache..
-                    let sub_section_data = subsection_image_data(&mut image, slice.texture_rect);
+                    let texture_rect_floor = Rect {
+                        min: slice.texture_rect.min.floor(),
+                        max: slice.texture_rect.max.ceil(),
+                    };
+                    let sub_section_data = subsection_image_data(&mut image, texture_rect_floor);
                     let vello_image = peniko::Image::new(
                         sub_section_data.into(),
                         peniko::Format::Rgba8,
-                        slice.texture_rect.size().x as u32,
-                        slice.texture_rect.size().y as u32,
+                        texture_rect_floor.size().x as u32,
+                        texture_rect_floor.size().y as u32,
                     );
-                    let scale =  slice.draw_size / slice.texture_rect.size();
-                    dbg!(slice.offset, slice.draw_size);
-                    let anchor = (slice.draw_size * (Vec2::new(-0.5, 0.5))) * Vec2::new(layout.size.width, layout.size.height) / slice.draw_size;
+                    let scale =  ((slice.draw_size / texture_rect_floor.size()) * 10.0).ceil() / 10.0 + 0.02;
                     let pos = (
-                        slice.offset.x + (layout.size.width / 2.0), // + ((slice.draw_size.x + layout.size.width) / 2.0),
-                        -slice.offset.y + (layout.size.height / 2.0), // + ((slice.draw_size.y + layout.size.height) / 2.0),
+                        slice.offset.x + (layout.size.width / 2.0),
+                        -slice.offset.y + (layout.size.height / 2.0),
                     );
-                    dbg!(pos, anchor);
-
 
                     let transform =
                         vello::kurbo::Affine::scale_non_uniform(scale.x as f64, scale.y as f64)
                             .with_translation(bevy_vello::prelude::kurbo::Vec2::new(
-                        // vello::kurbo::Affine::translate(bevy_vello::prelude::kurbo::Vec2::new(
-                                (layout.location.x as f64 + pos.0 as f64) - (slice.draw_size.x as f64 / 2.0), // + anchor.x as f64),
-                                (layout.location.y as f64 + pos.1 as f64) - (slice.draw_size.y as f64 / 2.0), // + anchor.y as f64),
+                                (layout.location.x as f64 + pos.0 as f64) - (slice.draw_size.x as f64 / 2.0),
+                                (layout.location.y as f64 + pos.1 as f64) - (slice.draw_size.y as f64 / 2.0),
                             ));
-                            // .then_scale_non_uniform(scale.x as f64, scale.y as f64);
-
+                       
                     vello_scene.draw_image(&vello_image, transform);
                 }
             }

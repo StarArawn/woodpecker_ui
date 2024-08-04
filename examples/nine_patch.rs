@@ -18,7 +18,7 @@ fn startup(
 ) {
     commands.spawn(Camera2dBundle::default());
 
-    let slice_border = 100.0;
+    let slice_border = 135.0;
 
     let cases = [
         // Stretched Scaled sliced sprite
