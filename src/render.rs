@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{hash::{DefaultHasher, Hash, Hasher}, sync::Arc};
 
 use bevy::prelude::*;
 use bevy_vello::{
@@ -345,24 +345,35 @@ impl WidgetRender {
                     sub_image.as_raw().clone()
                 }
 
-                let image =
-                    image::RgbaImage::from_raw(image.size().x, image.size().y, image.data.clone())
-                        .unwrap();
-                let mut image: image::DynamicImage = image::DynamicImage::ImageRgba8(image);
-
                 for slice in slices.iter() {
-                    // TODO: Cache..
                     let texture_rect_floor = Rect {
                         min: slice.texture_rect.min.floor(),
                         max: slice.texture_rect.max.ceil(),
                     };
-                    let sub_section_data = subsection_image_data(&mut image, texture_rect_floor);
-                    let vello_image = peniko::Image::new(
-                        sub_section_data.into(),
-                        peniko::Format::Rgba8,
-                        texture_rect_floor.size().x as u32,
-                        texture_rect_floor.size().y as u32,
-                    );
+                    let min = texture_rect_floor.min.as_uvec2();
+                    let max = texture_rect_floor.max.as_uvec2();
+
+                    let mut hasher = DefaultHasher::default(); 
+                    min.hash(&mut hasher);
+                    max.hash(&mut hasher);
+                    let key = hasher.finish();
+
+                    if !image_manager.nine_patch_slices.contains_key(&key) {
+                        let image =
+                            image::RgbaImage::from_raw(image.size().x, image.size().y, image.data.clone())
+                                .unwrap();
+                        let mut image: image::DynamicImage = image::DynamicImage::ImageRgba8(image);
+                        let sub_section_data = subsection_image_data(&mut image, texture_rect_floor);
+                        let vello_image = peniko::Image::new(
+                            sub_section_data.into(),
+                            peniko::Format::Rgba8,
+                            texture_rect_floor.size().x as u32,
+                            texture_rect_floor.size().y as u32,
+                        );
+                        image_manager.nine_patch_slices.insert(key, vello_image);
+                    }
+
+                    let vello_image = image_manager.nine_patch_slices.get(&key).unwrap();
                     let scale =
                         ((slice.draw_size / texture_rect_floor.size()) * 10.0).ceil() / 10.0 + 0.02;
                     let pos = (
@@ -379,7 +390,7 @@ impl WidgetRender {
                                     - (slice.draw_size.y as f64 / 2.0),
                             ));
 
-                    vello_scene.draw_image(&vello_image, transform);
+                    vello_scene.draw_image(vello_image, transform);
                 }
             }
         }
