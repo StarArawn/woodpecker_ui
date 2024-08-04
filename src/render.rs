@@ -11,7 +11,7 @@ use bevy_vello::{
     },
     VelloScene,
 };
-use image::{GenericImage, Pixel};
+use image::GenericImage;
 
 use crate::{
     font::FontManager,
@@ -59,7 +59,9 @@ pub enum WidgetRender {
     },
     /// A nine patch image
     NinePatch {
+        /// An asset handle to a nine patch image.
         handle: Handle<Image>,
+        /// A bevy image scale mode.
         scale_mode: ImageScaleMode,
     },
     /// A SVG asset.
@@ -331,12 +333,14 @@ impl WidgetRender {
                 };
 
                 fn subsection_image_data(image: &mut image::DynamicImage, region: Rect) -> Vec<u8> {
-                    let sub_image = image.sub_image(
-                        region.min.x.floor() as u32,
-                        region.min.y.floor() as u32,
-                        region.size().x.ceil() as u32,
-                        region.size().y.ceil() as u32,
-                    ).to_image();
+                    let sub_image = image
+                        .sub_image(
+                            region.min.x.floor() as u32,
+                            region.min.y.floor() as u32,
+                            region.size().x.ceil() as u32,
+                            region.size().y.ceil() as u32,
+                        )
+                        .to_image();
                     // let _ = sub_image.save_with_format(format!("image{}{}.png", region.min.x, region.min.y), image::ImageFormat::Png);
                     sub_image.as_raw().clone()
                 }
@@ -359,7 +363,8 @@ impl WidgetRender {
                         texture_rect_floor.size().x as u32,
                         texture_rect_floor.size().y as u32,
                     );
-                    let scale =  ((slice.draw_size / texture_rect_floor.size()) * 10.0).ceil() / 10.0 + 0.02;
+                    let scale =
+                        ((slice.draw_size / texture_rect_floor.size()) * 10.0).ceil() / 10.0 + 0.02;
                     let pos = (
                         slice.offset.x + (layout.size.width / 2.0),
                         -slice.offset.y + (layout.size.height / 2.0),
@@ -368,10 +373,12 @@ impl WidgetRender {
                     let transform =
                         vello::kurbo::Affine::scale_non_uniform(scale.x as f64, scale.y as f64)
                             .with_translation(bevy_vello::prelude::kurbo::Vec2::new(
-                                (layout.location.x as f64 + pos.0 as f64) - (slice.draw_size.x as f64 / 2.0),
-                                (layout.location.y as f64 + pos.1 as f64) - (slice.draw_size.y as f64 / 2.0),
+                                (layout.location.x as f64 + pos.0 as f64)
+                                    - (slice.draw_size.x as f64 / 2.0),
+                                (layout.location.y as f64 + pos.1 as f64)
+                                    - (slice.draw_size.y as f64 / 2.0),
                             ));
-                       
+
                     vello_scene.draw_image(&vello_image, transform);
                 }
             }
