@@ -1374,7 +1374,7 @@ dependencies = [
 [[package]]
 name = "bevy_vello"
 version = "0.5.1"
-source = "git+https://github.com/ChristopherBiscardi/bevy_vello?branch=renderlayer-canvas-fix#b00b02a6a26a2dba247a25e876a3750beaabb600"
+source = "git+https://github.com/linebender/bevy_vello?rev=f21cdc2#f21cdc2401906ccd0f23e15605bb99f1dbcbac2e"
 dependencies = [
  "bevy",
  "once_cell",

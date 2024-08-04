@@ -167,7 +167,7 @@ impl Plugin for WoodpeckerUIPlugin {
     fn build(&self, app: &mut App) {
         embedded_asset!(app, "embedded_assets/Poppins-Regular.ttf");
         app.add_plugins(WoodpeckerLayoutPlugin)
-            .add_plugins(VelloPlugin)
+            .add_plugins(VelloPlugin::default())
             .add_plugins(WoodpeckerUIWidgetPlugin)
             .add_plugins(EventListenerPlugin::<focus::WidgetFocus>::default())
             .add_plugins(EventListenerPlugin::<focus::WidgetBlur>::default())
@@ -234,18 +234,15 @@ fn has_root() -> impl Condition<(), ()> {
 
 fn startup(
     mut commands: Commands,
-    vello_render_config: Option<Res<bevy_vello::render::VelloRenderSettings>>,
+    vello_render_config: Res<bevy_vello::render::VelloRenderSettings>,
 ) {
-    let entity = commands
-        .spawn(VelloSceneBundle {
+    commands.spawn((
+        VelloSceneBundle {
             coordinate_space: CoordinateSpace::ScreenSpace,
             ..Default::default()
-        })
-        .id();
-    if let Some(layers) = vello_render_config.and_then(|config| config.canvas_render_layers.clone())
-    {
-        commands.entity(entity).insert(layers);
-    }
+        },
+        vello_render_config.canvas_render_layers.clone(),
+    ));
 }
 
 /// A trait that gives us some extra functionality for register widgets

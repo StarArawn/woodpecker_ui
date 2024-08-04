@@ -5,11 +5,11 @@ use woodpecker_ui::prelude::*;
 
 fn main() {
     App::new()
-        .insert_resource(VelloRenderSettings {
-            canvas_render_layers: Some(RenderLayers::layer(1)),
-        })
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin)
+        .insert_resource(VelloRenderSettings {
+            canvas_render_layers: RenderLayers::layer(1),
+        })
         .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)
         .add_systems(Update, flip_render_layers)
@@ -25,10 +25,12 @@ fn flip_render_layers(
         for mut layer in &mut query {
             *layer = match *local {
                 0 => {
+                    info!("camera showing layer 0");
                     *local = 1;
                     RenderLayers::layer(0)
                 }
                 1 => {
+                    info!("camera showing layer 1");
                     *local = 0;
                     RenderLayers::layer(1)
                 }
