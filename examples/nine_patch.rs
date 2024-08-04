@@ -86,12 +86,10 @@ fn startup(
     }
 
     let root = commands
-        .spawn((
-            WoodpeckerAppBundle {
-                children,
-                ..Default::default()
-            },
-        ))
+        .spawn((WoodpeckerAppBundle {
+            children,
+            ..Default::default()
+        },))
         .id();
     ui_context.set_root_widget(root);
 }

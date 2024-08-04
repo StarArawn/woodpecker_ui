@@ -206,7 +206,7 @@ pub fn render(
                       mut state_query: Query<&mut TextBoxState>,
                       default_font: Res<DefaultFont>,
                       mut font_manager: ResMut<FontManager>,
-                      mut event_writer: EventWriter<OnChange<TextChanged>>| {
+                      mut event_writer: EventWriter<Change<TextChanged>>| {
                     let Ok(styles) = style_query.get(event.target) else {
                         return;
                     };
@@ -221,7 +221,7 @@ pub fn render(
                     state.current_value.insert_str(char_pos, &event.c);
                     state.cursor_position += 1;
 
-                    event_writer.send(OnChange {
+                    event_writer.send(Change {
                         target: widget_entity,
                         data: TextChanged {
                             value: state.current_value.clone(),
@@ -277,7 +277,7 @@ pub fn render(
                   style_query: Query<&WoodpeckerStyle>,
                   mut state_query: Query<&mut TextBoxState>,
                   mut font_manager: ResMut<FontManager>,
-                  mut event_writer: EventWriter<OnChange<TextChanged>>| {
+                  mut event_writer: EventWriter<Change<TextChanged>>| {
                 let Ok(styles) = style_query.get(event.target) else {
                     return;
                 };
@@ -290,7 +290,7 @@ pub fn render(
                     .sum();
                 state.current_value.insert_str(char_pos, &event.paste);
 
-                event_writer.send(OnChange {
+                event_writer.send(Change {
                     target: widget_entity,
                     data: TextChanged {
                         value: state.current_value.clone(),
@@ -318,7 +318,7 @@ pub fn render(
                   mut state_query: Query<&mut TextBoxState>,
                   default_font: Res<DefaultFont>,
                   mut font_manager: ResMut<FontManager>,
-                  mut event_writer: EventWriter<OnChange<TextChanged>>,
+                  mut event_writer: EventWriter<Change<TextChanged>>,
                   keyboard_input: Res<ButtonInput<KeyCode>>| {
                 if event.code == KeyCode::ArrowRight {
                     let Ok(styles) = style_query.get(event.target) else {
@@ -419,7 +419,7 @@ pub fn render(
                         state.current_value.remove(char_pos);
                         state.cursor_position -= 1;
 
-                        event_writer.send(OnChange {
+                        event_writer.send(Change {
                             target: widget_entity,
                             data: TextChanged {
                                 value: state.current_value.clone(),

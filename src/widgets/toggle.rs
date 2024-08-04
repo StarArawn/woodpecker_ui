@@ -192,7 +192,7 @@ pub struct ToggleBundle {
     /// Used to animate..
     pub transition: Transition,
     /// Change detection event
-    pub on_changed: On<OnChange<ToggleChanged>>,
+    pub on_changed: On<Change<ToggleChanged>>,
 }
 
 impl Default for ToggleBundle {
@@ -209,7 +209,7 @@ impl Default for ToggleBundle {
                 playing: false,
                 ..default()
             },
-            on_changed: On::<OnChange<ToggleChanged>>::run(|| {}),
+            on_changed: On::<Change<ToggleChanged>>::run(|| {}),
         }
     }
 }
@@ -307,12 +307,12 @@ fn render(
         ))
         .insert(On::<Pointer<Click>>::run(
             move |mut state_query: Query<&mut ToggleState>,
-                  mut event_writer: EventWriter<OnChange<ToggleChanged>>| {
+                  mut event_writer: EventWriter<Change<ToggleChanged>>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
                 state.is_checked = !state.is_checked;
-                event_writer.send(OnChange {
+                event_writer.send(Change {
                     target: *current_widget,
                     data: ToggleChanged {
                         checked: state.is_checked,

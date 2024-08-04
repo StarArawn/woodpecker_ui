@@ -61,9 +61,7 @@
 //! }
 //!
 //! ```
-use bevy::{
-    asset::embedded_asset, prelude::*, reflect::GetTypeRegistration,
-};
+use bevy::{asset::embedded_asset, prelude::*, reflect::GetTypeRegistration};
 use bevy_mod_picking::{events::Pointer, prelude::EventListenerPlugin};
 use bevy_trait_query::RegisterExt;
 use bevy_vello::{text::VelloFont, CoordinateSpace, VelloPlugin, VelloSceneBundle};
@@ -108,7 +106,7 @@ pub mod prelude {
     pub use crate::keyboard_input::WidgetKeyboardCharEvent;
     pub use crate::layout::system::{WidgetLayout, WidgetPreviousLayout};
     pub use crate::metrics::WidgetMetrics;
-    pub use crate::on_change::OnChange;
+    pub use crate::on_change::Change;
     pub use crate::render::WidgetRender;
     pub use crate::styles::*;
     pub use crate::widgets::*;
@@ -170,6 +168,8 @@ pub struct WoodpeckerUIPlugin {
 impl Plugin for WoodpeckerUIPlugin {
     fn build(&self, app: &mut App) {
         embedded_asset!(app, "embedded_assets/Poppins-Regular.ttf");
+        embedded_asset!(app, "embedded_assets/icons/arrow-down.svg");
+        embedded_asset!(app, "embedded_assets/icons/arrow-up.svg");
         app.add_plugins(WoodpeckerLayoutPlugin)
             .add_plugins(VelloPlugin::default())
             .add_plugins(WoodpeckerUIWidgetPlugin)

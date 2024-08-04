@@ -1,4 +1,4 @@
-use crate::prelude::OnChange;
+use crate::prelude::Change;
 use crate::WidgetRegisterExt;
 use bevy::prelude::*;
 
@@ -7,6 +7,7 @@ mod button;
 mod clip;
 /// A set of default colors used by Woodpecker UI.
 pub mod colors;
+mod dropdown;
 mod element;
 mod icon_button;
 mod modal;
@@ -21,6 +22,7 @@ pub use app::{WoodpeckerApp, WoodpeckerAppBundle};
 use bevy_mod_picking::prelude::EventListenerPlugin;
 pub use button::{ButtonStyles, WButton, WButtonBundle};
 pub use clip::{Clip, ClipBundle};
+pub use dropdown::{Dropdown, DropdownBundle, DropdownChanged, DropdownStyles};
 pub use element::{Element, ElementBundle};
 pub use icon_button::{IconButton, IconButtonBundle, IconButtonStyles};
 pub use modal::{Modal, ModalBundle};
@@ -41,9 +43,10 @@ pub use window::{WindowState, WoodpeckerWindow, WoodpeckerWindowBundle};
 pub(crate) struct WoodpeckerUIWidgetPlugin;
 impl Plugin for WoodpeckerUIWidgetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(EventListenerPlugin::<OnChange<TextChanged>>::default())
-            .add_plugins(EventListenerPlugin::<OnChange<ToggleChanged>>::default())
-            .add_plugins(EventListenerPlugin::<OnChange<SliderChanged>>::default())
+        app.add_plugins(EventListenerPlugin::<Change<TextChanged>>::default())
+            .add_plugins(EventListenerPlugin::<Change<ToggleChanged>>::default())
+            .add_plugins(EventListenerPlugin::<Change<SliderChanged>>::default())
+            .add_plugins(EventListenerPlugin::<Change<DropdownChanged>>::default())
             .register_widget::<WoodpeckerApp>()
             .register_widget::<Element>()
             .register_widget::<WButton>()
@@ -58,6 +61,7 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
             .register_widget::<Toggle>()
             .register_widget::<Slider>()
             .register_widget::<WoodpeckerWindow>()
+            .register_widget::<Dropdown>()
             .add_systems(
                 Update,
                 (

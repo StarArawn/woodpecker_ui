@@ -24,7 +24,7 @@ fn startup(
             children: WidgetChildren::default().with_child::<IconButton>(IconButtonBundle {
                 render: WidgetRender::Svg {
                     handle: asset_server.load("woodpecker_svg/woodpecker.svg"),
-                    path_color: None, // Set by IconButton
+                    color: None, // Set by IconButton
                 },
                 ..Default::default()
             }),

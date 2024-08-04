@@ -112,7 +112,7 @@ pub struct SliderBundle {
     /// The render mode of the slider. Default: Quad
     pub render: WidgetRender,
     /// Change detection event
-    pub on_changed: On<OnChange<SliderChanged>>,
+    pub on_changed: On<Change<SliderChanged>>,
     /// Provides overrides for picking behavior.
     pub pickable: Pickable,
     /// Tracks entity interaction state.
@@ -127,7 +127,7 @@ impl Default for SliderBundle {
             children: Default::default(),
             styles: Default::default(),
             render: WidgetRender::Quad,
-            on_changed: On::<OnChange<SliderChanged>>::run(|| {}),
+            on_changed: On::<Change<SliderChanged>>::run(|| {}),
             pickable: Default::default(),
             interaction: Default::default(),
         }
@@ -171,7 +171,7 @@ fn render(
         .insert(On::<Pointer<Click>>::run(
             move |event: Listener<Pointer<Click>>,
                   mut state_query: Query<&mut SliderState>,
-                  mut event_writer: EventWriter<OnChange<SliderChanged>>| {
+                  mut event_writer: EventWriter<Change<SliderChanged>>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
@@ -179,7 +179,7 @@ fn render(
                 state.value = (event.pointer_location.position.x - widget_layout.location.x)
                     / widget_layout.size.x;
                 state.value = state.value.clamp(0.0, 1.0);
-                event_writer.send(OnChange {
+                event_writer.send(Change {
                     target: *current_widget,
                     data: SliderChanged { value: state.value },
                 });
@@ -214,7 +214,7 @@ fn render(
         On::<Pointer<Drag>>::run(
             move |event: ListenerMut<Pointer<Drag>>,
                   mut state_query: Query<&mut SliderState>,
-                  mut event_writer: EventWriter<OnChange<SliderChanged>>| {
+                  mut event_writer: EventWriter<Change<SliderChanged>>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
@@ -222,7 +222,7 @@ fn render(
                 state.value = (event.pointer_location.position.x - widget_layout.location.x)
                     / widget_layout.size.x;
                 state.value = state.value.clamp(0.0, 1.0);
-                event_writer.send(OnChange {
+                event_writer.send(Change {
                     target: *current_widget,
                     data: SliderChanged { value: state.value },
                 });

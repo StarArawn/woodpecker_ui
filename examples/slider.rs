@@ -47,7 +47,7 @@ fn startup(
                     value: 0.5,
                 },
                 on_changed: On::run(
-                    |event: Listener<OnChange<SliderChanged>>,
+                    |event: Listener<Change<SliderChanged>>,
                      mut material_assets: ResMut<Assets<ColorMaterial>>,
                      query: Query<&Handle<ColorMaterial>>| {
                         for material in query.iter() {

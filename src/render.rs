@@ -1,4 +1,7 @@
-use std::{hash::{DefaultHasher, Hash, Hasher}, sync::Arc};
+use std::{
+    hash::{DefaultHasher, Hash, Hasher},
+    sync::Arc,
+};
 
 use bevy::prelude::*;
 use bevy_vello::{
@@ -69,7 +72,7 @@ pub enum WidgetRender {
         /// A handle to the SVG asset.
         handle: Handle<SvgAsset>,
         /// An optional color that replaces paths and fills within the svg.
-        path_color: Option<Color>,
+        color: Option<Color>,
     },
 }
 
@@ -83,7 +86,9 @@ impl WidgetRender {
             WidgetRender::Layer => {}
             WidgetRender::Image { .. } => {}
             WidgetRender::NinePatch { .. } => {}
-            WidgetRender::Svg { path_color, .. } => {
+            WidgetRender::Svg {
+                color: path_color, ..
+            } => {
                 *path_color = Some(color);
             }
         }
@@ -109,6 +114,10 @@ impl WidgetRender {
         let location_y = layout.location.y;
         let size_x = layout.size.width;
         let size_y = layout.size.height;
+
+        if matches!(widget_style.display, crate::styles::WidgetDisplay::None) {
+            return false;
+        }
 
         match self {
             WidgetRender::Quad => {
@@ -281,7 +290,10 @@ impl WidgetRender {
 
                 vello_scene.draw_image(vello_image, transform);
             }
-            WidgetRender::Svg { handle, path_color } => {
+            WidgetRender::Svg {
+                handle,
+                color: path_color,
+            } => {
                 let Some(svg_asset) = svg_assets.get(handle) else {
                     return false;
                 };
@@ -353,17 +365,21 @@ impl WidgetRender {
                     let min = texture_rect_floor.min.as_uvec2();
                     let max = texture_rect_floor.max.as_uvec2();
 
-                    let mut hasher = DefaultHasher::default(); 
+                    let mut hasher = DefaultHasher::default();
                     min.hash(&mut hasher);
                     max.hash(&mut hasher);
                     let key = hasher.finish();
 
                     if !image_manager.nine_patch_slices.contains_key(&key) {
-                        let image =
-                            image::RgbaImage::from_raw(image.size().x, image.size().y, image.data.clone())
-                                .unwrap();
+                        let image = image::RgbaImage::from_raw(
+                            image.size().x,
+                            image.size().y,
+                            image.data.clone(),
+                        )
+                        .unwrap();
                         let mut image: image::DynamicImage = image::DynamicImage::ImageRgba8(image);
-                        let sub_section_data = subsection_image_data(&mut image, texture_rect_floor);
+                        let sub_section_data =
+                            subsection_image_data(&mut image, texture_rect_floor);
                         let vello_image = peniko::Image::new(
                             sub_section_data.into(),
                             peniko::Format::Rgba8,
