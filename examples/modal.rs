@@ -153,7 +153,7 @@ fn render(
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(WoodpeckerUIPlugin::default())
+        .add_plugins(WoodpeckerUIPlugin)
         .add_plugins(DefaultPickingPlugins)
         .register_widget::<MyWidget>()
         .add_systems(Startup, startup)
