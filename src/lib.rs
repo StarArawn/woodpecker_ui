@@ -62,7 +62,7 @@
 //!
 //! ```
 use bevy::{
-    asset::embedded_asset, prelude::*, reflect::GetTypeRegistration, render::view::RenderLayers,
+    asset::embedded_asset, prelude::*, reflect::GetTypeRegistration,
 };
 use bevy_mod_picking::{events::Pointer, prelude::EventListenerPlugin};
 use bevy_trait_query::RegisterExt;
