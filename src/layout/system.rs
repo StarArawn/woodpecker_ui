@@ -12,7 +12,7 @@ use crate::{
     image::ImageManager,
     metrics::WidgetMetrics,
     prelude::{PreviousWidget, WidgetPosition, WidgetRender},
-    styles::Edge,
+    styles::{Edge, WidgetDisplay},
     svg::{SvgAsset, SvgManager},
     DefaultFont,
 };
@@ -280,6 +280,7 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
         &ui_layout,
         root_node,
         &mut order,
+        true,
     );
 
     for (entity, layout) in cached_layout.iter() {
@@ -320,10 +321,12 @@ fn traverse_render_tree(
     ui_layout: &UiLayout,
     current_node: Entity,
     order: &mut u32,
+    mut should_render: bool,
 ) {
     let Ok((entity, _, styles, parent, children)) = query.get_mut(current_node) else {
         return;
     };
+
     let Some(layout) = ui_layout.get_layout(entity).cloned() else {
         return;
     };
@@ -342,6 +345,11 @@ fn traverse_render_tree(
     }
 
     layout.order = *order;
+    cached_layout.insert(entity, layout);
+
+    if matches!(styles.display, WidgetDisplay::None) {
+        should_render = false;
+    }
 
     let mut did_layer = false;
     if let Ok(widget_render) = widget_render.get(entity) {
@@ -351,7 +359,7 @@ fn traverse_render_tree(
                 .copied()
                 .unwrap_or_else(|| *ui_layout.get_layout(parent.get()).unwrap())
         });
-        if parent_layout.is_some() || root_node == entity {
+        if (parent_layout.is_some() || root_node == entity) && should_render {
             did_layer = widget_render.render(
                 vello_scene,
                 &layout,
@@ -368,7 +376,6 @@ fn traverse_render_tree(
             );
         }
     }
-    cached_layout.insert(entity, layout);
 
     let Some(children) = children.map(|c| c.iter().copied().collect::<Vec<_>>()) else {
         if did_layer {
@@ -396,6 +403,7 @@ fn traverse_render_tree(
             ui_layout,
             *child,
             order,
+            should_render,
         );
         *order -= 1;
     }

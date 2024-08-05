@@ -1374,7 +1374,7 @@ dependencies = [
 [[package]]
 name = "bevy_vello"
 version = "0.5.1"
-source = "git+https://github.com/linebender/bevy_vello?rev=f21cdc2#f21cdc2401906ccd0f23e15605bb99f1dbcbac2e"
+source = "git+https://github.com/linebender/bevy_vello?rev=7fe648ccb9766ecf2ef469f08c9f21093c3544e6#7fe648ccb9766ecf2ef469f08c9f21093c3544e6"
 dependencies = [
  "bevy",
  "once_cell",

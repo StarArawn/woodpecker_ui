@@ -59,13 +59,17 @@ impl HookHelper {
         &mut self,
         commands: &mut Commands,
         current_widget: CurrentWidget,
+        initial_context: T,
     ) -> Entity {
         let type_name: String = std::any::type_name::<T>().into();
         if let Some(context_entity) = self.traverse_find_context_entity(&type_name, current_widget)
         {
             context_entity
         } else {
-            let context_entity = commands.spawn(StateMarker).set_parent(*current_widget).id();
+            let context_entity = commands
+                .spawn((StateMarker, initial_context))
+                .set_parent(*current_widget)
+                .id();
 
             let context_types = self.internal_context.entry(*current_widget).or_default();
 

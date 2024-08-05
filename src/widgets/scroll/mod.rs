@@ -159,8 +159,7 @@ pub fn render(
     };
 
     // Setup scroll context.
-    let entity = context.use_context::<ScrollContext>(&mut commands, *current_widget);
-    commands.entity(entity).insert(provider.initial_value);
+    let _entity = context.use_context(&mut commands, *current_widget, provider.initial_value);
 
     children.apply(current_widget.as_parent());
 }

@@ -13,6 +13,7 @@ mod icon_button;
 mod modal;
 mod scroll;
 mod slider;
+mod tab;
 mod text_box;
 mod toggle;
 mod transition;
@@ -31,6 +32,7 @@ pub use scroll::scroll_bar::{ScrollBar, ScrollBarBundle};
 pub use scroll::scroll_box::{ScrollBox, ScrollBoxBundle};
 pub use scroll::{ScrollContextProvider, ScrollContextProviderBundle};
 pub use slider::{Slider, SliderBundle, SliderChanged, SliderState, SliderStyles};
+pub use tab::*;
 pub use text_box::{TextBox, TextBoxBundle, TextBoxState, TextChanged, TextboxStyles};
 pub use toggle::{
     Toggle, ToggleBundle, ToggleChanged, ToggleState, ToggleStyles, ToggleWidgetStyles,
@@ -62,6 +64,9 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
             .register_widget::<Slider>()
             .register_widget::<WoodpeckerWindow>()
             .register_widget::<Dropdown>()
+            .register_widget::<TabButton>()
+            .register_widget::<TabContextProvider>()
+            .register_widget::<TabContent>()
             .add_systems(
                 Update,
                 (

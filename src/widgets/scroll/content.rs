@@ -46,7 +46,7 @@ pub fn render(
         return;
     };
     let context_entity =
-        context_helper.use_context::<ScrollContext>(&mut commands, *current_widget);
+        context_helper.use_context(&mut commands, *current_widget, ScrollContext::default());
 
     let Ok(mut context) = context_query.get_mut(context_entity) else {
         return;

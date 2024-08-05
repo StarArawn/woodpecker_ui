@@ -61,10 +61,14 @@
 //! }
 //!
 //! ```
-use bevy::{asset::embedded_asset, prelude::*, reflect::GetTypeRegistration};
+use bevy::{
+    asset::embedded_asset, prelude::*, reflect::GetTypeRegistration, render::view::RenderLayers,
+};
 use bevy_mod_picking::{events::Pointer, prelude::EventListenerPlugin};
 use bevy_trait_query::RegisterExt;
-use bevy_vello::{text::VelloFont, CoordinateSpace, VelloPlugin, VelloSceneBundle};
+use bevy_vello::{
+    text::VelloFont, vello::AaConfig, CoordinateSpace, VelloPlugin, VelloSceneBundle,
+};
 use context::{Widget, WoodpeckerContext};
 use entity_mapping::WidgetMapper;
 use font::FontManager;
@@ -110,9 +114,32 @@ pub mod prelude {
     pub use crate::render::WidgetRender;
     pub use crate::styles::*;
     pub use crate::widgets::*;
-    pub use crate::{CurrentWidget, ParentWidget};
-    pub use crate::{WidgetRegisterExt, WoodpeckerUIPlugin};
+    pub use crate::{
+        CurrentWidget, ParentWidget, RenderSettings, WidgetRegisterExt, WoodpeckerUIPlugin,
+    };
+    pub use bevy_vello::vello::AaConfig;
     pub use woodpecker_ui_macros::*;
+}
+
+/// Defines useful render settings
+#[derive(Resource, Clone)]
+pub struct RenderSettings {
+    /// The bevy render layer to use
+    pub layer: RenderLayers,
+    /// Is antialiased? Default: True
+    pub antialiasing: AaConfig,
+    /// Use CPU to render. Warning can be slow.
+    pub use_cpu: bool,
+}
+
+impl Default for RenderSettings {
+    fn default() -> Self {
+        Self {
+            layer: Default::default(),
+            antialiasing: AaConfig::Area,
+            use_cpu: Default::default(),
+        }
+    }
 }
 
 /// A bevy resource used as the default font.
@@ -160,9 +187,9 @@ impl CurrentWidget {
 /// Add this to bevy to use.
 #[derive(Default)]
 pub struct WoodpeckerUIPlugin {
-    /// Specifies the render layer that woodpecker will use internally.
-    /// TODO: We should instead associate the context with the camera.
-    pub render_layers: Option<RenderLayers>,
+    /// The render settings
+    /// These settings are used to tell bevy_vello how to render.
+    pub render_settings: RenderSettings,
 }
 
 impl Plugin for WoodpeckerUIPlugin {
@@ -171,7 +198,11 @@ impl Plugin for WoodpeckerUIPlugin {
         embedded_asset!(app, "embedded_assets/icons/arrow-down.svg");
         embedded_asset!(app, "embedded_assets/icons/arrow-up.svg");
         app.add_plugins(WoodpeckerLayoutPlugin)
-            .add_plugins(VelloPlugin::default())
+            .add_plugins(VelloPlugin {
+                canvas_render_layers: self.render_settings.layer.clone(),
+                use_cpu: self.render_settings.use_cpu,
+                antialiasing: self.render_settings.antialiasing,
+            })
             .add_plugins(WoodpeckerUIWidgetPlugin)
             .add_plugins(EventListenerPlugin::<focus::WidgetFocus>::default())
             .add_plugins(EventListenerPlugin::<focus::WidgetBlur>::default())
@@ -190,6 +221,7 @@ impl Plugin for WoodpeckerUIPlugin {
             .init_resource::<WidgetMetrics>()
             .init_resource::<SvgManager>()
             .init_resource::<ImageManager>()
+            .insert_resource(self.render_settings.clone())
             .init_asset::<SvgAsset>()
             .init_asset_loader::<SvgLoader>()
             .add_systems(
@@ -217,6 +249,7 @@ impl Plugin for WoodpeckerUIPlugin {
             )
             .add_systems(Startup, startup)
             // Reflection registration
+            .register_type::<render::WidgetRender>()
             .register_type::<crate::prelude::WidgetLayout>()
             .register_type::<styles::WoodpeckerStyle>()
             .register_type::<styles::Corner>()
@@ -243,17 +276,14 @@ fn has_root() -> impl Condition<(), ()> {
     IntoSystem::into_system(|context: Res<WoodpeckerContext>| context.root_widget.is_some())
 }
 
-fn startup(
-    mut commands: Commands,
-    vello_render_config: Res<bevy_vello::render::VelloRenderSettings>,
-) {
+fn startup(mut commands: Commands, render_settings: Res<RenderSettings>) {
     commands.spawn((
         VelloSceneBundle {
             coordinate_space: CoordinateSpace::ScreenSpace,
             transform: Transform::from_xyz(0.0, 0.0, f32::MAX),
             ..Default::default()
         },
-        vello_render_config.canvas_render_layers.clone(),
+        render_settings.layer.clone(),
     ));
 }
 

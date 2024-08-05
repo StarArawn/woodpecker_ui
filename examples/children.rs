@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_mod_picking::DefaultPickingPlugins;
 use woodpecker_ui::prelude::*;
 
@@ -84,8 +83,8 @@ fn baz_render(entity: Res<CurrentWidget>, query: Query<&BazWidget>) {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(WoodpeckerUIPlugin)
-        .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(WoodpeckerUIPlugin::default())
+        .add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new())
         .add_plugins(DefaultPickingPlugins)
         .register_widget::<FooWidget>()
         .register_widget::<BarWidget>()

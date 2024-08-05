@@ -29,8 +29,9 @@ pub(crate) const VARIATIONS: &[(&str, f32)] = &[];
 
 /// Used to tell Woodpecker UI's rendering system(vello) how
 /// to render a specific widget entity.
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Reflect, Default)]
 pub enum WidgetRender {
+    #[default]
     /// A basic quad shape. Can include borders.
     Quad,
     /// A text shape renderer
@@ -45,6 +46,7 @@ pub enum WidgetRender {
     /// TODO: Untested, write an example?
     Custom {
         /// A custom widget render function
+        #[reflect(ignore)]
         render: WidgetRenderCustom,
     },
     /// A render layer
@@ -391,7 +393,7 @@ impl WidgetRender {
 
                     let vello_image = image_manager.nine_patch_slices.get(&key).unwrap();
                     let scale =
-                        ((slice.draw_size / texture_rect_floor.size()) * 10.0).ceil() / 10.0 + 0.02;
+                        ((slice.draw_size / texture_rect_floor.size()) * 10.0).ceil() / 10.0;
                     let pos = (
                         slice.offset.x + (layout.size.width / 2.0),
                         -slice.offset.y + (layout.size.height / 2.0),
@@ -428,6 +430,12 @@ pub(crate) fn fit_image(size_to_fit: Vec2, container_size: Vec2) -> f32 {
 #[derive(Clone)]
 pub struct WidgetRenderCustom {
     inner: Arc<dyn Fn(&mut VelloScene, &taffy::Layout) + Send + Sync>,
+}
+
+impl Default for WidgetRenderCustom {
+    fn default() -> Self {
+        Self::new(|_, _| {})
+    }
 }
 
 impl WidgetRenderCustom {
