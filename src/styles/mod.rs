@@ -390,17 +390,11 @@ fn lerp_units(prop_a: Units, prop_b: Units, x: f32) -> Units {
             }
             Units::Pixels(value)
         }
-<<<<<<< HEAD
         (Units::Percentage(a), Units::Percentage(b)) => Units::Percentage(if a > b {
             lerp(a, b, x).clamp(b, a)
         } else {
             lerp(a, b, x).clamp(a, b)
         }),
-=======
-        (Units::Percentage(a), Units::Percentage(b)) => {
-            Units::Percentage(lerp(a, b, x).clamp(a, b))
-        }
->>>>>>> 9190f5d (Added window widget. Fixed some issues. Fmt + Clippy)
         _ => {
             bevy::prelude::trace!(
                 "Cannot lerp between non-matching units! Unit_A: {:?}, Unit_B: {:?}",
