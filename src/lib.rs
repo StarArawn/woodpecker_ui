@@ -250,6 +250,7 @@ fn startup(
     commands.spawn((
         VelloSceneBundle {
             coordinate_space: CoordinateSpace::ScreenSpace,
+            transform: Transform::from_xyz(0.0, 0.0, f32::MAX),
             ..Default::default()
         },
         vello_render_config.canvas_render_layers.clone(),
