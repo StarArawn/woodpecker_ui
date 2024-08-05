@@ -75,8 +75,8 @@ fn render(current_widget: Res<CurrentWidget>, mut query: Query<(&TodoInput, &mut
                 },
                 ..Default::default()
             },
-            On::<OnChange<TextChanged>>::run(
-                move |event: Listener<OnChange<TextChanged>>, mut query: Query<&mut TodoInput>| {
+            On::<Change<TextChanged>>::run(
+                move |event: Listener<Change<TextChanged>>, mut query: Query<&mut TodoInput>| {
                     let Ok(mut input) = query.get_mut(*current_widget) else {
                         return;
                     };

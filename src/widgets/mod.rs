@@ -1,25 +1,33 @@
-use crate::prelude::OnChange;
+use crate::prelude::Change;
 use crate::WidgetRegisterExt;
 use bevy::prelude::*;
 
 mod app;
 mod button;
+mod checkbox;
 mod clip;
+/// A set of default colors used by Woodpecker UI.
+pub mod colors;
+mod dropdown;
 mod element;
 mod icon_button;
 mod modal;
 mod scroll;
-mod text_box;
-mod transition;
-mod toggle;
-/// A set of default colors used by Woodpecker UI.
-pub mod colors;
 mod slider;
+mod tab;
+mod text_box;
+mod toggle;
+mod transition;
+mod window;
 
 pub use app::{WoodpeckerApp, WoodpeckerAppBundle};
 use bevy_mod_picking::prelude::EventListenerPlugin;
 pub use button::{ButtonStyles, WButton, WButtonBundle};
+pub use checkbox::{
+    Checkbox, CheckboxBundle, CheckboxChanged, CheckboxState, CheckboxStyles, CheckboxWidgetStyles,
+};
 pub use clip::{Clip, ClipBundle};
+pub use dropdown::{Dropdown, DropdownBundle, DropdownChanged, DropdownStyles};
 pub use element::{Element, ElementBundle};
 pub use icon_button::{IconButton, IconButtonBundle, IconButtonStyles};
 pub use modal::{Modal, ModalBundle};
@@ -27,19 +35,25 @@ pub use scroll::content::{ScrollContent, ScrollContentBundle};
 pub use scroll::scroll_bar::{ScrollBar, ScrollBarBundle};
 pub use scroll::scroll_box::{ScrollBox, ScrollBoxBundle};
 pub use scroll::{ScrollContextProvider, ScrollContextProviderBundle};
-pub use text_box::{TextChanged, TextBox, TextBoxBundle, TextBoxState, TextboxStyles};
-pub use toggle::{Toggle, ToggleBundle, ToggleState, ToggleWidgetStyles, ToggleStyles, ToggleChanged};
-pub use slider::{Slider, SliderChanged, SliderState, SliderStyles, SliderBundle};
+pub use slider::{Slider, SliderBundle, SliderChanged, SliderState, SliderStyles};
+pub use tab::*;
+pub use text_box::{TextBox, TextBoxBundle, TextBoxState, TextChanged, TextboxStyles};
+pub use toggle::{
+    Toggle, ToggleBundle, ToggleChanged, ToggleState, ToggleStyles, ToggleWidgetStyles,
+};
 pub use transition::*;
+pub use window::{WindowState, WoodpeckerWindow, WoodpeckerWindowBundle};
 
-/// A core set of UI widgets that Wookpecker UI provides.
+/// A core set of UI widgets that Woodpecker UI provides.
 // TODO: Make this optional? Expose publicly.
 pub(crate) struct WoodpeckerUIWidgetPlugin;
 impl Plugin for WoodpeckerUIWidgetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(EventListenerPlugin::<OnChange<TextChanged>>::default())
-            .add_plugins(EventListenerPlugin::<OnChange<ToggleChanged>>::default())
-            .add_plugins(EventListenerPlugin::<OnChange<SliderChanged>>::default())
+        app.add_plugins(EventListenerPlugin::<Change<TextChanged>>::default())
+            .add_plugins(EventListenerPlugin::<Change<ToggleChanged>>::default())
+            .add_plugins(EventListenerPlugin::<Change<CheckboxChanged>>::default())
+            .add_plugins(EventListenerPlugin::<Change<SliderChanged>>::default())
+            .add_plugins(EventListenerPlugin::<Change<DropdownChanged>>::default())
             .register_widget::<WoodpeckerApp>()
             .register_widget::<Element>()
             .register_widget::<WButton>()
@@ -53,6 +67,12 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
             .register_widget::<IconButton>()
             .register_widget::<Toggle>()
             .register_widget::<Slider>()
+            .register_widget::<WoodpeckerWindow>()
+            .register_widget::<Dropdown>()
+            .register_widget::<TabButton>()
+            .register_widget::<TabContextProvider>()
+            .register_widget::<TabContent>()
+            .register_widget::<Checkbox>()
             .add_systems(
                 Update,
                 (

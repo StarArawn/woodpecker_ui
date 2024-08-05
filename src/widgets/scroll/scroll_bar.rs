@@ -36,7 +36,7 @@ pub struct ScrollBarBundle {
     /// The scrollbar itself.
     pub scroll_bar: ScrollBar,
     /// The styles of the scrollbar
-    /// 
+    ///
     /// Hint: Don't set this directly use: (thumb_styles, track_styles)
     /// in the [`ScrollBar`]
     pub styles: WoodpeckerStyle,
@@ -61,7 +61,7 @@ pub fn render(
         return;
     };
     let context_entity =
-        context_helper.use_context::<ScrollContext>(&mut commands, *current_widget);
+        context_helper.use_context(&mut commands, *current_widget, ScrollContext::default());
 
     let Ok(context) = context_query.get(context_entity) else {
         return;

@@ -11,7 +11,7 @@ use woodpecker_ui::prelude::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(WoodpeckerUIPlugin)
+        .add_plugins(WoodpeckerUIPlugin::default())
         .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)
         .run();
@@ -54,8 +54,8 @@ fn startup(
             },
             children: WidgetChildren::default().with_child::<Toggle>(ToggleBundle {
                 on_changed: On::run(
-                    |event: Listener<OnChange<ToggleChanged>>,
-                    material_list: Res<MaterialList>,
+                    |event: Listener<Change<ToggleChanged>>,
+                     material_list: Res<MaterialList>,
                      mut query: Query<&mut Handle<ColorMaterial>>| {
                         for mut material in query.iter_mut() {
                             if event.data.checked {

@@ -4,6 +4,8 @@ use bevy::prelude::*;
 pub const DARK_BACKGROUND: Color = Color::Srgba(Srgba::new(0.098, 0.106, 0.128, 1.0));
 /// Default background color
 pub const BACKGROUND: Color = Color::Srgba(Srgba::new(0.188, 0.203, 0.274, 1.0));
+/// Default mid background color
+pub const BACKGROUND_MID: Color = Color::srgba(0.224, 0.239, 0.314, 1.0);
 /// Default light background color
 pub const BACKGROUND_LIGHT: Color = Color::Srgba(Srgba::new(0.254, 0.270, 0.349, 1.0));
 /// Default primary color

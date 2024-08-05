@@ -11,7 +11,7 @@ use woodpecker_ui::prelude::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(WoodpeckerUIPlugin)
+        .add_plugins(WoodpeckerUIPlugin::default())
         .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)
         .run();
@@ -47,11 +47,15 @@ fn startup(
                     value: 0.5,
                 },
                 on_changed: On::run(
-                    |event: Listener<OnChange<SliderChanged>>,
-                    mut material_assets: ResMut<Assets<ColorMaterial>>,
+                    |event: Listener<Change<SliderChanged>>,
+                     mut material_assets: ResMut<Assets<ColorMaterial>>,
                      query: Query<&Handle<ColorMaterial>>| {
                         for material in query.iter() {
-                            material_assets.get_mut(material).unwrap().color.set_alpha(event.data.value)
+                            material_assets
+                                .get_mut(material)
+                                .unwrap()
+                                .color
+                                .set_alpha(event.data.value)
                         }
                     },
                 ),

@@ -6,9 +6,9 @@ use bevy::prelude::*;
 
 use super::ScrollContext;
 
-/// A widget that is used to keep track of the layout of the content that 
+/// A widget that is used to keep track of the layout of the content that
 /// the scroll box wraps so that we can correctly calculate the amount of
-/// scroll necessary. 
+/// scroll necessary.
 #[derive(Component, Widget, Reflect, Default, PartialEq, Eq, Clone)]
 #[auto_update(render)]
 #[props(ScrollContent, WidgetLayout)]
@@ -46,7 +46,7 @@ pub fn render(
         return;
     };
     let context_entity =
-        context_helper.use_context::<ScrollContext>(&mut commands, *current_widget);
+        context_helper.use_context(&mut commands, *current_widget, ScrollContext::default());
 
     let Ok(mut context) = context_query.get_mut(context_entity) else {
         return;

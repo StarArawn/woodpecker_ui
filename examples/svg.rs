@@ -5,7 +5,7 @@ use woodpecker_ui::prelude::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(WoodpeckerUIPlugin)
+        .add_plugins(WoodpeckerUIPlugin::default())
         .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)
         .run();
@@ -23,7 +23,7 @@ fn startup(
             WoodpeckerAppBundle::default(),
             WidgetRender::Svg {
                 handle: asset_server.load("woodpecker_svg/woodpecker.svg"),
-                path_color: Some(Srgba::GREEN.into()),
+                color: Some(Srgba::GREEN.into()),
             },
         ))
         .id();

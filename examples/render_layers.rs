@@ -1,14 +1,15 @@
 use bevy::{prelude::*, render::view::RenderLayers};
 use bevy_mod_picking::DefaultPickingPlugins;
-use bevy_vello::render::VelloRenderSettings;
 use woodpecker_ui::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(WoodpeckerUIPlugin)
-        .insert_resource(VelloRenderSettings {
-            canvas_render_layers: RenderLayers::layer(1),
+        .add_plugins(WoodpeckerUIPlugin {
+            render_settings: RenderSettings {
+                layer: RenderLayers::layer(1),
+                ..Default::default()
+            },
         })
         .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)

@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    hash::{DefaultHasher, Hash, Hasher},
+    sync::Arc,
+};
 
 use bevy::prelude::*;
 use bevy_vello::{
@@ -11,17 +14,24 @@ use bevy_vello::{
     },
     VelloScene,
 };
+use image::GenericImage;
 
 use crate::{
-    font::FontManager, image::ImageManager, metrics::WidgetMetrics, prelude::WoodpeckerStyle, svg::{SvgAsset, SvgManager}, DefaultFont
+    font::FontManager,
+    image::ImageManager,
+    metrics::WidgetMetrics,
+    prelude::WoodpeckerStyle,
+    svg::{SvgAsset, SvgManager},
+    DefaultFont,
 };
 
 pub(crate) const VARIATIONS: &[(&str, f32)] = &[];
 
 /// Used to tell Woodpecker UI's rendering system(vello) how
 /// to render a specific widget entity.
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Reflect, Default)]
 pub enum WidgetRender {
+    #[default]
     /// A basic quad shape. Can include borders.
     Quad,
     /// A text shape renderer
@@ -36,6 +46,7 @@ pub enum WidgetRender {
     /// TODO: Untested, write an example?
     Custom {
         /// A custom widget render function
+        #[reflect(ignore)]
         render: WidgetRenderCustom,
     },
     /// A render layer
@@ -51,12 +62,19 @@ pub enum WidgetRender {
         /// A handle to a bevy image.
         handle: Handle<Image>,
     },
+    /// A nine patch image
+    NinePatch {
+        /// An asset handle to a nine patch image.
+        handle: Handle<Image>,
+        /// A bevy image scale mode.
+        scale_mode: ImageScaleMode,
+    },
     /// A SVG asset.
     Svg {
         /// A handle to the SVG asset.
         handle: Handle<SvgAsset>,
         /// An optional color that replaces paths and fills within the svg.
-        path_color: Option<Color>,
+        color: Option<Color>,
     },
 }
 
@@ -67,9 +85,12 @@ impl WidgetRender {
             WidgetRender::Quad => {}
             WidgetRender::Text { .. } => {}
             WidgetRender::Custom { .. } => {}
-            WidgetRender::Layer => todo!(),
+            WidgetRender::Layer => {}
             WidgetRender::Image { .. } => {}
-            WidgetRender::Svg { path_color, .. } => {
+            WidgetRender::NinePatch { .. } => {}
+            WidgetRender::Svg {
+                color: path_color, ..
+            } => {
                 *path_color = Some(color);
             }
         }
@@ -95,6 +116,10 @@ impl WidgetRender {
         let location_y = layout.location.y;
         let size_x = layout.size.width;
         let size_y = layout.size.height;
+
+        if matches!(widget_style.display, crate::styles::WidgetDisplay::None) {
+            return false;
+        }
 
         match self {
             WidgetRender::Quad => {
@@ -241,25 +266,36 @@ impl WidgetRender {
                     return false;
                 };
 
-                let transform = vello::kurbo::Affine::scale(fit_image(
+                let scale = fit_image(
                     image.size().as_vec2(),
                     Vec2::new(layout.size.width, layout.size.height),
-                ) as f64)
-                .with_translation(bevy_vello::prelude::kurbo::Vec2::new(
-                    layout.location.x as f64,
-                    layout.location.y as f64,
-                ));
+                ) as f64;
 
-                let vello_image = image_manager.images.entry(image_handle.into()).or_insert_with(|| peniko::Image::new(
-                    image.data.clone().into(),
-                    peniko::Format::Rgba8,
-                    image.size().x,
-                    image.size().y,
-                ));
+                let transform = vello::kurbo::Affine::scale(scale).with_translation(
+                    bevy_vello::prelude::kurbo::Vec2::new(
+                        layout.location.x as f64,
+                        layout.location.y as f64,
+                    ),
+                );
 
-                vello_scene.draw_image(&vello_image, transform);
+                let vello_image = image_manager
+                    .images
+                    .entry(image_handle.into())
+                    .or_insert_with(|| {
+                        peniko::Image::new(
+                            image.data.clone().into(),
+                            peniko::Format::Rgba8,
+                            image.size().x,
+                            image.size().y,
+                        )
+                    });
+
+                vello_scene.draw_image(vello_image, transform);
             }
-            WidgetRender::Svg { handle, path_color } => {
+            WidgetRender::Svg {
+                handle,
+                color: path_color,
+            } => {
                 let Some(svg_asset) = svg_assets.get(handle) else {
                     return false;
                 };
@@ -282,6 +318,98 @@ impl WidgetRender {
 
                 vello_scene.append(&svg_scene, Some(transform));
             }
+            WidgetRender::NinePatch { handle, scale_mode } => {
+                let Some(image) = image_assets.get(handle) else {
+                    return false;
+                };
+
+                let image_rect = Rect {
+                    min: Vec2::ZERO,
+                    max: Vec2::new(image.size().x as f32, image.size().y as f32),
+                };
+                let layout_size = Vec2::new(layout.size.width, layout.size.height);
+                let slices = match scale_mode {
+                    ImageScaleMode::Sliced(slicer) => {
+                        slicer.compute_slices(image_rect, Some(layout_size))
+                    }
+                    ImageScaleMode::Tiled {
+                        tile_x,
+                        tile_y,
+                        stretch_value,
+                    } => {
+                        let slice = TextureSlice {
+                            texture_rect: image_rect,
+                            draw_size: layout_size,
+                            offset: Vec2::ZERO,
+                        };
+                        slice.tiled(*stretch_value, (*tile_x, *tile_y))
+                    }
+                };
+
+                fn subsection_image_data(image: &mut image::DynamicImage, region: Rect) -> Vec<u8> {
+                    let sub_image = image
+                        .sub_image(
+                            region.min.x as u32,
+                            region.min.y as u32,
+                            region.size().x as u32,
+                            region.size().y as u32,
+                        )
+                        .to_image();
+                    // let _ = sub_image.save_with_format(format!("image{}{}.png", region.min.x, region.min.y), image::ImageFormat::Png);
+                    sub_image.as_raw().clone()
+                }
+
+                for slice in slices.iter() {
+                    let texture_rect_floor = Rect {
+                        min: slice.texture_rect.min,
+                        max: slice.texture_rect.max,
+                    };
+                    let min = texture_rect_floor.min.as_uvec2();
+                    let max = texture_rect_floor.max.as_uvec2();
+
+                    let mut hasher = DefaultHasher::default();
+                    min.hash(&mut hasher);
+                    max.hash(&mut hasher);
+                    let key = hasher.finish();
+
+                    if !image_manager.nine_patch_slices.contains_key(&key) {
+                        let image = image::RgbaImage::from_raw(
+                            image.size().x,
+                            image.size().y,
+                            image.data.clone(),
+                        )
+                        .unwrap();
+                        let mut image: image::DynamicImage = image::DynamicImage::ImageRgba8(image);
+                        let sub_section_data =
+                            subsection_image_data(&mut image, texture_rect_floor);
+                        let vello_image = peniko::Image::new(
+                            sub_section_data.into(),
+                            peniko::Format::Rgba8,
+                            texture_rect_floor.size().x as u32,
+                            texture_rect_floor.size().y as u32,
+                        );
+                        image_manager.nine_patch_slices.insert(key, vello_image);
+                    }
+
+                    let vello_image = image_manager.nine_patch_slices.get(&key).unwrap();
+                    let scale = slice.draw_size / texture_rect_floor.size();
+                    let pos = (
+                        slice.offset.x.round() + (layout.size.width / 2.0),
+                        -slice.offset.y.round() + (layout.size.height / 2.0),
+                    );
+
+                    let transform =
+                        vello::kurbo::Affine::scale_non_uniform(scale.x as f64, scale.y as f64)
+                            .with_translation(bevy_vello::prelude::kurbo::Vec2::new(
+                                (layout.location.x as f64 + pos.0 as f64)
+                                    - (slice.draw_size.x as f64 / 2.0),
+                                (layout.location.y as f64 + pos.1 as f64)
+                                    - (slice.draw_size.y as f64 / 2.0),
+                            ));
+
+                    vello_scene.draw_image(vello_image, transform);
+                }
+            }
         }
         did_layer
     }
@@ -301,6 +429,12 @@ pub(crate) fn fit_image(size_to_fit: Vec2, container_size: Vec2) -> f32 {
 #[derive(Clone)]
 pub struct WidgetRenderCustom {
     inner: Arc<dyn Fn(&mut VelloScene, &taffy::Layout) + Send + Sync>,
+}
+
+impl Default for WidgetRenderCustom {
+    fn default() -> Self {
+        Self::new(|_, _| {})
+    }
 }
 
 impl WidgetRenderCustom {

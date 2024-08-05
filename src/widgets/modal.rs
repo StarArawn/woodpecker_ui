@@ -58,14 +58,14 @@ pub struct ModalBundle {
     pub modal: Modal,
     /// The styles of the modal
     pub styles: WoodpeckerStyle,
-    /// The children of the modal 
+    /// The children of the modal
     pub children: PassedChildren,
     /// The internal children of the modal
     pub internal_children: WidgetChildren,
     /// A transition used to fade in/out the modal.
     pub transition: Transition,
     /// Used to tell woodpecker that the modal should create its
-    /// own render layer context so our fade in/out works as a 
+    /// own render layer context so our fade in/out works as a
     /// group.
     pub widget_render: WidgetRender,
 }
@@ -138,7 +138,7 @@ fn render(
     *transition = Transition {
         reversing: !modal.visible,
         timeout: modal.timeout,
-        ..transition.clone()
+        ..*transition
     };
 
     if state.previous_visibility != modal.visible {

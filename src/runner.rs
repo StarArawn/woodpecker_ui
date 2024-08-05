@@ -14,7 +14,12 @@ use bevy::{
 use bevy_trait_query::One;
 
 use crate::{
-    children::WidgetChildren, context::Widget, hook_helper::StateMarker, metrics::WidgetMetrics, prelude::{PreviousWidget, WidgetMapper}, CurrentWidget, WoodpeckerContext
+    children::WidgetChildren,
+    context::Widget,
+    hook_helper::StateMarker,
+    metrics::WidgetMetrics,
+    prelude::{PreviousWidget, WidgetMapper},
+    CurrentWidget, WoodpeckerContext,
 };
 
 pub(crate) fn system(world: &mut World) {
@@ -23,7 +28,8 @@ pub(crate) fn system(world: &mut World) {
 
     let mut new_ticks = HashMap::new();
 
-    let mut widget_query_state = QueryState::<One<&dyn Widget>, Without<PreviousWidget>>::new(world);
+    let mut widget_query_state =
+        QueryState::<One<&dyn Widget>, Without<PreviousWidget>>::new(world);
 
     // STEP 1: Run update systems and mark widgets as needing to be re-rendered
     // Note: re-rendering means to re-build the sub-tree at X point in the tree.
@@ -47,13 +53,17 @@ pub(crate) fn system(world: &mut World) {
             })
             .collect::<Vec<_>>()
     };
-    
+
     let mut removed_list = HashSet::default();
     let mut metrics = world.remove_resource::<WidgetMetrics>().unwrap();
     metrics.clear_last_frame();
- 
+
     {
-        let _ = info_span!("Update and render widgets", name = "Update and render widgets").entered();
+        let _ = info_span!(
+            "Update and render widgets",
+            name = "Update and render widgets"
+        )
+        .entered();
         for widget_entity in widgets_list {
             // Skip removed widgets.
             if removed_list.contains(&widget_entity) {
@@ -103,7 +113,15 @@ fn update_widgets(
     // STEP 2: Diff widgets
     if run_update_system(world, widget_entity, context, new_ticks, widget_query_state) {
         // Step 3: Run render system.
-        run_render_system(world, context, metrics, new_ticks, removed_list, widget_entity, widget_query_state);
+        run_render_system(
+            world,
+            context,
+            metrics,
+            new_ticks,
+            removed_list,
+            widget_entity,
+            widget_query_state,
+        );
     }
 }
 
@@ -119,11 +137,8 @@ fn get_all_children(world: &mut World, parent_entity: Entity) -> Vec<Entity> {
     };
     for child in bevy_children.into_iter() {
         // Only widget entities should be traversed here
-        if !world
-            .entity(child)
-            .contains::<StateMarker>() && !world
-            .entity(child)
-            .contains::<PreviousWidget>()
+        if !world.entity(child).contains::<StateMarker>()
+            && !world.entity(child).contains::<PreviousWidget>()
         {
             children.push(child);
             children.extend(get_all_children(world, child));

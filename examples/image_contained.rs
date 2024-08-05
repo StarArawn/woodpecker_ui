@@ -111,7 +111,7 @@ fn render(
                         },
                         WidgetRender::Svg {
                             handle: asset_server.load("woodpecker_svg/woodpecker.svg"),
-                            path_color: Some(Srgba::RED.into()),
+                            color: Some(Srgba::RED.into()),
                         },
                     ))
                     .with_child::<WButton>((
@@ -151,7 +151,7 @@ fn render(
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(WoodpeckerUIPlugin)
+        .add_plugins(WoodpeckerUIPlugin::default())
         .add_plugins(DefaultPickingPlugins)
         .register_widget::<MyWidget>()
         .add_systems(Startup, startup)

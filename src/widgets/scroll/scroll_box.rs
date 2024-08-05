@@ -51,8 +51,8 @@ pub struct ScrollBox {
 pub struct ScrollBoxBundle {
     /// The scrollbox itself
     pub scroll_box: ScrollBox,
-    /// Internal Styles 
-    /// 
+    /// Internal Styles
+    ///
     /// Hint: To set the styles use fields in [`ScrollBox`]
     pub styles: WoodpeckerStyle,
     /// The internal children built by this widget.
@@ -81,7 +81,7 @@ pub fn render(
         return;
     };
     let context_entity =
-        context_helper.use_context::<ScrollContext>(&mut commands, *current_widget);
+        context_helper.use_context(&mut commands, *current_widget, ScrollContext::default());
 
     let Ok(mut context) = context_query.get_mut(context_entity) else {
         return;

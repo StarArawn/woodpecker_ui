@@ -5,7 +5,7 @@ use woodpecker_ui::prelude::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(WoodpeckerUIPlugin)
+        .add_plugins(WoodpeckerUIPlugin::default())
         .add_plugins(DefaultPickingPlugins)
         .insert_resource(DebugPickingMode::Normal)
         .add_systems(Startup, startup)
@@ -24,7 +24,7 @@ fn startup(
             children: WidgetChildren::default().with_child::<IconButton>(IconButtonBundle {
                 render: WidgetRender::Svg {
                     handle: asset_server.load("woodpecker_svg/woodpecker.svg"),
-                    path_color: None, // Set by IconButton
+                    color: None, // Set by IconButton
                 },
                 ..Default::default()
             }),

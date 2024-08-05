@@ -1,5 +1,8 @@
 use bevy::prelude::*;
-use bevy_mod_picking::{focus::PickingInteraction, prelude::{EntityEvent, PointerPress}};
+use bevy_mod_picking::{
+    focus::PickingInteraction,
+    prelude::{EntityEvent, PointerPress},
+};
 
 /// Marks an entity as focusable
 #[derive(Component, Default, Debug, Clone, Copy)]
@@ -65,7 +68,7 @@ impl CurrentFocus {
                 }
             }
         }
-        
+
         if none_selected && pointer_query.iter().any(|press| press.is_primary_pressed()) {
             // Blur if we have a focused entity because we had no "hits" this frame.
             if current_focus.get() != Entity::PLACEHOLDER {

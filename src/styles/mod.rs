@@ -383,7 +383,7 @@ fn lerp_units(prop_a: Units, prop_b: Units, x: f32) -> Units {
     match (prop_a, prop_b) {
         (Units::Pixels(a), Units::Pixels(b)) => {
             let mut value = lerp(a, b, x);
-            if a > b  {
+            if a > b {
                 value = value.clamp(b, a);
             } else {
                 value = value.clamp(a, b);

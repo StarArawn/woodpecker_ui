@@ -7,7 +7,7 @@ use bevy::{prelude::*, window::PrimaryWindow};
 
 /// The Woodpecker UI App widget bundle.
 /// Typically this should be the root widget.
-#[derive(Bundle, Default, Clone)]
+#[derive(Bundle, Clone)]
 pub struct WoodpeckerAppBundle {
     /// The app component itself.
     pub app: WoodpeckerApp,
@@ -15,6 +15,19 @@ pub struct WoodpeckerAppBundle {
     pub children: WidgetChildren,
     /// The widget styles,
     pub styles: WoodpeckerStyle,
+    /// The name of the widget.
+    pub name: Name,
+}
+
+impl Default for WoodpeckerAppBundle {
+    fn default() -> Self {
+        Self {
+            app: Default::default(),
+            children: Default::default(),
+            styles: Default::default(),
+            name: Name::new("WoodpeckerApp"),
+        }
+    }
 }
 
 /// The Woodpecker UI App component
