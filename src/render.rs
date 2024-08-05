@@ -349,10 +349,10 @@ impl WidgetRender {
                 fn subsection_image_data(image: &mut image::DynamicImage, region: Rect) -> Vec<u8> {
                     let sub_image = image
                         .sub_image(
-                            region.min.x.floor() as u32,
-                            region.min.y.floor() as u32,
-                            region.size().x.ceil() as u32,
-                            region.size().y.ceil() as u32,
+                            region.min.x as u32,
+                            region.min.y as u32,
+                            region.size().x as u32,
+                            region.size().y as u32,
                         )
                         .to_image();
                     // let _ = sub_image.save_with_format(format!("image{}{}.png", region.min.x, region.min.y), image::ImageFormat::Png);
@@ -361,8 +361,8 @@ impl WidgetRender {
 
                 for slice in slices.iter() {
                     let texture_rect_floor = Rect {
-                        min: slice.texture_rect.min.floor(),
-                        max: slice.texture_rect.max.ceil(),
+                        min: slice.texture_rect.min,
+                        max: slice.texture_rect.max,
                     };
                     let min = texture_rect_floor.min.as_uvec2();
                     let max = texture_rect_floor.max.as_uvec2();
@@ -392,11 +392,10 @@ impl WidgetRender {
                     }
 
                     let vello_image = image_manager.nine_patch_slices.get(&key).unwrap();
-                    let scale =
-                        ((slice.draw_size / texture_rect_floor.size()) * 10.0).ceil() / 10.0;
+                    let scale = slice.draw_size / texture_rect_floor.size();
                     let pos = (
-                        slice.offset.x + (layout.size.width / 2.0),
-                        -slice.offset.y + (layout.size.height / 2.0),
+                        slice.offset.x.round() + (layout.size.width / 2.0),
+                        -slice.offset.y.round() + (layout.size.height / 2.0),
                     );
 
                     let transform =

@@ -82,7 +82,7 @@ fn startup(
                 scale_mode,
             },
         ));
-        position.x += size.x;
+        position.x += size.x + 25.0;
     }
 
     let root = commands
