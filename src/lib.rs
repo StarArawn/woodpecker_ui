@@ -197,6 +197,7 @@ impl Plugin for WoodpeckerUIPlugin {
         embedded_asset!(app, "embedded_assets/Poppins-Regular.ttf");
         embedded_asset!(app, "embedded_assets/icons/arrow-down.svg");
         embedded_asset!(app, "embedded_assets/icons/arrow-up.svg");
+        embedded_asset!(app, "embedded_assets/icons/checkmark.svg");
         app.add_plugins(WoodpeckerLayoutPlugin)
             .add_plugins(VelloPlugin {
                 canvas_render_layers: self.render_settings.layer.clone(),

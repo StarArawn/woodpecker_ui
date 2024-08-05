@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 mod app;
 mod button;
+mod checkbox;
 mod clip;
 /// A set of default colors used by Woodpecker UI.
 pub mod colors;
@@ -22,6 +23,9 @@ mod window;
 pub use app::{WoodpeckerApp, WoodpeckerAppBundle};
 use bevy_mod_picking::prelude::EventListenerPlugin;
 pub use button::{ButtonStyles, WButton, WButtonBundle};
+pub use checkbox::{
+    Checkbox, CheckboxBundle, CheckboxChanged, CheckboxState, CheckboxStyles, CheckboxWidgetStyles,
+};
 pub use clip::{Clip, ClipBundle};
 pub use dropdown::{Dropdown, DropdownBundle, DropdownChanged, DropdownStyles};
 pub use element::{Element, ElementBundle};
@@ -47,6 +51,7 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(EventListenerPlugin::<Change<TextChanged>>::default())
             .add_plugins(EventListenerPlugin::<Change<ToggleChanged>>::default())
+            .add_plugins(EventListenerPlugin::<Change<CheckboxChanged>>::default())
             .add_plugins(EventListenerPlugin::<Change<SliderChanged>>::default())
             .add_plugins(EventListenerPlugin::<Change<DropdownChanged>>::default())
             .register_widget::<WoodpeckerApp>()
@@ -67,6 +72,7 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
             .register_widget::<TabButton>()
             .register_widget::<TabContextProvider>()
             .register_widget::<TabContent>()
+            .register_widget::<Checkbox>()
             .add_systems(
                 Update,
                 (
