@@ -185,7 +185,11 @@ pub fn render(
         set_new_cursor_position(
             &mut state,
             &mut font_manager,
-            &styles.normal.font.map(|a| Handle::Weak(a)).unwrap_or(default_font.0.clone_weak()),
+            &styles
+                .normal
+                .font
+                .map(Handle::Weak)
+                .unwrap_or(default_font.0.clone_weak()),
             styles.normal.font_size,
         );
     }
@@ -230,7 +234,10 @@ pub fn render(
                     set_new_cursor_position(
                         &mut state,
                         &mut font_manager,
-                        &styles.font.map(|a| Handle::Weak(a)).unwrap_or(default_font.0.clone_weak()),
+                        &styles
+                            .font
+                            .map(Handle::Weak)
+                            .unwrap_or(default_font.0.clone_weak()),
                         styles.font_size,
                     );
                 },
@@ -297,7 +304,10 @@ pub fn render(
                 set_new_cursor_position(
                     &mut state,
                     &mut font_manager,
-                    &styles.font.map(|a| Handle::Weak(a)).unwrap_or(default_font.0.clone_weak()),
+                    &styles
+                        .font
+                        .map(Handle::Weak)
+                        .unwrap_or(default_font.0.clone_weak()),
                     styles.font_size,
                 );
             },
@@ -343,7 +353,10 @@ pub fn render(
                     set_new_cursor_position(
                         &mut state,
                         &mut font_manager,
-                        &styles.font.map(|a| Handle::Weak(a)).unwrap_or(default_font.0.clone_weak()),
+                        &styles
+                            .font
+                            .map(Handle::Weak)
+                            .unwrap_or(default_font.0.clone_weak()),
                         styles.font_size,
                     );
                 }
@@ -382,7 +395,10 @@ pub fn render(
                     set_new_cursor_position(
                         &mut state,
                         &mut font_manager,
-                        &styles.font.map(|a| Handle::Weak(a)).unwrap_or(default_font.0.clone_weak()),
+                        &styles
+                            .font
+                            .map(Handle::Weak)
+                            .unwrap_or(default_font.0.clone_weak()),
                         styles.font_size,
                     );
                 }
@@ -416,7 +432,10 @@ pub fn render(
                         set_new_cursor_position(
                             &mut state,
                             &mut font_manager,
-                            &styles.font.map(|a| Handle::Weak(a)).unwrap_or(default_font.0.clone_weak()),
+                            &styles
+                                .font
+                                .map(Handle::Weak)
+                                .unwrap_or(default_font.0.clone_weak()),
                             styles.font_size,
                         );
                     }

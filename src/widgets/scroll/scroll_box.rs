@@ -51,8 +51,8 @@ pub struct ScrollBox {
 pub struct ScrollBoxBundle {
     /// The scrollbox itself
     pub scroll_box: ScrollBox,
-    /// Internal Styles 
-    /// 
+    /// Internal Styles
+    ///
     /// Hint: To set the styles use fields in [`ScrollBox`]
     pub styles: WoodpeckerStyle,
     /// The internal children built by this widget.

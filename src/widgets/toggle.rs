@@ -47,8 +47,12 @@ impl Default for ToggleState {
             circle_transition: Transition {
                 easing: TransitionEasing::QuadraticInOut,
                 timeout: 250.0,
-                style_a: ToggleWidgetStyles::default().check.get_style(&checkbox_state_empty, false),
-                style_b: ToggleWidgetStyles::default().check.get_style(&checkbox_state_empty, false),
+                style_a: ToggleWidgetStyles::default()
+                    .check
+                    .get_style(&checkbox_state_empty, false),
+                style_b: ToggleWidgetStyles::default()
+                    .check
+                    .get_style(&checkbox_state_empty, false),
                 ..Default::default()
             },
         }
@@ -168,7 +172,6 @@ impl Default for ToggleWidgetStyles {
 #[state(ToggleState)]
 pub struct Toggle;
 
-
 /// A convince bundle for the widget
 #[derive(Bundle, Clone)]
 pub struct ToggleBundle {
@@ -255,16 +258,16 @@ fn render(
             easing: TransitionEasing::QuadraticInOut,
             reversing: false,
             timeout: 250.0,
-            style_a: toggle_styles.background.get_style(&*state, true),
-            style_b: toggle_styles.background.get_style(&*state, false),
-            ..transition.clone()
+            style_a: toggle_styles.background.get_style(&state, true),
+            style_b: toggle_styles.background.get_style(&state, false),
+            ..*transition
         };
 
         state.circle_transition = Transition {
             easing: TransitionEasing::QuadraticInOut,
             timeout: 250.0,
-            style_a: toggle_styles.check.get_style(&*state, true),
-            style_b: toggle_styles.check.get_style(&*state, false),
+            style_a: toggle_styles.check.get_style(&state, true),
+            style_b: toggle_styles.check.get_style(&state, false),
             ..Default::default()
         };
     }
@@ -304,8 +307,7 @@ fn render(
         ))
         .insert(On::<Pointer<Click>>::run(
             move |mut state_query: Query<&mut ToggleState>,
-            mut event_writer: EventWriter<OnChange<ToggleChanged>>,
-            | {
+                  mut event_writer: EventWriter<OnChange<ToggleChanged>>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };

@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{context::Widget, prelude::WidgetMapper, ParentWidget};
 
-/// A commponent to pass children down the tree
+/// A component to pass children down the tree
 /// while also having children of its own.
 #[derive(Component, Default, Clone, Deref, DerefMut, PartialEq)]
 pub struct PassedChildren(pub WidgetChildren);
@@ -15,7 +15,7 @@ pub struct PassedChildren(pub WidgetChildren);
 pub struct Mounted;
 
 /// A bevy component that keeps track of Woodpecker UI widget children.
-/// 
+///
 /// This is very similar to bevy commands as in it lets you spawn bundles
 /// but it does not create an entity until
 /// WidgetChildren::process_world is called.
@@ -89,10 +89,12 @@ impl WidgetChildren {
             widget_type,
             Arc::new(
                 move |world: &mut World,
-                widget_mapper: &mut WidgetMapper,
-                parent: ParentWidget,
-                index: usize, widget_type: String| {
-                    let type_name_without_path = widget_type.clone().split("::").last().unwrap().to_string();
+                      widget_mapper: &mut WidgetMapper,
+                      parent: ParentWidget,
+                      index: usize,
+                      widget_type: String| {
+                    let type_name_without_path =
+                        widget_type.clone().split("::").last().unwrap().to_string();
                     let child_widget = widget_mapper.get_or_insert_entity_world(
                         world,
                         widget_type,
@@ -143,7 +145,13 @@ impl WidgetChildren {
             // widget type name. The type name is passed in here from the children vec.
             for (i, (widget_type, child)) in self.children.iter().enumerate() {
                 trace!("Adding as child: {}", widget_type);
-                child(world, &mut widget_mapper, parent_widget, i, widget_type.clone());
+                child(
+                    world,
+                    &mut widget_mapper,
+                    parent_widget,
+                    i,
+                    widget_type.clone(),
+                );
             }
         });
 

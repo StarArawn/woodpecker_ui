@@ -48,10 +48,14 @@ fn startup(
                 },
                 on_changed: On::run(
                     |event: Listener<OnChange<SliderChanged>>,
-                    mut material_assets: ResMut<Assets<ColorMaterial>>,
+                     mut material_assets: ResMut<Assets<ColorMaterial>>,
                      query: Query<&Handle<ColorMaterial>>| {
                         for material in query.iter() {
-                            material_assets.get_mut(material).unwrap().color.set_alpha(event.data.value)
+                            material_assets
+                                .get_mut(material)
+                                .unwrap()
+                                .color
+                                .set_alpha(event.data.value)
                         }
                     },
                 ),

@@ -6,9 +6,9 @@ use bevy::prelude::*;
 
 use super::ScrollContext;
 
-/// A widget that is used to keep track of the layout of the content that 
+/// A widget that is used to keep track of the layout of the content that
 /// the scroll box wraps so that we can correctly calculate the amount of
-/// scroll necessary. 
+/// scroll necessary.
 #[derive(Component, Widget, Reflect, Default, PartialEq, Eq, Clone)]
 #[auto_update(render)]
 #[props(ScrollContent, WidgetLayout)]

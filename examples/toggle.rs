@@ -55,7 +55,7 @@ fn startup(
             children: WidgetChildren::default().with_child::<Toggle>(ToggleBundle {
                 on_changed: On::run(
                     |event: Listener<OnChange<ToggleChanged>>,
-                    material_list: Res<MaterialList>,
+                     material_list: Res<MaterialList>,
                      mut query: Query<&mut Handle<ColorMaterial>>| {
                         for mut material in query.iter_mut() {
                             if event.data.checked {

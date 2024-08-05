@@ -224,7 +224,14 @@ impl Plugin for WoodpeckerUIPlugin {
             .register_type::<styles::WidgetFlexDirection>()
             .register_type::<styles::WidgetFlexWrap>()
             .register_type::<styles::WidgetOverflow>()
-            .register_type::<styles::WidgetPosition>();
+            .register_type::<styles::WidgetPosition>()
+            .register_type::<Option<styles::WidgetAlignContent>>()
+            .register_type::<Option<styles::WidgetAlignItems>>()
+            .register_type::<Option<styles::WidgetDisplay>>()
+            .register_type::<Option<styles::WidgetFlexDirection>>()
+            .register_type::<Option<styles::WidgetFlexWrap>>()
+            .register_type::<Option<styles::WidgetOverflow>>()
+            .register_type::<Option<styles::WidgetPosition>>();
     }
 }
 

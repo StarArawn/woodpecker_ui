@@ -106,6 +106,30 @@ impl Corner {
             self.bottom_right,
         )
     }
+
+    /// Sets the top left corner and returns itself.
+    pub fn top_left(mut self, value: impl Into<Units> + Copy) -> Self {
+        self.top_left = value.into();
+        self
+    }
+
+    /// Sets the top right corner and returns itself.
+    pub fn top_right(mut self, value: impl Into<Units> + Copy) -> Self {
+        self.top_right = value.into();
+        self
+    }
+
+    /// Sets the bottom left corner and returns itself.
+    pub fn bottom_left(mut self, value: impl Into<Units> + Copy) -> Self {
+        self.bottom_left = value.into();
+        self
+    }
+
+    /// Sets the bottom right corner and returns itself.
+    pub fn bottom_right(mut self, value: impl Into<Units> + Copy) -> Self {
+        self.bottom_right = value.into();
+        self
+    }
 }
 
 impl From<Corner> for (Units, Units, Units, Units) {

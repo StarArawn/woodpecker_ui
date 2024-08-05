@@ -14,7 +14,7 @@ pub struct SliderChanged {
     pub value: f32,
 }
 
-/// Slider state 
+/// Slider state
 #[derive(Component, Reflect, Clone, Copy, PartialEq, Default)]
 pub struct SliderState {
     /// The value of the slider
@@ -153,8 +153,9 @@ fn render(
         return;
     };
 
-    let mut default_state = SliderState::default();
-    default_state.value = slider.value;
+    let default_state = SliderState {
+        value: slider.value,
+    };
     let state_entity = hooks.use_state(&mut commands, *current_widget, default_state);
 
     let state = state_query.get(state_entity).unwrap_or(&default_state);
@@ -169,8 +170,8 @@ fn render(
         .entity(*current_widget)
         .insert(On::<Pointer<Click>>::run(
             move |event: Listener<Pointer<Click>>,
-             mut state_query: Query<&mut SliderState>,
-             mut event_writer: EventWriter<OnChange<SliderChanged>>| {
+                  mut state_query: Query<&mut SliderState>,
+                  mut event_writer: EventWriter<OnChange<SliderChanged>>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
@@ -182,7 +183,7 @@ fn render(
                     target: *current_widget,
                     data: SliderChanged { value: state.value },
                 });
-             },
+            },
         ));
 
     children.add::<Element>((

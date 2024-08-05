@@ -36,7 +36,7 @@ pub struct ScrollBarBundle {
     /// The scrollbar itself.
     pub scroll_bar: ScrollBar,
     /// The styles of the scrollbar
-    /// 
+    ///
     /// Hint: Don't set this directly use: (thumb_styles, track_styles)
     /// in the [`ScrollBar`]
     pub styles: WoodpeckerStyle,

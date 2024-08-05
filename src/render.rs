@@ -13,7 +13,12 @@ use bevy_vello::{
 };
 
 use crate::{
-    font::FontManager, image::ImageManager, metrics::WidgetMetrics, prelude::WoodpeckerStyle, svg::{SvgAsset, SvgManager}, DefaultFont
+    font::FontManager,
+    image::ImageManager,
+    metrics::WidgetMetrics,
+    prelude::WoodpeckerStyle,
+    svg::{SvgAsset, SvgManager},
+    DefaultFont,
 };
 
 pub(crate) const VARIATIONS: &[(&str, f32)] = &[];
@@ -250,14 +255,19 @@ impl WidgetRender {
                     layout.location.y as f64,
                 ));
 
-                let vello_image = image_manager.images.entry(image_handle.into()).or_insert_with(|| peniko::Image::new(
-                    image.data.clone().into(),
-                    peniko::Format::Rgba8,
-                    image.size().x,
-                    image.size().y,
-                ));
+                let vello_image = image_manager
+                    .images
+                    .entry(image_handle.into())
+                    .or_insert_with(|| {
+                        peniko::Image::new(
+                            image.data.clone().into(),
+                            peniko::Format::Rgba8,
+                            image.size().x,
+                            image.size().y,
+                        )
+                    });
 
-                vello_scene.draw_image(&vello_image, transform);
+                vello_scene.draw_image(vello_image, transform);
             }
             WidgetRender::Svg { handle, path_color } => {
                 let Some(svg_asset) = svg_assets.get(handle) else {
