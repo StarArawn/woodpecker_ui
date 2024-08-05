@@ -11,6 +11,7 @@ use bevy_vello::{
     },
     VelloScene,
 };
+use image::{GenericImage, Pixel};
 
 use crate::{
     font::FontManager,
@@ -56,6 +57,11 @@ pub enum WidgetRender {
         /// A handle to a bevy image.
         handle: Handle<Image>,
     },
+    /// A nine patch image
+    NinePatch {
+        handle: Handle<Image>,
+        scale_mode: ImageScaleMode,
+    },
     /// A SVG asset.
     Svg {
         /// A handle to the SVG asset.
@@ -72,8 +78,9 @@ impl WidgetRender {
             WidgetRender::Quad => {}
             WidgetRender::Text { .. } => {}
             WidgetRender::Custom { .. } => {}
-            WidgetRender::Layer => todo!(),
+            WidgetRender::Layer => {}
             WidgetRender::Image { .. } => {}
+            WidgetRender::NinePatch { .. } => {}
             WidgetRender::Svg { path_color, .. } => {
                 *path_color = Some(color);
             }
@@ -246,14 +253,17 @@ impl WidgetRender {
                     return false;
                 };
 
-                let transform = vello::kurbo::Affine::scale(fit_image(
+                let scale = fit_image(
                     image.size().as_vec2(),
                     Vec2::new(layout.size.width, layout.size.height),
-                ) as f64)
-                .with_translation(bevy_vello::prelude::kurbo::Vec2::new(
-                    layout.location.x as f64,
-                    layout.location.y as f64,
-                ));
+                ) as f64;
+
+                let transform = vello::kurbo::Affine::scale(scale).with_translation(
+                    bevy_vello::prelude::kurbo::Vec2::new(
+                        layout.location.x as f64,
+                        layout.location.y as f64,
+                    ),
+                );
 
                 let vello_image = image_manager
                     .images
@@ -291,6 +301,81 @@ impl WidgetRender {
                 };
 
                 vello_scene.append(&svg_scene, Some(transform));
+            }
+            WidgetRender::NinePatch { handle, scale_mode } => {
+                let Some(image) = image_assets.get(handle) else {
+                    return false;
+                };
+
+                let image_rect = Rect {
+                    min: Vec2::ZERO,
+                    max: Vec2::new(image.size().x as f32, image.size().y as f32),
+                };
+                let layout_size = Vec2::new(layout.size.width, layout.size.height);
+                let slices = match scale_mode {
+                    ImageScaleMode::Sliced(slicer) => {
+                        slicer.compute_slices(image_rect, Some(layout_size))
+                    }
+                    ImageScaleMode::Tiled {
+                        tile_x,
+                        tile_y,
+                        stretch_value,
+                    } => {
+                        let slice = TextureSlice {
+                            texture_rect: image_rect,
+                            draw_size: layout_size,
+                            offset: Vec2::ZERO,
+                        };
+                        slice.tiled(*stretch_value, (*tile_x, *tile_y))
+                    }
+                };
+
+                fn subsection_image_data(image: &mut image::DynamicImage, region: Rect) -> Vec<u8> {
+                    let sub_image = image.sub_image(
+                        region.min.x as u32,
+                        region.min.y as u32,
+                        region.size().x as u32,
+                        region.size().y as u32,
+                    ).to_image();
+                    // let _ = sub_image.save_with_format(format!("image{}{}.png", region.min.x, region.min.y), image::ImageFormat::Png);
+                    sub_image.as_raw().clone()
+                }
+
+                let image =
+                    image::RgbaImage::from_raw(image.size().x, image.size().y, image.data.clone())
+                        .unwrap();
+                let mut image: image::DynamicImage = image::DynamicImage::ImageRgba8(image);
+
+                for slice in slices.iter() {
+                    // TODO: Cache..
+                    let sub_section_data = subsection_image_data(&mut image, slice.texture_rect);
+                    let vello_image = peniko::Image::new(
+                        sub_section_data.into(),
+                        peniko::Format::Rgba8,
+                        slice.texture_rect.size().x as u32,
+                        slice.texture_rect.size().y as u32,
+                    );
+                    let scale =  slice.draw_size / slice.texture_rect.size();
+                    dbg!(slice.offset, slice.draw_size);
+                    let anchor = (slice.draw_size * (Vec2::new(-0.5, 0.5))) * Vec2::new(layout.size.width, layout.size.height) / slice.draw_size;
+                    let pos = (
+                        slice.offset.x + (layout.size.width / 2.0), // + ((slice.draw_size.x + layout.size.width) / 2.0),
+                        -slice.offset.y + (layout.size.height / 2.0), // + ((slice.draw_size.y + layout.size.height) / 2.0),
+                    );
+                    dbg!(pos, anchor);
+
+
+                    let transform =
+                        vello::kurbo::Affine::scale_non_uniform(scale.x as f64, scale.y as f64)
+                            .with_translation(bevy_vello::prelude::kurbo::Vec2::new(
+                        // vello::kurbo::Affine::translate(bevy_vello::prelude::kurbo::Vec2::new(
+                                (layout.location.x as f64 + pos.0 as f64) - (slice.draw_size.x as f64 / 2.0), // + anchor.x as f64),
+                                (layout.location.y as f64 + pos.1 as f64) - (slice.draw_size.y as f64 / 2.0), // + anchor.y as f64),
+                            ));
+                            // .then_scale_non_uniform(scale.x as f64, scale.y as f64);
+
+                    vello_scene.draw_image(&vello_image, transform);
+                }
             }
         }
         did_layer

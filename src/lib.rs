@@ -161,7 +161,11 @@ impl CurrentWidget {
 /// The Woodpecker UI bevy Plugin
 /// Add this to bevy to use.
 #[derive(Default)]
-pub struct WoodpeckerUIPlugin;
+pub struct WoodpeckerUIPlugin {
+    /// Specifies the render layer that woodpecker will use internally.
+    /// TODO: We should instead associate the context with the camera.
+    pub render_layers: Option<RenderLayers>,
+}
 
 impl Plugin for WoodpeckerUIPlugin {
     fn build(&self, app: &mut App) {
