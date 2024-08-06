@@ -130,6 +130,7 @@ pub(crate) fn runner(
                 #[cfg(not(target_arch = "wasm32"))]
                 {
                     let Ok(mut clipboard) = arboard::Clipboard::new() else {
+                        warn!("no clipboard");
                         return;
                     };
                     let Ok(text) = clipboard.get_text() else {

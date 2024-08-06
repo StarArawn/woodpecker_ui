@@ -20,6 +20,7 @@ bevy-trait-query = { git = "https://github.com/RobWalt/bevy-trait-query", rev = 
 cosmic-text = "0.12"
 image = "0.24"
 interpolation = "0.2"
+palette = "0.7.6"
 smol_str = { version = "0.2", default-features = false }
 taffy = { version = "0.5", features = ["flexbox", "grid"] }
 thiserror = "1.0"

@@ -6,6 +6,7 @@ mod app;
 mod button;
 mod checkbox;
 mod clip;
+mod color_picker;
 /// A set of default colors used by Woodpecker UI.
 pub mod colors;
 mod dropdown;
@@ -27,6 +28,7 @@ pub use checkbox::{
     Checkbox, CheckboxBundle, CheckboxChanged, CheckboxState, CheckboxStyles, CheckboxWidgetStyles,
 };
 pub use clip::{Clip, ClipBundle};
+pub use color_picker::{ColorPicker, ColorPickerBundle, ColorPickerChanged};
 pub use dropdown::{Dropdown, DropdownBundle, DropdownChanged, DropdownStyles};
 pub use element::{Element, ElementBundle};
 pub use icon_button::{IconButton, IconButtonBundle, IconButtonStyles};
@@ -54,6 +56,7 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
             .add_plugins(EventListenerPlugin::<Change<CheckboxChanged>>::default())
             .add_plugins(EventListenerPlugin::<Change<SliderChanged>>::default())
             .add_plugins(EventListenerPlugin::<Change<DropdownChanged>>::default())
+            .add_plugins(EventListenerPlugin::<Change<ColorPickerChanged>>::default())
             .register_widget::<WoodpeckerApp>()
             .register_widget::<Element>()
             .register_widget::<WButton>()
@@ -73,6 +76,7 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
             .register_widget::<TabContextProvider>()
             .register_widget::<TabContent>()
             .register_widget::<Checkbox>()
+            .register_widget::<ColorPicker>()
             .add_systems(
                 Update,
                 (

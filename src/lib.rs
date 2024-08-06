@@ -111,12 +111,13 @@ pub mod prelude {
     pub use crate::layout::system::{WidgetLayout, WidgetPreviousLayout};
     pub use crate::metrics::WidgetMetrics;
     pub use crate::on_change::Change;
-    pub use crate::render::WidgetRender;
+    pub use crate::render::{WidgetRender, WidgetRenderCustom};
     pub use crate::styles::*;
     pub use crate::widgets::*;
     pub use crate::{
         CurrentWidget, ParentWidget, RenderSettings, WidgetRegisterExt, WoodpeckerUIPlugin,
     };
+    pub use bevy_vello::vello;
     pub use bevy_vello::vello::AaConfig;
     pub use woodpecker_ui_macros::*;
 }
@@ -198,6 +199,7 @@ impl Plugin for WoodpeckerUIPlugin {
         embedded_asset!(app, "embedded_assets/icons/arrow-down.svg");
         embedded_asset!(app, "embedded_assets/icons/arrow-up.svg");
         embedded_asset!(app, "embedded_assets/icons/checkmark.svg");
+        embedded_asset!(app, "embedded_assets/icons/copy-outline.svg");
         app.add_plugins(WoodpeckerLayoutPlugin)
             .add_plugins(VelloPlugin {
                 canvas_render_layers: self.render_settings.layer.clone(),
