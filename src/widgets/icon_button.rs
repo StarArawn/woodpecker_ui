@@ -25,13 +25,13 @@ pub struct IconButtonStyles {
 impl Default for IconButtonStyles {
     fn default() -> Self {
         let normal = WoodpeckerStyle {
-            background_color: colors::BACKGROUND_LIGHT,
+            background_color: colors::BACKGROUND_MID,
             ..Default::default()
         };
         Self {
             normal,
             hovered: WoodpeckerStyle {
-                background_color: colors::PRIMARY,
+                background_color: colors::BACKGROUND_LIGHT,
                 ..normal
             },
             width: 32.0.into(),
