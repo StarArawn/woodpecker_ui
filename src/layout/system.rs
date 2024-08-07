@@ -2,24 +2,21 @@
 
 use bevy::{ecs::system::SystemParam, prelude::*, utils::HashMap};
 use bevy_trait_query::One;
-use bevy_vello::{text::VelloFont, VelloScene};
 use taffy::Layout;
 
 use crate::{
     context::{Widget, WoodpeckerContext},
     font::FontManager,
     hook_helper::StateMarker,
-    image::ImageManager,
-    metrics::WidgetMetrics,
     prelude::{PreviousWidget, WidgetPosition, WidgetRender},
-    styles::{Edge, WidgetDisplay},
-    svg::{SvgAsset, SvgManager},
+    styles::Edge,
+    svg::SvgAsset,
     DefaultFont,
 };
 
 use super::{measure::LayoutMeasure, UiLayout, WoodpeckerStyle};
 
-#[derive(Debug, Copy, Clone, Reflect)]
+#[derive(Debug, Copy, Clone, Reflect, Default)]
 pub struct ReflectedLayout {
     /// The relative ordering of the node
     ///
@@ -68,8 +65,8 @@ impl From<&Layout> for ReflectedLayout {
 /// A widget's layout
 /// This is built by taffy and included as a component on
 /// your widgets automatically when taffy computes layout logic.
-#[derive(Component, Debug, Clone, Copy, Deref, DerefMut, Reflect)]
-pub struct WidgetLayout(ReflectedLayout);
+#[derive(Component, Debug, Clone, Copy, Deref, DerefMut, Reflect, Default)]
+pub struct WidgetLayout(pub ReflectedLayout);
 
 impl WidgetLayout {
     /// The position of the widget in pixels
@@ -127,7 +124,7 @@ impl PartialEq for WidgetLayout {
 /// Useful in some cases to see if a widget's layout has
 /// changed.
 #[derive(Component, Debug, Clone, Copy, Deref, DerefMut, Reflect)]
-pub struct WidgetPreviousLayout(ReflectedLayout);
+pub struct WidgetPreviousLayout(pub ReflectedLayout);
 
 impl PartialEq for WidgetPreviousLayout {
     fn eq(&self, other: &Self) -> bool {
@@ -140,8 +137,6 @@ pub(crate) struct LayoutSystemParam<'w, 's> {
     commands: Commands<'w, 's>,
     default_font: Res<'w, DefaultFont>,
     font_manager: ResMut<'w, FontManager>,
-    svg_manager: ResMut<'w, SvgManager>,
-    image_manager: ResMut<'w, ImageManager>,
     ui_layout: ResMut<'w, UiLayout>,
     query: Query<
         'w,
@@ -157,20 +152,17 @@ pub(crate) struct LayoutSystemParam<'w, 's> {
     >,
     state_marker_query: Query<'w, 's, &'static StateMarker>,
     prev_marker_query: Query<'w, 's, &'static PreviousWidget>,
-    layout_query: Query<'w, 's, &'static WidgetLayout>,
     children_query: Query<
         'w,
         's,
         (Entity, &'static Children, One<&'static dyn Widget>),
         (Changed<Children>, Without<PreviousWidget>),
     >,
-    vello_query: Query<'w, 's, &'static mut VelloScene>,
+    layout_query: Query<'w, 's, &'static WidgetLayout>,
     widget_render: Query<'w, 's, &'static WidgetRender>,
     context: Res<'w, WoodpeckerContext>,
-    font_assets: Res<'w, Assets<VelloFont>>,
     image_assets: Res<'w, Assets<Image>>,
     svg_assets: Res<'w, Assets<SvgAsset>>,
-    metrics: ResMut<'w, WidgetMetrics>,
 }
 
 // TODO: Document how layouting works..
@@ -179,30 +171,17 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
         mut commands,
         default_font,
         mut font_manager,
-        mut svg_manager,
-        mut image_manager,
         mut ui_layout,
-        mut query,
         state_marker_query,
+        query,
         prev_marker_query,
-        layout_query,
         children_query,
-        mut vello_query,
+        layout_query,
         widget_render,
         context,
-        font_assets,
         image_assets,
         svg_assets,
-        mut metrics,
     } = layout_system_param;
-
-    let Ok(mut vello_scene) = vello_query.get_single_mut() else {
-        error!("Woodpecker UI: No vello scene spawned!");
-        return;
-    };
-    vello_scene.reset();
-
-    metrics.clear_quad_last_frame();
 
     let root_node = context.get_root_widget();
     ui_layout.root_entity = root_node;
@@ -256,48 +235,17 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
 
     ui_layout.compute(root_node, Vec2::new(width, height));
 
-    let mut cached_layout = HashMap::default();
-
+    // TODO(PERF): Figure out how we can combine traversal and compute together..
     let mut order = 0;
-
-    // After layout computations update layouts and render scene.
-    // Needs to be done in the correct order..
-    // We also need to know if we are going back up the tree so we can pop the clipping and opacity layers.
-    traverse_render_tree(
-        root_node,
-        &mut query,
-        &default_font,
-        &mut font_manager,
-        &mut svg_manager,
-        &mut image_manager,
-        &mut metrics,
-        &widget_render,
-        &mut cached_layout,
-        &mut vello_scene,
-        &font_assets,
-        &image_assets,
-        &svg_assets,
-        &ui_layout,
-        root_node,
-        &mut order,
-        true,
-    );
-
-    for (entity, layout) in cached_layout.iter() {
-        if let Ok(prev_layout) = layout_query.get(*entity) {
-            commands
-                .entity(*entity)
-                .insert(WidgetPreviousLayout(prev_layout.0));
-        }
-        commands.entity(*entity).insert(WidgetLayout(layout.into()));
-    }
-
-    metrics.commit_quad_frame();
+    let mut cache = HashMap::default();
+    traverse_layout_update(&mut commands, root_node, &ui_layout, &query, &layout_query, &mut cache, &mut order);
 }
 
-fn traverse_render_tree(
-    root_node: Entity,
-    query: &mut Query<
+fn traverse_layout_update(
+    commands: &mut Commands,
+    entity: Entity,
+    ui_layout: &UiLayout,
+    query: &Query<
         (
             Entity,
             One<&dyn Widget>,
@@ -307,109 +255,44 @@ fn traverse_render_tree(
         ),
         (Without<StateMarker>, Without<PreviousWidget>),
     >,
-    default_font: &DefaultFont,
-    font_manager: &mut FontManager,
-    svg_manager: &mut SvgManager,
-    image_manager: &mut ImageManager,
-    metrics: &mut WidgetMetrics,
-    widget_render: &Query<&WidgetRender>,
-    cached_layout: &mut HashMap<Entity, Layout>,
-    vello_scene: &mut VelloScene,
-    font_assets: &Assets<VelloFont>,
-    image_assets: &Assets<Image>,
-    svg_assets: &Assets<SvgAsset>,
-    ui_layout: &UiLayout,
-    current_node: Entity,
+    layout_query: &Query<&WidgetLayout>,
+    cache: &mut HashMap<Entity, Layout>,
     order: &mut u32,
-    mut should_render: bool,
 ) {
-    let Ok((entity, _, styles, parent, children)) = query.get_mut(current_node) else {
+    let Ok((entity, _, styles, parent, children)) = query.get(entity) else {
         return;
     };
-
-    let Some(layout) = ui_layout.get_layout(entity).cloned() else {
-        return;
-    };
-
-    let mut layout = layout;
-    if let Some(parent_layout) = parent.map(|parent| {
-        cached_layout
-            .get(&parent.get())
-            .copied()
-            .unwrap_or_else(|| *ui_layout.get_layout(parent.get()).unwrap())
-    }) {
-        if styles.position != WidgetPosition::Fixed {
-            layout.location.x += parent_layout.location.x;
-            layout.location.y += parent_layout.location.y;
+    if let Some(layout) = ui_layout.get_layout(entity) {
+        let mut layout = *layout;
+        if let Ok(prev_layout) = layout_query.get(entity) {
+            commands
+                .entity(entity)
+                .insert(WidgetPreviousLayout(prev_layout.0));
         }
-    }
 
-    layout.order = *order;
-    cached_layout.insert(entity, layout);
-
-    if matches!(styles.display, WidgetDisplay::None) {
-        should_render = false;
-    }
-
-    let mut did_layer = false;
-    if let Ok(widget_render) = widget_render.get(entity) {
-        let parent_layout = parent.map(|parent| {
-            cached_layout
-                .get(&parent.get())
-                .copied()
-                .unwrap_or_else(|| *ui_layout.get_layout(parent.get()).unwrap())
-        });
-        if (parent_layout.is_some() || root_node == entity) && should_render {
-            did_layer = widget_render.render(
-                vello_scene,
-                &layout,
-                &parent_layout.unwrap_or_default(),
-                default_font,
-                font_assets,
-                image_assets,
-                svg_assets,
-                font_manager,
-                svg_manager,
-                image_manager,
-                metrics,
-                styles,
-            );
+        if let Some(parent_layout) = parent.map(|parent| {
+            cache.get(&parent.get()).unwrap_or(ui_layout
+                .get_layout(parent.get()).unwrap())
+        }) {
+            if styles.position != WidgetPosition::Fixed {
+                layout.location.x += parent_layout.location.x;
+                layout.location.y += parent_layout.location.y;
+            }
         }
-    }
+    
+        layout.order = *order;
+        cache.insert(entity, layout);
+        commands.entity(entity).insert(WidgetLayout((&layout).into()));
 
-    let Some(children) = children.map(|c| c.iter().copied().collect::<Vec<_>>()) else {
-        if did_layer {
-            vello_scene.pop_layer();
+        let Some(children) = children.map(|c| c.iter().copied().collect::<Vec<_>>()) else {
+            return;
+        };
+
+        for child in children.iter() {
+            *order += 1;
+            traverse_layout_update(commands, *child, ui_layout, query, layout_query, cache, order);
+            *order -= 1;
         }
-        return;
-    };
-
-    for child in children.iter() {
-        *order += 1;
-        traverse_render_tree(
-            root_node,
-            query,
-            default_font,
-            font_manager,
-            svg_manager,
-            image_manager,
-            metrics,
-            widget_render,
-            cached_layout,
-            vello_scene,
-            font_assets,
-            image_assets,
-            svg_assets,
-            ui_layout,
-            *child,
-            order,
-            should_render,
-        );
-        *order -= 1;
-    }
-
-    if did_layer {
-        vello_scene.pop_layer();
     }
 }
 

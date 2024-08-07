@@ -20,7 +20,7 @@ use crate::{
     font::FontManager,
     image::ImageManager,
     metrics::WidgetMetrics,
-    prelude::WoodpeckerStyle,
+    prelude::{WidgetLayout, WoodpeckerStyle},
     svg::{SvgAsset, SvgManager},
     DefaultFont,
 };
@@ -99,8 +99,8 @@ impl WidgetRender {
     pub(crate) fn render(
         &self,
         vello_scene: &mut VelloScene,
-        layout: &taffy::Layout,
-        parent_layout: &taffy::Layout,
+        layout: &WidgetLayout,
+        parent_layout: &WidgetLayout,
         default_font: &DefaultFont,
         font_assets: &Assets<VelloFont>,
         image_assets: &Assets<Image>,
@@ -114,8 +114,8 @@ impl WidgetRender {
         let mut did_layer = false;
         let location_x = layout.location.x;
         let location_y = layout.location.y;
-        let size_x = layout.size.width;
-        let size_y = layout.size.height;
+        let size_x = layout.size.x;
+        let size_y = layout.size.y;
 
         if matches!(widget_style.display, crate::styles::WidgetDisplay::None) {
             return false;
@@ -126,10 +126,10 @@ impl WidgetRender {
                 let color = widget_style.background_color.to_srgba();
                 let border_color = widget_style.border_color.to_srgba();
                 let rect = kurbo::RoundedRect::new(
-                    location_x as f64 - layout.border.left as f64,
-                    location_y as f64 - layout.border.top as f64,
-                    location_x as f64 + (size_x as f64 + layout.border.right as f64),
-                    location_y as f64 + (size_y as f64 + layout.border.bottom as f64),
+                    location_x as f64 - layout.border.left.value_or(0.0) as f64,
+                    location_y as f64 - layout.border.top.value_or(0.0) as f64,
+                    location_x as f64 + (size_x as f64 + layout.border.right.value_or(0.0) as f64),
+                    location_y as f64 + (size_y as f64 + layout.border.bottom.value_or(0.0) as f64),
                     RoundedRectRadii::new(
                         widget_style.border_radius.top_left.value_or(0.0) as f64,
                         widget_style.border_radius.top_right.value_or(0.0) as f64,
@@ -189,7 +189,7 @@ impl WidgetRender {
                 };
 
                 let Some(buffer) = font_manager.layout(
-                    Vec2::new(parent_layout.size.width, parent_layout.size.height),
+                    Vec2::new(parent_layout.size.x, parent_layout.size.y),
                     widget_style,
                     &font_handle,
                     content,
@@ -268,7 +268,7 @@ impl WidgetRender {
 
                 let scale = fit_image(
                     image.size().as_vec2(),
-                    Vec2::new(layout.size.width, layout.size.height),
+                    Vec2::new(layout.size.x, layout.size.y),
                 ) as f64;
 
                 let transform = vello::kurbo::Affine::scale(scale).with_translation(
@@ -304,7 +304,7 @@ impl WidgetRender {
 
                 let transform = vello::kurbo::Affine::scale(fit_image(
                     Vec2::new(width, height),
-                    Vec2::new(layout.size.width, layout.size.height),
+                    Vec2::new(layout.size.x, layout.size.y),
                 ) as f64)
                 .with_translation(bevy_vello::prelude::kurbo::Vec2::new(
                     layout.location.x as f64,
@@ -327,7 +327,7 @@ impl WidgetRender {
                     min: Vec2::ZERO,
                     max: Vec2::new(image.size().x as f32, image.size().y as f32),
                 };
-                let layout_size = Vec2::new(layout.size.width, layout.size.height);
+                let layout_size = Vec2::new(layout.size.x, layout.size.y);
                 let slices = match scale_mode {
                     ImageScaleMode::Sliced(slicer) => {
                         slicer.compute_slices(image_rect, Some(layout_size))
@@ -394,8 +394,8 @@ impl WidgetRender {
                     let vello_image = image_manager.nine_patch_slices.get(&key).unwrap();
                     let scale = slice.draw_size / texture_rect_floor.size();
                     let pos = (
-                        slice.offset.x.round() + (layout.size.width / 2.0),
-                        -slice.offset.y.round() + (layout.size.height / 2.0),
+                        slice.offset.x.round() + (layout.size.x / 2.0),
+                        -slice.offset.y.round() + (layout.size.y / 2.0),
                     );
 
                     let transform =
@@ -429,7 +429,7 @@ pub(crate) fn fit_image(size_to_fit: Vec2, container_size: Vec2) -> f32 {
 /// A custom widget vello renderer.
 #[derive(Clone)]
 pub struct WidgetRenderCustom {
-    inner: Arc<dyn Fn(&mut VelloScene, &taffy::Layout, &WoodpeckerStyle) + Send + Sync>,
+    inner: Arc<dyn Fn(&mut VelloScene, &WidgetLayout, &WoodpeckerStyle) + Send + Sync>,
 }
 
 impl Default for WidgetRenderCustom {
@@ -442,7 +442,7 @@ impl WidgetRenderCustom {
     /// Create a new custom widget render.
     pub fn new<F>(render: F) -> Self
     where
-        F: Fn(&mut VelloScene, &taffy::Layout, &WoodpeckerStyle) + Send + Sync + 'static,
+        F: Fn(&mut VelloScene, &WidgetLayout, &WoodpeckerStyle) + Send + Sync + 'static,
     {
         Self {
             inner: Arc::new(render),
@@ -452,7 +452,7 @@ impl WidgetRenderCustom {
     pub(crate) fn render(
         &self,
         vello_scene: &mut VelloScene,
-        layout: &taffy::Layout,
+        layout: &WidgetLayout,
         styles: &WoodpeckerStyle,
     ) {
         self.inner.clone()(vello_scene, layout, styles);

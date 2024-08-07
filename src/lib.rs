@@ -97,6 +97,7 @@ mod runner;
 mod styles;
 mod svg;
 mod vello_svg;
+mod vello_renderer;
 mod widgets;
 
 /// A module that exports all publicly exposed types.
@@ -237,6 +238,7 @@ impl Plugin for WoodpeckerUIPlugin {
                     #[cfg(target_arch = "wasm32")]
                     (keyboard_input::runner, keyboard_input::read_paste_events).chain(),
                     hook_helper::HookHelper::update_context_helper,
+                    vello_renderer::run.after(layout::system::run),
                 )
                     .run_if(has_root()),
             )

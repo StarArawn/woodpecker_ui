@@ -89,7 +89,7 @@ impl UiLayout {
         let children = children
             .iter()
             .map(|child| *self.entity_to_taffy.get(child).unwrap_or_else(|| panic!("Woodpecker UI: Couldn't find the child entity layout for {:?}. \
-                This likely occured because you are missing a WoodpeckerStyle component on one of your widgets", child)))
+                This likely occurred because you are missing a WoodpeckerStyle component on one of your widgets", child)))
             .collect::<Vec<_>>();
         self.taffy.set_children(*node_id, &children).unwrap();
     }
@@ -100,7 +100,7 @@ impl UiLayout {
             self.taffy.layout(*taffy_node).ok()
         } else {
             if entity != self.root_entity {
-                warn!(
+                trace!(
                     "Styled child in a non-UI entity hierarchy. You are using an entity \
     with UI components as a child of an entity without UI components, results may be unexpected."
                 );
