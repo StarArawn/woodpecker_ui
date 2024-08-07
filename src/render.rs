@@ -21,6 +21,7 @@ use crate::{
     image::ImageManager,
     metrics::WidgetMetrics,
     prelude::WoodpeckerStyle,
+    styles::WidgetVisibility,
     svg::{SvgAsset, SvgManager},
     DefaultFont,
 };
@@ -123,8 +124,17 @@ impl WidgetRender {
 
         match self {
             WidgetRender::Quad => {
-                let color = widget_style.background_color.to_srgba();
-                let border_color = widget_style.border_color.to_srgba();
+                // if this color shows, its an error, so use classic "rendering error magenta"
+                let error_magenta = Srgba::new(1., 0., 1., 0.);
+
+                let color = match widget_style.visibility {
+                    WidgetVisibility::Visible => widget_style.background_color.to_srgba(),
+                    WidgetVisibility::Hidden => error_magenta,
+                };
+                let border_color = match widget_style.visibility {
+                    WidgetVisibility::Visible => widget_style.border_color.to_srgba(),
+                    WidgetVisibility::Hidden => error_magenta,
+                };
                 let rect = kurbo::RoundedRect::new(
                     location_x as f64 - layout.border.left as f64,
                     location_y as f64 - layout.border.top as f64,
@@ -223,16 +233,23 @@ impl WidgetRender {
                         .font_size(widget_style.font_size)
                         .transform(transform)
                         .normalized_coords(var_loc.coords())
-                        .brush(&Brush::Solid(vello::peniko::Color::rgba(
-                            color.red as f64,
-                            color.green as f64,
-                            color.blue as f64,
-                            color.alpha as f64,
-                        )))
+                        .brush(&Brush::Solid(match widget_style.visibility {
+                            WidgetVisibility::Visible => vello::peniko::Color::rgba(
+                                color.red as f64,
+                                color.green as f64,
+                                color.blue as f64,
+                                color.alpha as f64,
+                            ),
+                            WidgetVisibility::Hidden => {
+                                // if this color shows, its an error, so use classic "rendering error magenta"
+                                peniko::Color::rgba(1., 0., 1., 0.)
+                            }
+                        }))
                         .draw(vello::peniko::Fill::NonZero, glyphs.into_iter());
                 }
             }
             WidgetRender::Custom { render } => {
+                // handling WidgetVisibility is left to the custom renderer
                 render.render(vello_scene, layout, widget_style);
             }
             WidgetRender::Layer => {
@@ -242,7 +259,11 @@ impl WidgetRender {
                 );
                 vello_scene.push_layer(
                     mask_blend,
-                    widget_style.opacity,
+                    if widget_style.visibility == WidgetVisibility::Hidden {
+                        0.
+                    } else {
+                        widget_style.opacity
+                    },
                     Affine::default(),
                     &kurbo::RoundedRect::new(
                         location_x as f64,
@@ -290,7 +311,25 @@ impl WidgetRender {
                         )
                     });
 
-                vello_scene.draw_image(vello_image, transform);
+                match widget_style.visibility {
+                    WidgetVisibility::Visible => vello_scene.draw_image(vello_image, transform),
+                    WidgetVisibility::Hidden => {
+                        // if this color shows, its an error, so use classic "rendering error magenta"
+                        let error_magenta = peniko::Color::rgba(1., 0., 1., 0.);
+                        vello_scene.fill(
+                            peniko::Fill::NonZero,
+                            transform,
+                            peniko::BrushRef::Solid(error_magenta),
+                            None,
+                            &kurbo::Rect::new(
+                                0.0,
+                                0.0,
+                                vello_image.width as f64,
+                                vello_image.height as f64,
+                            ),
+                        )
+                    }
+                };
             }
             WidgetRender::Svg {
                 handle,
@@ -316,7 +355,20 @@ impl WidgetRender {
                     return false;
                 };
 
-                vello_scene.append(&svg_scene, Some(transform));
+                match widget_style.visibility {
+                    WidgetVisibility::Visible => vello_scene.append(&svg_scene, Some(transform)),
+                    WidgetVisibility::Hidden => {
+                        // if this color shows, its an error, so use classic "rendering error magenta"
+                        let error_magenta = peniko::Color::rgba(1., 0., 1., 0.);
+                        vello_scene.fill(
+                            peniko::Fill::NonZero,
+                            transform,
+                            peniko::BrushRef::Solid(error_magenta),
+                            None,
+                            &kurbo::Rect::new(0.0, 0.0, width as f64, height as f64),
+                        );
+                    }
+                };
             }
             WidgetRender::NinePatch { handle, scale_mode } => {
                 let Some(image) = image_assets.get(handle) else {
@@ -328,6 +380,32 @@ impl WidgetRender {
                     max: Vec2::new(image.size().x as f32, image.size().y as f32),
                 };
                 let layout_size = Vec2::new(layout.size.width, layout.size.height);
+
+                if widget_style.visibility == WidgetVisibility::Hidden {
+                    // if this color shows, its an error, so use classic "rendering error magenta"
+                    let error_magenta = peniko::Color::rgba(1., 0., 1., 0.);
+                    let transform = vello::kurbo::Affine::scale(1.).with_translation(
+                        bevy_vello::prelude::kurbo::Vec2::new(
+                            layout.location.x as f64,
+                            layout.location.y as f64,
+                        ),
+                    );
+
+                    vello_scene.fill(
+                        peniko::Fill::NonZero,
+                        transform,
+                        peniko::BrushRef::Solid(error_magenta),
+                        None,
+                        &kurbo::Rect::new(
+                            0.0,
+                            0.0,
+                            layout.size.width as f64,
+                            layout.size.height as f64,
+                        ),
+                    );
+                    return false;
+                };
+
                 let slices = match scale_mode {
                     ImageScaleMode::Sliced(slicer) => {
                         slicer.compute_slices(image_rect, Some(layout_size))
