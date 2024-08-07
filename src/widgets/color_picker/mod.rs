@@ -489,14 +489,14 @@ fn get_hue_gradient(color: Hsva) -> WidgetRender {
         render: WidgetRenderCustom::new(move |vello_scene, layout, _styles| {
             let location_x = layout.location.x as f64;
             let location_y = layout.location.y as f64;
-            let size_x = layout.size.width as f64;
-            let size_y = layout.size.height as f64;
+            let size_x = layout.size.x as f64;
+            let size_y = layout.size.y as f64;
 
             let rect = kurbo::RoundedRect::new(
-                location_x - layout.border.left as f64,
-                location_y - layout.border.top as f64,
-                location_x + (size_x + layout.border.right as f64),
-                location_y + (size_y + layout.border.bottom as f64),
+                location_x - layout.border.left.value_or(0.0) as f64,
+                location_y - layout.border.top.value_or(0.0) as f64,
+                location_x + (size_x + layout.border.right.value_or(0.0) as f64),
+                location_y + (size_y + layout.border.bottom.value_or(0.0) as f64),
                 RoundedRectRadii::new(50.0, 50.0, 50.0, 50.0),
             );
 
@@ -550,14 +550,14 @@ fn get_saturation_gradient(color: Hsva) -> WidgetRender {
         render: WidgetRenderCustom::new(move |vello_scene, layout, _styles| {
             let location_x = layout.location.x as f64;
             let location_y = layout.location.y as f64;
-            let size_x = layout.size.width as f64;
-            let size_y = layout.size.height as f64;
+            let size_x = layout.size.x as f64;
+            let size_y = layout.size.y as f64;
 
             let rect = kurbo::RoundedRect::new(
-                location_x - layout.border.left as f64,
-                location_y - layout.border.top as f64,
-                location_x + (size_x + layout.border.right as f64),
-                location_y + (size_y + layout.border.bottom as f64),
+                location_x - layout.border.left.value_or(0.0) as f64,
+                location_y - layout.border.top.value_or(0.0) as f64,
+                location_x + (size_x + layout.border.right.value_or(0.0) as f64),
+                location_y + (size_y + layout.border.bottom.value_or(0.0) as f64),
                 RoundedRectRadii::new(50.0, 50.0, 50.0, 50.0),
             );
 
@@ -611,14 +611,14 @@ fn get_value_gradient(color: Hsva) -> WidgetRender {
         render: WidgetRenderCustom::new(move |vello_scene, layout, _styles| {
             let location_x = layout.location.x as f64;
             let location_y = layout.location.y as f64;
-            let size_x = layout.size.width as f64;
-            let size_y = layout.size.height as f64;
+            let size_x = layout.size.x as f64;
+            let size_y = layout.size.y as f64;
 
             let rect = kurbo::RoundedRect::new(
-                location_x - layout.border.left as f64,
-                location_y - layout.border.top as f64,
-                location_x + (size_x + layout.border.right as f64),
-                location_y + (size_y + layout.border.bottom as f64),
+                location_x - layout.border.left.value_or(0.0) as f64,
+                location_y - layout.border.top.value_or(0.0) as f64,
+                location_x + (size_x + layout.border.right.value_or(0.0) as f64),
+                location_y + (size_y + layout.border.bottom.value_or(0.0) as f64),
                 RoundedRectRadii::new(50.0, 50.0, 50.0, 50.0),
             );
             let mut color = palette::Hsva::new(color.hue as f64, color.saturation as f64, 0.0, 1.0);
