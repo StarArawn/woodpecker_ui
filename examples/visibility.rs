@@ -1,7 +1,7 @@
-use bevy::{color::palettes::tailwind::RED_400, prelude::*};
+use bevy::{color::palettes::tailwind::*, prelude::*};
 use bevy_mod_picking::{
     events::{Click, Pointer},
-    prelude::On,
+    prelude::{On, Pickable},
     DefaultPickingPlugins,
 };
 use woodpecker_ui::prelude::*;
@@ -279,6 +279,10 @@ fn render(
                 content: "Hello World! I am Woodpecker UI!".into(),
                 word_wrap: false,
             },
+            Pickable::default(),
+            On::<Pointer<Click>>::run(|| {
+                info!("Clicked!");
+            }),
         ))
         .add::<Element>((
             ElementBundle {
@@ -292,18 +296,26 @@ fn render(
             WidgetRender::Image {
                 handle: asset_server.load("woodpecker.jpg"),
             },
+            Pickable::default(),
+            On::<Pointer<Click>>::run(|| {
+                info!("Clicked!");
+            }),
         ))
         .add::<Element>((
             ElementBundle {
                 styles: WoodpeckerStyle {
                     visibility: state.quad,
                     height: Units::Pixels(100.),
-                    background_color: RED_400.into(),
+                    background_color: BLUE_400.into(),
                     ..default()
                 },
                 ..default()
             },
             WidgetRender::Quad,
+            Pickable::default(),
+            On::<Pointer<Click>>::run(|| {
+                info!("Clicked!");
+            }),
         ))
         .add::<Element>((
             ElementBundle {
@@ -318,6 +330,10 @@ fn render(
                 handle: asset_server.load("woodpecker_svg/woodpecker.svg"),
                 color: Some(Srgba::GREEN.into()),
             },
+            Pickable::default(),
+            On::<Pointer<Click>>::run(|| {
+                info!("Clicked!");
+            }),
         ))
         .add::<Element>((
             ElementBundle {
@@ -337,6 +353,10 @@ fn render(
                     ..default()
                 }),
             },
+            Pickable::default(),
+            On::<Pointer<Click>>::run(|| {
+                info!("Clicked!");
+            }),
         ))
         .add::<Element>((
             ElementBundle {
@@ -362,6 +382,10 @@ fn render(
                 ..default()
             },
             WidgetRender::Layer,
+            Pickable::default(),
+            On::<Pointer<Click>>::run(|| {
+                info!("Clicked!");
+            }),
         ));
 
     widget_children.apply(current_widget.as_parent());
