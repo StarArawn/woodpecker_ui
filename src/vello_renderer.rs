@@ -113,7 +113,7 @@ fn traverse_render_tree(
     svg_assets: &Assets<SvgAsset>,
     layout_query: &Query<&WidgetLayout>,
     current_node: Entity,
-    mut should_render: bool,
+    should_render: bool,
 ) {
     let Ok((entity, _, styles, parent, children)) = query.get_mut(current_node) else {
         return;
@@ -126,7 +126,7 @@ fn traverse_render_tree(
     if matches!(styles.display, WidgetDisplay::None)
         || matches!(styles.visibility, WidgetVisibility::Hidden)
     {
-        should_render = false;
+        return;
     }
 
     let mut did_layer = false;
