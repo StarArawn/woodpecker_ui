@@ -123,7 +123,9 @@ fn traverse_render_tree(
         return;
     };
 
-    if matches!(styles.display, WidgetDisplay::None) {
+    if matches!(styles.display, WidgetDisplay::None)
+        || matches!(styles.visibility, WidgetVisibility::Hidden)
+    {
         should_render = false;
     }
 
