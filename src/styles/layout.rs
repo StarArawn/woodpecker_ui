@@ -31,6 +31,17 @@ impl From<WidgetDisplay> for taffy::Display {
     }
 }
 
+/// Visibility shows or hides an element without changing the layout of a document.
+#[derive(Default, Reflect, Copy, Clone, PartialEq, Eq, Debug)]
+pub enum WidgetVisibility {
+    /// The element box is visible.
+    #[default]
+    Visible,
+    /// The element box is invisible (not drawn), but still affects layout as normal. Descendants of the element will be visible if they
+    /// have visibility set to visible. The element cannot receive focus (such as when navigating through tab indexes).
+    Hidden,
+}
+
 /// How children overflowing their container should affect layout
 ///
 /// In CSS the primary effect of this property is to control whether contents of a parent container that overflow that container should

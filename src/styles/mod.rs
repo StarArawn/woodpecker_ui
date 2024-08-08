@@ -42,6 +42,8 @@ pub struct WoodpeckerStyle {
     ///
     /// The default values depends on on which feature flags are enabled. The order of precedence is: Flex, Grid, Block, None.
     pub display: WidgetDisplay,
+    /// Show or hide an element without changing layout
+    pub visibility: WidgetVisibility,
     /// How children overflowing their container should affect layout
     ///
     /// In CSS the primary effect of this property is to control whether contents of a parent container that overflow that container should
@@ -212,6 +214,7 @@ impl WoodpeckerStyle {
             bottom: Units::Pixels(0.0),
         },
         display: WidgetDisplay::Flex,
+        visibility: WidgetVisibility::Visible,
         overflow: WidgetOverflow::Visible,
         position: WidgetPosition::Relative,
         left: Units::Auto,

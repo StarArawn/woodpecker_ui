@@ -10,13 +10,16 @@ use bevy_mod_picking::{
     prelude::PointerMap,
 };
 
-use crate::layout::system::WidgetLayout;
+use crate::{
+    layout::system::WidgetLayout,
+    styles::{WidgetVisibility, WoodpeckerStyle},
+};
 
 pub(crate) fn system(
     pointers: Query<(&PointerId, &PointerLocation)>,
     cameras: Query<(Entity, &Camera, &GlobalTransform, &OrthographicProjection)>,
     primary_window: Query<Entity, With<PrimaryWindow>>,
-    layout_query: Query<(Entity, &WidgetLayout), With<Pickable>>,
+    layout_query: Query<(Entity, &WidgetLayout, &WoodpeckerStyle), With<Pickable>>,
     mut output: EventWriter<PointerHits>,
     #[cfg(feature = "debug-render")] mut gizmos: Gizmos,
 ) {
@@ -61,7 +64,10 @@ pub(crate) fn system(
 
         let picks = layout_query
             .iter()
-            .filter_map(|(entity, layout)| {
+            .filter_map(|(entity, layout, style)| {
+                if matches!(style.visibility, WidgetVisibility::Hidden) {
+                    return None;
+                }
                 let x = layout.location.x;
                 let y = layout.location.y;
                 let rect = Rect::new(x, y, x + layout.size.x, y + layout.size.y);
