@@ -8,31 +8,27 @@ use bevy::{
     prelude::*,
     reflect::Reflect,
 };
-use bevy_mod_picking::prelude::EntityEvent;
+// use bevy_mod_picking::prelude::EntityEvent;
 
 use crate::focus::CurrentFocus;
 
 /// An event that fires when a keyboard button is pressed.
 /// The event target is the currently focused entity.
 /// Note: This does not continously fire unless a button is released.
-#[derive(Clone, PartialEq, Debug, Reflect, Event, EntityEvent)]
+#[derive(Clone, PartialEq, Debug, Reflect, Event)]
 pub struct WidgetKeyboardButtonEvent {
     /// The target of this event
-    #[target]
     pub target: Entity,
-
     /// The keyboard button pressed
     pub code: KeyCode,
 }
 
 /// An event that fires when a keyboard character is sent.
 /// The event target is the currently focused entity.
-#[derive(Clone, PartialEq, Debug, Reflect, Event, EntityEvent)]
+#[derive(Clone, PartialEq, Debug, Reflect, Event)]
 pub struct WidgetKeyboardCharEvent {
     /// The target of this event
-    #[target]
     pub target: Entity,
-
     /// The char pressed
     /// Note this might be a series of chars such as a graphemes
     /// which is why we use SmolStr here.
@@ -41,12 +37,10 @@ pub struct WidgetKeyboardCharEvent {
 
 /// An event that fires when the user pastes(ctrl + v).
 /// The event target is the currently focused entity.
-#[derive(Clone, PartialEq, Debug, Reflect, Event, EntityEvent)]
+#[derive(Clone, PartialEq, Debug, Reflect, Event)]
 pub struct WidgetPasteEvent {
     /// The target of this event
-    #[target]
     pub target: Entity,
-
     /// The char pressed
     /// Note this might be a series of chars such as a graphemes
     /// which is why we use SmolStr here.
@@ -90,13 +84,10 @@ pub(crate) fn read_paste_events(
 }
 
 pub(crate) fn runner(
-    #[cfg(target_arch = "wasm32")] mut commands: Commands,
+    mut commands: Commands,
     mut time_since_last_paste: Local<TimeSinceLastPaste>,
     mut ctrl_pressed: Local<bool>,
     mut key_event: EventReader<KeyboardInput>,
-    mut char_event_writer: EventWriter<WidgetKeyboardCharEvent>,
-    mut button_event_writer: EventWriter<WidgetKeyboardButtonEvent>,
-    #[cfg(not(target_arch = "wasm32"))] mut paste_event_writer: EventWriter<WidgetPasteEvent>,
     current_focus: Res<CurrentFocus>,
 ) {
     let mut v_pressed = false;
@@ -104,6 +95,7 @@ pub(crate) fn runner(
     for event in key_event.read() {
         if event.state == ButtonState::Released {
             match &event.key_code {
+                KeyCode::SuperLeft => *ctrl_pressed = false,
                 KeyCode::ControlLeft => *ctrl_pressed = false,
                 KeyCode::KeyV => {
                     *time_since_last_paste = TimeSinceLastPaste(
@@ -117,6 +109,7 @@ pub(crate) fn runner(
         }
         if current_focus.get() != Entity::PLACEHOLDER && event.state == ButtonState::Pressed {
             match &event.key_code {
+                KeyCode::SuperLeft => *ctrl_pressed = true,
                 KeyCode::ControlLeft => *ctrl_pressed = true,
                 KeyCode::KeyV => v_pressed = true,
                 _ => {}
@@ -137,10 +130,13 @@ pub(crate) fn runner(
                         return;
                     };
                     *time_since_last_paste = TimeSinceLastPaste::default();
-                    paste_event_writer.send(WidgetPasteEvent {
-                        target: current_focus.get(),
-                        paste: smol_str::SmolStr::new(text),
-                    });
+                    commands.trigger_targets(
+                        WidgetPasteEvent {
+                            target: current_focus.get(),
+                            paste: smol_str::SmolStr::new(text),
+                        },
+                        current_focus.get(),
+                    );
                     return;
                 }
 
@@ -168,35 +164,47 @@ pub(crate) fn runner(
                         let _ = sender.send(text);
                     });
 
-                    commands.spawn(WidgetPasteEventWasm {
-                        target: current_focus.get(),
-                        receiver,
-                    });
+                    commands.trigger_targets(
+                        WidgetPasteEventWasm {
+                            target: current_focus.get(),
+                            receiver,
+                        },
+                        current_focus.get(),
+                    );
 
                     return;
                 }
             }
             match &event.logical_key {
                 Key::Character(c) => {
-                    char_event_writer.send(WidgetKeyboardCharEvent {
-                        target: current_focus.get(),
-                        c: c.clone(),
-                    });
+                    commands.trigger_targets(
+                        WidgetKeyboardCharEvent {
+                            target: current_focus.get(),
+                            c: c.clone(),
+                        },
+                        current_focus.get(),
+                    );
                 }
                 Key::Space => {
-                    char_event_writer.send(WidgetKeyboardCharEvent {
-                        target: current_focus.get(),
-                        c: smol_str::SmolStr::new(" "),
-                    });
+                    commands.trigger_targets(
+                        WidgetKeyboardCharEvent {
+                            target: current_focus.get(),
+                            c: smol_str::SmolStr::new(" "),
+                        },
+                        current_focus.get(),
+                    );
                 }
                 _ => {}
             }
 
             // Also send a button event.
-            button_event_writer.send(WidgetKeyboardButtonEvent {
-                target: current_focus.get(),
-                code: event.key_code,
-            });
+            commands.trigger_targets(
+                WidgetKeyboardButtonEvent {
+                    target: current_focus.get(),
+                    code: event.key_code,
+                },
+                current_focus.get(),
+            );
         }
     }
 }

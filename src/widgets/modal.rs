@@ -1,9 +1,9 @@
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Out, Over, Pointer},
-    prelude::{ListenerMut, On},
-    PickableBundle,
-};
+// use bevy_mod_picking::{
+//     events::{Click, Out, Over, Pointer},
+//     prelude::{ListenerMut, On},
+//     PickableBundle,
+// };
 
 use crate::prelude::*;
 
@@ -172,16 +172,16 @@ fn render(
                 },
                 ..Default::default()
             },
-            PickableBundle::default(),
-            On::<Pointer<Over>>::run(|mut event: ListenerMut<Pointer<Over>>| {
-                event.stop_propagation();
-            }),
-            On::<Pointer<Out>>::run(|mut event: ListenerMut<Pointer<Out>>| {
-                event.stop_propagation();
-            }),
-            On::<Pointer<Click>>::run(|mut event: ListenerMut<Pointer<Click>>| {
-                event.stop_propagation();
-            }),
+            // PickableBundle::default(),
+            // On::<Pointer<Over>>::run(|mut event: ListenerMut<Pointer<Over>>| {
+            //     event.stop_propagation();
+            // }),
+            // On::<Pointer<Out>>::run(|mut event: ListenerMut<Pointer<Out>>| {
+            //     event.stop_propagation();
+            // }),
+            // On::<Pointer<Click>>::run(|mut event: ListenerMut<Pointer<Click>>| {
+            //     event.stop_propagation();
+            // }),
             WidgetRender::Quad,
         ))
         // Window

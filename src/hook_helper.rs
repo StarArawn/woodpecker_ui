@@ -1,4 +1,4 @@
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_trait_query::One;
 
 use crate::{context::Widget, CurrentWidget};
@@ -31,7 +31,7 @@ impl HookHelper {
         } else {
             let state_entity = commands
                 .spawn((StateMarker, initial_state))
-                .set_parent(*current_widget)
+                .insert(ChildOf(*current_widget))
                 .id();
 
             let context_types = self.state.entry(*current_widget).or_default();
@@ -68,7 +68,7 @@ impl HookHelper {
         } else {
             let context_entity = commands
                 .spawn((StateMarker, initial_context))
-                .set_parent(*current_widget)
+                .insert(ChildOf(*current_widget))
                 .id();
 
             let context_types = self.internal_context.entry(*current_widget).or_default();
@@ -111,14 +111,14 @@ impl HookHelper {
     pub(crate) fn update_context_helper(
         mut context_helper: ResMut<HookHelper>,
         query: Query<
-            (Entity, &Parent, One<&dyn Widget>),
-            (Changed<Parent>, Without<PreviousWidget>),
+            (Entity, &ChildOf, One<&dyn Widget>),
+            (Changed<ChildOf>, Without<PreviousWidget>),
         >,
-        mut removed: RemovedComponents<Parent>,
+        mut removed: RemovedComponents<ChildOf>,
     ) {
         // Add any that were added or changed.
         for (entity, parent, _) in query.iter() {
-            context_helper.parents.insert(entity, parent.get());
+            context_helper.parents.insert(entity, parent.parent());
         }
 
         // Remove any that were removed.
@@ -139,7 +139,7 @@ impl HookHelper {
             .or_insert_with(|| {
                 commands
                     .spawn(PreviousWidget)
-                    .set_parent(*current_widget)
+                    .insert(ChildOf(*current_widget))
                     .id()
             });
 

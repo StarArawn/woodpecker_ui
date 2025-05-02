@@ -1,6 +1,6 @@
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
-use bevy::prelude::*;
+use bevy::{ecs::system::IntoObserverSystem, prelude::*};
 
 use crate::{context::Widget, prelude::WidgetMapper, ParentWidget};
 
@@ -14,6 +14,8 @@ pub struct PassedChildren(pub WidgetChildren);
 #[derive(Component, Default, Clone)]
 pub struct Mounted;
 
+type ObserverList = Vec<Arc<dyn Fn(&mut World, Entity, &mut Entity) + Sync + Send>>;
+
 /// A bevy component that keeps track of Woodpecker UI widget children.
 ///
 /// This is very similar to bevy commands as in it lets you spawn bundles
@@ -25,12 +27,22 @@ pub struct WidgetChildren {
     // First children are stored in a queue.
     children_queue: Vec<(
         String,
-        Arc<dyn Fn(&mut World, &mut WidgetMapper, ParentWidget, usize, String) + Sync + Send>,
+        Arc<
+            dyn Fn(&mut World, &mut WidgetMapper, ParentWidget, usize, String, ObserverList)
+                + Sync
+                + Send,
+        >,
+        ObserverList,
     )>,
     // When a widget is processed onto a parent they get stored here and removed from the queue.
     children: Vec<(
         String,
-        Arc<dyn Fn(&mut World, &mut WidgetMapper, ParentWidget, usize, String) + Sync + Send>,
+        Arc<
+            dyn Fn(&mut World, &mut WidgetMapper, ParentWidget, usize, String, ObserverList)
+                + Sync
+                + Send,
+        >,
+        ObserverList,
     )>,
     /// Stores a list of previous children.
     prev_children: Vec<String>,
@@ -45,22 +57,22 @@ impl PartialEq for WidgetChildren {
         let queue = self
             .children_queue
             .iter()
-            .map(|(wn, _)| wn.clone())
+            .map(|(wn, _, _)| wn.clone())
             .collect::<Vec<_>>();
         let other_queue = other
             .children_queue
             .iter()
-            .map(|(wn, _)| wn.clone())
+            .map(|(wn, _, _)| wn.clone())
             .collect::<Vec<_>>();
         let children: Vec<String> = self
             .children
             .iter()
-            .map(|(wn, _)| wn.clone())
+            .map(|(wn, _, _)| wn.clone())
             .collect::<Vec<_>>();
         let other_children = other
             .children
             .iter()
-            .map(|(wn, _)| wn.clone())
+            .map(|(wn, _, _)| wn.clone())
             .collect::<Vec<_>>();
         queue == other_queue && children == other_children
     }
@@ -70,6 +82,15 @@ impl WidgetChildren {
     /// Builder pattern for adding children when you initially create the component.
     pub fn with_child<T: Widget>(mut self, bundle: impl Bundle + Clone) -> Self {
         self.add::<T>(bundle);
+        self
+    }
+
+    /// Builder pattern for adding observers when you initially create a child.
+    pub fn with_observe<E: Event, B: Bundle, M>(
+        mut self,
+        observer: impl IntoObserverSystem<E, B, M>,
+    ) -> Self {
+        self.observe(observer);
         self
     }
 
@@ -92,7 +113,10 @@ impl WidgetChildren {
                       widget_mapper: &mut WidgetMapper,
                       parent: ParentWidget,
                       index: usize,
-                      widget_type: String| {
+                      widget_type: String,
+                      observer_list: Vec<
+                    Arc<dyn Fn(&mut World, Entity, &mut Entity) + Send + Sync>,
+                >| {
                     let type_name_without_path =
                         widget_type.clone().split("::").last().unwrap().to_string();
                     let child_widget = widget_mapper.get_or_insert_entity_world(
@@ -107,16 +131,64 @@ impl WidgetChildren {
                         .insert(bundle.clone())
                         .insert(Mounted)
                         .insert(Name::new(type_name_without_path.clone()));
+                    for (id, ob) in observer_list.iter().enumerate() {
+                        let ob_entity = widget_mapper
+                            .observers
+                            .entry((id, child_widget))
+                            .or_insert(Entity::PLACEHOLDER);
+                        (ob)(world, child_widget, ob_entity);
+                    }
                 },
             ),
+            vec![],
         ));
+
+        self
+    }
+
+    /// Add a bevy observer system to the last added entity.
+    pub fn observe<E: Event, B: Bundle, M>(
+        &mut self,
+        observer: impl IntoObserverSystem<E, B, M>,
+    ) -> &mut Self {
+        if let Some((_, _, observers)) = self.children_queue.last_mut() {
+            let o = Arc::new(RwLock::new(Some(Observer::new(observer))));
+            observers.push(Arc::new(move |world, entity, observer_entity| {
+                // If we have an observer we can just change the entity id.
+                if let Ok(mut ob_entity) = world.get_entity_mut(*observer_entity) {
+                    if let Some(mut ob) = ob_entity.get_mut::<Observer>() {
+                        // Only add if we have a new entity id.
+                        if !ob.descriptor().entities().iter().any(|e| *e == entity) {
+                            trace!("Using existing observer {}", entity);
+                            // There is no way to clear out the existing "watched" entities in the observer.
+                            // I'm not sure why this is..
+                            ob.watch_entity(entity);
+                            return;
+                        } else {
+                            return;
+                        }
+                    }
+                }
+
+                // Last we attempt to spawn the observer.
+                // We need to do this funkyness to get around observer not being cloneable.
+                // Instead we can just reuse it!
+                if let Some(ob) = o.write().unwrap().take() {
+                    trace!("Adding new observer for {}", entity);
+                    *observer_entity = world.spawn(ob.with_entity(entity)).id();
+                    return;
+                }
+            }));
+        } else {
+            warn!("Can't attach observer!");
+        }
 
         self
     }
 
     /// Lets you know if the children have changed between now and when they were last rendered.
     pub fn children_changed(&self) -> bool {
-        self.children.iter().map(|(n, _)| n).collect::<Vec<_>>()
+        self.children.iter().map(|(n, _, _)| n).collect::<Vec<_>>()
             != self.prev_children.iter().collect::<Vec<_>>()
     }
 
@@ -143,7 +215,7 @@ impl WidgetChildren {
             // The widget mapper helps keep track of which entities go with which child.
             // They are ensured to have the same entity id for a given child index and
             // widget type name. The type name is passed in here from the children vec.
-            for (i, (widget_type, child)) in self.children.iter().enumerate() {
+            for (i, (widget_type, child, observers)) in self.children.iter().enumerate() {
                 trace!("Adding as child: {}", widget_type);
                 child(
                     world,
@@ -151,6 +223,7 @@ impl WidgetChildren {
                     parent_widget,
                     i,
                     widget_type.clone(),
+                    observers.clone(),
                 );
             }
         });
@@ -164,7 +237,7 @@ impl WidgetChildren {
         self.prev_children = self
             .children
             .iter()
-            .map(|(n, _)| n.clone())
+            .map(|(n, _, _)| n.clone())
             .collect::<Vec<_>>()
     }
 }

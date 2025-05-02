@@ -1,22 +1,23 @@
 use crate::prelude::*;
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Out, Over, Pointer},
-    focus::PickingInteraction,
-    prelude::{On, Pickable},
-};
+// use bevy_mod_picking::{
+//     events::{Click, Out, Over, Pointer},
+//     focus::PickingInteraction,
+//     prelude::{On, Pickable},
+// };
 
 use super::colors;
 
 /// A checkbox change event
-#[derive(Debug, Reflect, Clone)]
+#[derive(Clone, PartialEq, Debug, Reflect)]
+#[reflect(Clone, PartialEq)]
 pub struct CheckboxChanged {
     /// Is the checkbox "checked"?
     pub checked: bool,
 }
 
 /// The state of the checkbox button
-#[derive(Component, Default, Reflect, PartialEq, Clone)]
+#[derive(Component, Debug, Default, Reflect, PartialEq, Clone)]
 pub struct CheckboxState {
     /// Is hovering
     pub is_hovering: bool,
@@ -123,10 +124,6 @@ pub struct CheckboxBundle {
     pub render: WidgetRender,
     /// Provides overrides for picking behavior.
     pub pickable: Pickable,
-    /// Tracks entity interaction state.
-    pub interaction: PickingInteraction,
-    /// Change detection event
-    pub on_changed: On<Change<CheckboxChanged>>,
 }
 
 impl Default for CheckboxBundle {
@@ -138,8 +135,6 @@ impl Default for CheckboxBundle {
             styles: Default::default(),
             render: WidgetRender::Quad,
             pickable: Default::default(),
-            interaction: Default::default(),
-            on_changed: On::<Change<CheckboxChanged>>::run(|| {}),
         }
     }
 }
@@ -147,6 +142,7 @@ impl Default for CheckboxBundle {
 fn render(
     mut commands: Commands,
     current_widget: Res<CurrentWidget>,
+    mut widget_mapper: ResMut<WidgetMapper>,
     mut hooks: ResMut<HookHelper>,
     asset_server: Res<AssetServer>,
     mut query: Query<(
@@ -170,41 +166,60 @@ fn render(
 
     let state = state_query.get(state_entity).unwrap_or(&default_state);
 
+    dbg!(state);
+
     // Insert event listeners
     let current_widget = *current_widget;
-    commands
-        .entity(*current_widget)
-        .insert(On::<Pointer<Over>>::run(
-            move |mut state_query: Query<&mut CheckboxState>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
-                state.is_hovering = true;
-            },
-        ))
-        .insert(On::<Pointer<Out>>::run(
-            move |mut state_query: Query<&mut CheckboxState>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
-                state.is_hovering = false;
-            },
-        ))
-        .insert(On::<Pointer<Click>>::run(
-            move |mut state_query: Query<&mut CheckboxState>,
-                  mut event_writer: EventWriter<Change<CheckboxChanged>>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
-                state.is_checked = !state.is_checked;
-                event_writer.send(Change {
-                    target: *current_widget,
-                    data: CheckboxChanged {
-                        checked: state.is_checked,
-                    },
-                });
-            },
-        ));
+    widget_mapper
+        // Slot 0 might be used so lets just use some random gen'd value
+        .map_observer(10836065465138027339, *current_widget)
+        .or_insert_with(move || {
+            commands
+                .spawn(
+                    Observer::new(
+                        move |_: Trigger<Pointer<Over>>,
+                              mut state_query: Query<&mut CheckboxState>| {
+                            let Ok(mut state) = state_query.get_mut(state_entity) else {
+                                return;
+                            };
+                            state.is_hovering = true;
+                        },
+                    )
+                    .with_entity(*current_widget),
+                )
+                .with_child(
+                    Observer::new(
+                        move |_: Trigger<Pointer<Out>>,
+                              mut state_query: Query<&mut CheckboxState>| {
+                            let Ok(mut state) = state_query.get_mut(state_entity) else {
+                                return;
+                            };
+                            state.is_hovering = false;
+                        },
+                    )
+                    .with_entity(*current_widget),
+                )
+                .with_child(
+                    Observer::new(
+                        move |_: Trigger<Pointer<Click>>,
+                              mut commands: Commands,
+                              mut state_query: Query<&mut CheckboxState>| {
+                            let Ok(mut state) = state_query.get_mut(state_entity) else {
+                                return;
+                            };
+                            state.is_checked = !state.is_checked;
+                            commands.trigger(Change {
+                                target: *current_widget,
+                                data: CheckboxChanged {
+                                    checked: state.is_checked,
+                                },
+                            });
+                        },
+                    )
+                    .with_entity(*current_widget),
+                )
+                .id()
+        });
 
     *children = WidgetChildren::default();
     if state.is_checked {

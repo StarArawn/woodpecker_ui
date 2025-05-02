@@ -4,11 +4,12 @@ use std::{
 };
 
 use bevy::{
-    asset::{io::Reader, AssetLoader, AsyncReadExt, LoadContext},
+    asset::{io::Reader, AssetLoader, LoadContext},
+    platform::collections::HashMap,
     prelude::*,
-    utils::{ConditionalSendFuture, HashMap},
+    tasks::ConditionalSendFuture,
 };
-use bevy_vello::{integrations::VectorLoaderError, vello_svg};
+use bevy_vello::integrations::VectorLoaderError;
 
 #[derive(Default)]
 pub struct SvgLoader;
@@ -27,11 +28,11 @@ impl AssetLoader for SvgLoader {
 
     type Error = VectorLoaderError;
 
-    fn load<'a>(
-        &'a self,
-        reader: &'a mut Reader,
-        _settings: &'a Self::Settings,
-        load_context: &'a mut LoadContext,
+    fn load(
+        &self,
+        reader: &mut dyn Reader,
+        _settings: &Self::Settings,
+        load_context: &mut LoadContext,
     ) -> impl ConditionalSendFuture<Output = Result<Self::Asset, Self::Error>> {
         Box::pin(async move {
             let mut bytes = Vec::new();
@@ -49,8 +50,13 @@ impl AssetLoader for SvgLoader {
             match ext {
                 "svg" => {
                     let svg_str = std::str::from_utf8(&bytes)?;
-                    let svg = usvg::Tree::from_str(svg_str, &usvg::Options::default())
-                        .map_err(vello_svg::Error::Svg)?;
+                    let svg =
+                        usvg::Tree::from_str(svg_str, &usvg::Options::default()).map_err(|_| {
+                            VectorLoaderError::Io(std::io::Error::new(
+                                std::io::ErrorKind::InvalidData,
+                                "Invalid svg file",
+                            ))
+                        })?;
                     let width = svg.size().width();
                     let height = svg.size().height();
                     Ok(SvgAsset {
@@ -102,12 +108,7 @@ impl SvgManager {
                         &svg.tree,
                         color.map(|c| {
                             let c = c.to_srgba();
-                            bevy_vello::vello::peniko::Color::rgba(
-                                c.red as f64,
-                                c.green as f64,
-                                c.blue as f64,
-                                c.alpha as f64,
-                            )
+                            bevy_vello::vello::peniko::Color::new([c.red, c.green, c.blue, c.alpha])
                         }),
                     ))
                 })

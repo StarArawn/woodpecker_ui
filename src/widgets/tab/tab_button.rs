@@ -1,10 +1,10 @@
 use super::TabContext;
 use crate::prelude::*;
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Pointer},
-    prelude::On,
-};
+// use bevy_mod_picking::{
+//     events::{Click, Pointer},
+//     prelude::On,
+// };
 
 /// Tab button
 #[derive(Widget, Component, Clone, PartialEq, Reflect)]
@@ -91,8 +91,8 @@ fn render(
 
     // Actual button.
     let index = tab_button.index;
-    children.add::<WButton>((
-        WButtonBundle {
+    children
+        .add::<WButton>((WButtonBundle {
             button_styles: if is_active {
                 tab_button.active_styles
             } else {
@@ -121,14 +121,15 @@ fn render(
                 },
             )),
             ..Default::default()
-        },
-        On::<Pointer<Click>>::run(move |mut context_query: Query<&mut TabContext>| {
-            let Ok(mut context) = context_query.get_mut(context_entity) else {
-                return;
-            };
-            context.current_index = index;
-        }),
-    ));
+        },))
+        .observe(
+            move |_trigger: Trigger<Pointer<Click>>, mut context_query: Query<&mut TabContext>| {
+                let Ok(mut context) = context_query.get_mut(context_entity) else {
+                    return;
+                };
+                context.current_index = index;
+            },
+        );
 
     children.apply(current_widget.as_parent());
 }

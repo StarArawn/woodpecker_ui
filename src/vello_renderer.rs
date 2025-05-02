@@ -7,7 +7,7 @@ use crate::{
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use bevy_trait_query::One;
-use bevy_vello::{text::VelloFont, VelloScene};
+use bevy_vello::{prelude::VelloFont, VelloScene};
 
 #[derive(SystemParam)]
 pub(crate) struct RenderSystemParam<'w, 's> {
@@ -22,7 +22,7 @@ pub(crate) struct RenderSystemParam<'w, 's> {
             Entity,
             One<&'static dyn Widget>,
             &'static WoodpeckerStyle,
-            Option<&'static Parent>,
+            Option<&'static ChildOf>,
             Option<&'static Children>,
         ),
         (Without<StateMarker>, Without<PreviousWidget>),
@@ -55,7 +55,7 @@ pub(crate) fn run(renderer_system_param: RenderSystemParam) {
         mut metrics,
     } = renderer_system_param;
 
-    let Ok(mut vello_scene) = vello_query.get_single_mut() else {
+    let Ok(mut vello_scene) = vello_query.single_mut() else {
         error!("Woodpecker UI: No vello scene spawned!");
         return;
     };
@@ -96,7 +96,7 @@ fn traverse_render_tree(
             Entity,
             One<&dyn Widget>,
             &WoodpeckerStyle,
-            Option<&Parent>,
+            Option<&ChildOf>,
             Option<&Children>,
         ),
         (Without<StateMarker>, Without<PreviousWidget>),
@@ -131,7 +131,7 @@ fn traverse_render_tree(
 
     let mut did_layer = false;
     if let Ok(widget_render) = widget_render.get(entity) {
-        let parent_layout = parent.map(|parent| *layout_query.get(parent.get()).unwrap());
+        let parent_layout = parent.map(|parent| *layout_query.get(parent.parent()).unwrap());
         if (parent_layout.is_some() || root_node == entity) && should_render {
             did_layer = widget_render.render(
                 vello_scene,
@@ -150,7 +150,7 @@ fn traverse_render_tree(
         }
     }
 
-    let Some(children) = children.map(|c| c.iter().copied().collect::<Vec<_>>()) else {
+    let Some(children) = children.map(|c| c.iter().collect::<Vec<_>>()) else {
         if did_layer {
             vello_scene.pop_layer();
         }

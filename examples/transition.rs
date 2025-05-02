@@ -1,18 +1,17 @@
 use bevy::prelude::*;
-use bevy_mod_picking::DefaultPickingPlugins;
+use bevy_vello::render::VelloView;
 use woodpecker_ui::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)
         .run();
 }
 
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2d, VelloView));
 
     // Some default styles for our transition examples
     let quad_styles = WoodpeckerStyle {

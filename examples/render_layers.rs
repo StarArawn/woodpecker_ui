@@ -1,5 +1,5 @@
 use bevy::{prelude::*, render::view::RenderLayers};
-use bevy_mod_picking::DefaultPickingPlugins;
+use bevy_vello::render::VelloView;
 use woodpecker_ui::prelude::*;
 
 fn main() {
@@ -11,7 +11,6 @@ fn main() {
                 ..Default::default()
             },
         })
-        .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)
         .add_systems(Update, flip_render_layers)
         .run();
@@ -46,7 +45,7 @@ fn startup(
     mut font_manager: ResMut<FontManager>,
     asset_server: Res<AssetServer>,
 ) {
-    commands.spawn((Camera2dBundle::default(), RenderLayers::layer(1)));
+    commands.spawn((Camera2d, VelloView, RenderLayers::layer(1)));
 
     let font = asset_server.load("Outfit/static/Outfit-Regular.ttf");
     font_manager.add(&font);

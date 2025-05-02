@@ -1,10 +1,10 @@
 use crate::prelude::*;
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Drag, DragEnd, DragStart, Drop, Pointer},
-    prelude::{ListenerMut, On, Pickable},
-    PickableBundle,
-};
+// use bevy_mod_picking::{
+//     events::{Click, Drag, DragEnd, DragStart, Drop, Pointer},
+//     prelude::{ListenerMut, On, Pickable},
+//     PickableBundle,
+// };
 
 use super::{map_range, ScrollContext};
 
@@ -74,7 +74,6 @@ pub fn render(
     // === Configuration === //
     // let disabled = scrollbar.disabled;
     let horizontal = scrollbar.horizontal;
-    let _thickness = scrollbar.thickness;
     let thickness = scrollbar.thickness;
     let thumb_color = scrollbar
         .thumb_color
@@ -174,34 +173,63 @@ pub fn render(
         };
     }
 
+    let current_widget = *current_widget;
     children.add::<Element>((
         ElementBundle {
             styles: track_style,
             children: WidgetChildren::default().with_child::<Clip>(ClipBundle {
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: thumb_style,
-                        ..Default::default()
-                    },
-                    PickableBundle::default(),
-                    On::<Pointer<Click>>::run(|mut event: ListenerMut<Pointer<Click>>| {
-                        event.stop_propagation();
-                    }),
-                    On::<Pointer<DragStart>>::target_insert(Pickable::IGNORE), // Disable picking
-                    On::<Pointer<DragEnd>>::target_insert(Pickable::default()), // Re-enable picking
-                    On::<Pointer<Drop>>::run(|| {}),
-                    On::<Pointer<Drag>>::run(
-                        move |event: ListenerMut<Pointer<Drag>>,
-                              mut context_query: Query<&mut ScrollContext>| {
+                children: WidgetChildren::default()
+                    .with_child::<Element>((
+                        ElementBundle {
+                            styles: thumb_style,
+                            ..Default::default()
+                        },
+                        Pickable::default(),
+                        WidgetRender::Quad,
+                    ))
+                    .with_observe(|mut trigger: Trigger<Pointer<Click>>| {
+                        trigger.propagate(false);
+                    })
+                    .with_observe(
+                        |trigger: Trigger<Pointer<DragStart>>, mut commands: Commands| {
+                            commands.entity(trigger.target).insert(Pickable::IGNORE);
+                        },
+                    )
+                    .with_observe(
+                        |trigger: Trigger<Pointer<DragEnd>>, mut commands: Commands| {
+                            commands.entity(trigger.target).insert(Pickable::default());
+                        },
+                    )
+                    .with_observe(
+                        move |trigger: Trigger<Pointer<Drag>>,
+                        layout_query: Query<&WidgetLayout>,
+                         mut context_query: Query<&mut ScrollContext>| {
                             let Ok(mut context) = context_query.get_mut(context_entity) else {
                                 return;
+                            };
+
+                            let Ok(layout) = layout_query.get(*current_widget) else {
+                                return;
+                            };
+
+                            // The size of the thumb as a percentage
+                            let content_width = context.content_width();
+                            let content_height = context.content_height();
+                            let thumb_size_percent = if horizontal {
+                                layout.width() / (content_width - thickness).max(1.0)
+                            } else {
+                                layout.height() / (content_height - thickness).max(1.0)
                             };
 
                             // --- Move Thumb --- //
                             // Positional difference (scaled by thumb size)
                             let pos_diff = (
-                                (context.start_pos.x - (event.pointer_location.position.x - layout.location.x)) / thumb_size_percent,
-                                (context.start_pos.y - (event.pointer_location.position.y - layout.location.y)) / thumb_size_percent,
+                                (context.start_pos.x
+                                    - (trigger.pointer_location.position.x - layout.location.x))
+                                    / thumb_size_percent,
+                                (context.start_pos.y
+                                    - (trigger.pointer_location.position.y - layout.location.y))
+                                    / thumb_size_percent,
                             );
 
                             let start_offset = context.start_offset;
@@ -212,35 +240,37 @@ pub fn render(
                             }
                         },
                     ),
-                    WidgetRender::Quad,
-                )),
                 ..Default::default()
             }),
             ..Default::default()
         },
-        PickableBundle::default(),
-        On::<Pointer<Click>>::run(move |event: ListenerMut<Pointer<Click>>,
-              mut context_query: Query<&mut ScrollContext>| {
-                  let Ok(mut context) = context_query.get_mut(context_entity) else {
-                      return;
-                  };
-
-                  // --- Move Thumb --- //
-                  // Positional difference (scaled by thumb size)
-                  let pos_diff = (
-                      (context.start_pos.x - (event.pointer_location.position.x - layout.location.x)) / thumb_size_percent,
-                      (context.start_pos.y - (event.pointer_location.position.y  - layout.location.y)) / thumb_size_percent,
-                  );
-
-                  let start_offset = context.start_offset;
-                  if horizontal {
-                      context.set_scroll_x(start_offset.x + pos_diff.0);
-                  } else {
-                      context.set_scroll_y(start_offset.y + pos_diff.1);
-                  }
-              }),
+        Pickable::default(),
         WidgetRender::Quad,
-    ));
+    )).observe(move |trigger: Trigger<Pointer<Click>>, layout_query: Query<&WidgetLayout>, mut context_query: Query<&mut ScrollContext>| {
+        let Ok(mut context) = context_query.get_mut(context_entity) else {
+            return;
+        };
+
+        let Ok(layout) = layout_query.get(*current_widget) else {
+            return;
+        };
+
+        // --- Move Thumb --- //
+        // Positional difference (scaled by thumb size)
+        let pos_diff = (
+            (context.start_pos.x - (trigger.pointer_location.position.x - layout.location.x))
+                / thumb_size_percent,
+            (context.start_pos.y - (trigger.pointer_location.position.y - layout.location.y))
+                / thumb_size_percent,
+        );
+
+        let start_offset = context.start_offset;
+        if horizontal {
+            context.set_scroll_x(start_offset.x + pos_diff.0);
+        } else {
+            context.set_scroll_y(start_offset.y + pos_diff.1);
+        }
+    });
 
     children.apply(current_widget.as_parent());
 }

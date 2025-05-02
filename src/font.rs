@@ -1,11 +1,12 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 use bevy::{
+    platform::collections::{HashMap, HashSet},
     prelude::*,
-    utils::{HashMap, HashSet},
 };
-use bevy_vello::{text::VelloFont, vello::glyph::skrifa::FontRef};
+use bevy_vello::prelude::VelloFont;
 use cosmic_text::{Buffer, Family};
+use skrifa::FontRef;
 
 use crate::prelude::WoodpeckerStyle;
 
@@ -158,7 +159,7 @@ pub(crate) fn load_fonts(
     for event in event_reader.read() {
         if let AssetEvent::LoadedWithDependencies { id } = event {
             let font_asset = assets.get(*id).unwrap();
-            let font_data: &[u8] = font_asset.font.data.data();
+            let font_data: &[u8] = &font_asset.bytes;
             let font_data = font_data.to_vec();
 
             let face = cosmic_text::ttf_parser::Face::parse(&font_data, 0).unwrap();

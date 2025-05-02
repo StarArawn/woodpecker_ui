@@ -1,10 +1,10 @@
 use crate::prelude::*;
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Drag, Pointer},
-    focus::PickingInteraction,
-    prelude::{Listener, ListenerMut, On, Pickable},
-};
+// use bevy_mod_picking::{
+//     events::{Click, Drag, Pointer},
+//     focus::PickingInteraction,
+//     prelude::{Listener, ListenerMut, On, Pickable},
+// };
 
 /// A slider change event.
 #[derive(Reflect, Debug, Clone, PartialEq, Default)]
@@ -111,12 +111,8 @@ pub struct SliderBundle {
     pub styles: WoodpeckerStyle,
     /// The render mode of the slider. Default: Quad
     pub render: WidgetRender,
-    /// Change detection event
-    pub on_changed: On<Change<SliderChanged>>,
     /// Provides overrides for picking behavior.
     pub pickable: Pickable,
-    /// Tracks entity interaction state.
-    pub interaction: PickingInteraction,
 }
 
 impl Default for SliderBundle {
@@ -127,15 +123,14 @@ impl Default for SliderBundle {
             children: Default::default(),
             styles: Default::default(),
             render: WidgetRender::Quad,
-            on_changed: On::<Change<SliderChanged>>::run(|| {}),
             pickable: Default::default(),
-            interaction: Default::default(),
         }
     }
 }
 
 fn render(
     mut commands: Commands,
+    mut widget_mapper: ResMut<WidgetMapper>,
     current_widget: Res<CurrentWidget>,
     mut hooks: ResMut<HookHelper>,
     mut query: Query<(
@@ -164,27 +159,42 @@ fn render(
 
     *styles = slider_styles.bar;
 
-    let widget_layout = *widget_layout;
     let current_widget = *current_widget;
-    commands
-        .entity(*current_widget)
-        .insert(On::<Pointer<Click>>::run(
-            move |event: Listener<Pointer<Click>>,
-                  mut state_query: Query<&mut SliderState>,
-                  mut event_writer: EventWriter<Change<SliderChanged>>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
+    widget_mapper
+        // Slot 0 might be used so lets just use some random gen'd value
+        .map_observer(10836065465138027339, *current_widget)
+        .or_insert_with(move || {
+            commands
+                .spawn(
+                    Observer::new(
+                        move |trigger: Trigger<Pointer<Click>>,
+                              mut commands: Commands,
+                              layout_query: Query<&WidgetLayout>,
+                              mut state_query: Query<&mut SliderState>| {
+                            let Ok(mut state) = state_query.get_mut(state_entity) else {
+                                return;
+                            };
+                            let Ok(widget_layout) = layout_query.get(*current_widget) else {
+                                return;
+                            };
 
-                state.value = (event.pointer_location.position.x - widget_layout.location.x)
-                    / widget_layout.size.x;
-                state.value = state.value.clamp(0.0, 1.0);
-                event_writer.send(Change {
-                    target: *current_widget,
-                    data: SliderChanged { value: state.value },
-                });
-            },
-        ));
+                            state.value = (trigger.pointer_location.position.x
+                                - widget_layout.location.x)
+                                / widget_layout.size.x;
+                            state.value = state.value.clamp(0.0, 1.0);
+                            commands.trigger_targets(
+                                Change {
+                                    target: *current_widget,
+                                    data: SliderChanged { value: state.value },
+                                },
+                                *current_widget,
+                            );
+                        },
+                    )
+                    .with_entity(*current_widget),
+                )
+                .id()
+        });
 
     children.add::<Element>((
         ElementBundle {
@@ -197,8 +207,8 @@ fn render(
         WidgetRender::Quad,
     ));
 
-    children.add::<WButton>((
-        WButtonBundle {
+    children
+        .add::<WButton>((WButtonBundle {
             button_styles: ButtonStyles {
                 normal: WoodpeckerStyle {
                     left: slider_left.into(),
@@ -210,25 +220,30 @@ fn render(
                 },
             },
             ..default()
-        },
-        On::<Pointer<Drag>>::run(
-            move |event: ListenerMut<Pointer<Drag>>,
-                  mut state_query: Query<&mut SliderState>,
-                  mut event_writer: EventWriter<Change<SliderChanged>>| {
+        },))
+        .observe(
+            move |trigger: Trigger<Pointer<Drag>>,
+                  mut commands: Commands,
+                  layout_query: Query<&WidgetLayout>,
+                  mut state_query: Query<&mut SliderState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
-
-                state.value = (event.pointer_location.position.x - widget_layout.location.x)
+                let Ok(widget_layout) = layout_query.get(*current_widget) else {
+                    return;
+                };
+                state.value = (trigger.pointer_location.position.x - widget_layout.location.x)
                     / widget_layout.size.x;
                 state.value = state.value.clamp(0.0, 1.0);
-                event_writer.send(Change {
-                    target: *current_widget,
-                    data: SliderChanged { value: state.value },
-                });
+                commands.trigger_targets(
+                    Change {
+                        target: *current_widget,
+                        data: SliderChanged { value: state.value },
+                    },
+                    *current_widget,
+                );
             },
-        ),
-    ));
+        );
 
     children.apply(current_widget.as_parent());
 }

@@ -1,9 +1,5 @@
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Pointer},
-    prelude::On,
-    DefaultPickingPlugins,
-};
+use bevy_vello::render::VelloView;
 use calc::Context;
 use woodpecker_ui::prelude::*;
 
@@ -27,7 +23,6 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)
         .insert_resource(CalcOutput("".into()))
         .register_widget::<Output>()
@@ -50,13 +45,13 @@ pub const BUTTON_STYLES_HOVER: WoodpeckerStyle = WoodpeckerStyle {
 };
 
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2d, VelloView));
 
     let mut buttons = WidgetChildren::default();
 
     // Clear button
-    buttons.add::<WButton>((
-        WButtonBundle {
+    buttons
+        .add::<WButton>(WButtonBundle {
             button_styles: ButtonStyles {
                 normal: BUTTON_STYLES,
                 hovered: BUTTON_STYLES_HOVER,
@@ -76,11 +71,12 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                 },
             )),
             ..Default::default()
-        },
-        On::<Pointer<Click>>::run(|mut calc_output: ResMut<CalcOutput>| {
-            calc_output.0 = "".into();
-        }),
-    ));
+        })
+        .observe(
+            |_: Trigger<Pointer<Click>>, mut calc_output: ResMut<CalcOutput>| {
+                calc_output.0 = "".into();
+            },
+        );
 
     // Text box
     buttons.add::<Element>((
@@ -118,8 +114,8 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     ));
 
     for button in get_buttons() {
-        buttons.add::<WButton>((
-            WButtonBundle {
+        buttons
+            .add::<WButton>((WButtonBundle {
                 button_styles: ButtonStyles {
                     normal: BUTTON_STYLES,
                     hovered: BUTTON_STYLES_HOVER,
@@ -139,17 +135,18 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                     },
                 )),
                 ..Default::default()
-            },
-            On::<Pointer<Click>>::run(move |mut calc_output: ResMut<CalcOutput>| {
-                if button == "=" {
-                    if let Ok(result) = Context::<f64>::default().evaluate(&calc_output.0) {
-                        calc_output.0 = result.to_string();
+            },))
+            .observe(
+                move |_: Trigger<Pointer<Click>>, mut calc_output: ResMut<CalcOutput>| {
+                    if button == "=" {
+                        if let Ok(result) = Context::<f64>::default().evaluate(&calc_output.0) {
+                            calc_output.0 = result.to_string();
+                        }
+                    } else {
+                        calc_output.0 += button;
                     }
-                } else {
-                    calc_output.0 += button;
-                }
-            }),
-        ));
+                },
+            );
     }
 
     let root = commands

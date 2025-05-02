@@ -1,10 +1,10 @@
 use crate::prelude::*;
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Drag, Pointer},
-    prelude::{Listener, On},
-    PickableBundle,
-};
+// use bevy_mod_picking::{
+//     events::{Drag, Pointer},
+//     prelude::{Listener, On},
+//     PickableBundle,
+// };
 
 /// State to keep track of window data.
 #[derive(Default, Component, Reflect, PartialEq, Clone)]
@@ -150,23 +150,22 @@ fn render(
                 )),
                 ..Default::default()
             },
-            PickableBundle::default(),
-            WidgetRender::Quad,
-            On::<Pointer<Drag>>::run(
-                move |event: Listener<Pointer<Drag>>,
-                      mut state_query: Query<&mut WindowState>,
-                      layout_query: Query<&WidgetLayout>| {
-                    let Ok(mut state) = state_query.get_mut(state_entity) else {
-                        return;
-                    };
-                    let Ok(layout) = layout_query.get(*current_widget) else {
-                        return;
-                    };
-                    state.position =
-                        layout.location + (event.pointer_location.position - layout.location);
-                },
-            ),
+            Pickable::default(),
         ))
+        .observe(
+            move |trigger: Trigger<Pointer<Drag>>,
+                  mut state_query: Query<&mut WindowState>,
+                  layout_query: Query<&WidgetLayout>| {
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
+                let Ok(layout) = layout_query.get(*current_widget) else {
+                    return;
+                };
+                state.position =
+                    layout.location + (trigger.pointer_location.position - layout.location);
+            },
+        )
         // Children
         .add::<Element>(ElementBundle {
             styles: window.children_styles,

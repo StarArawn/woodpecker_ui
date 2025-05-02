@@ -1,18 +1,11 @@
-use bevy::{
-    prelude::*,
-    sprite::{MaterialMesh2dBundle, Mesh2dHandle},
-};
-use bevy_mod_picking::{
-    prelude::{Listener, On},
-    DefaultPickingPlugins,
-};
+use bevy::prelude::*;
+use bevy_vello::render::VelloView;
 use woodpecker_ui::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)
         .run();
 }
@@ -29,7 +22,7 @@ fn startup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2d, VelloView));
 
     let material_red = materials.add(Color::Srgba(Srgba::RED));
     let material_blue = materials.add(Color::Srgba(Srgba::BLUE));
@@ -39,12 +32,11 @@ fn startup(
         blue: material_blue,
     });
 
-    commands.spawn(MaterialMesh2dBundle {
-        mesh: Mesh2dHandle(meshes.add(Circle { radius: 50.0 })),
-        material: material_red,
-        transform: Transform::from_xyz(0.0, 0.0, 0.0),
-        ..default()
-    });
+    commands.spawn((
+        Mesh2d(meshes.add(Circle { radius: 50.0 })),
+        MeshMaterial2d(material_red),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+    ));
 
     let root = commands
         .spawn((WoodpeckerAppBundle {
@@ -52,24 +44,23 @@ fn startup(
                 padding: Edge::all(10.0),
                 ..default()
             },
-            children: WidgetChildren::default().with_child::<Toggle>(ToggleBundle {
-                on_changed: On::run(
-                    |event: Listener<Change<ToggleChanged>>,
+            children: WidgetChildren::default()
+                .with_child::<Toggle>(ToggleBundle::default())
+                .with_observe(
+                    |trigger: Trigger<Change<ToggleChanged>>,
                      material_list: Res<MaterialList>,
-                     mut query: Query<&mut Handle<ColorMaterial>>| {
+                     mut query: Query<&mut MeshMaterial2d<ColorMaterial>>| {
                         for mut material in query.iter_mut() {
-                            if event.data.checked {
+                            if trigger.data.checked {
                                 info!("Toggle is now checked!");
-                                *material = material_list.blue.clone();
+                                *material = MeshMaterial2d(material_list.blue.clone());
                             } else {
                                 info!("Toggle is now unchecked!");
-                                *material = material_list.red.clone();
+                                *material = MeshMaterial2d(material_list.red.clone());
                             }
                         }
                     },
                 ),
-                ..default()
-            }),
             ..default()
         },))
         .id();

@@ -1,11 +1,5 @@
 use crate::prelude::*;
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Out, Over, Pointer},
-    focus::PickingInteraction,
-    picking_core::Pickable,
-    prelude::On,
-};
 
 use super::colors;
 
@@ -55,8 +49,6 @@ pub struct IconButtonBundle {
     pub button_styles: IconButtonStyles,
     /// Provides overrides for picking behavior.
     pub pickable: Pickable,
-    /// Tracks entity interaction state.
-    pub interaction: PickingInteraction,
 }
 
 impl Default for IconButtonBundle {
@@ -67,7 +59,6 @@ impl Default for IconButtonBundle {
             children: Default::default(),
             styles: ButtonStyles::default().normal,
             pickable: Default::default(),
-            interaction: Default::default(),
             button_styles: IconButtonStyles::default(),
         }
     }
@@ -125,22 +116,22 @@ pub fn render(
 
     commands
         .entity(**current_widget)
-        .insert(On::<Pointer<Over>>::run(
-            move |mut state_query: Query<&mut IconButtonState>| {
+        .observe(
+            move |_: Trigger<Pointer<Over>>, mut state_query: Query<&mut IconButtonState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
                 state.hovering = true;
             },
-        ))
-        .insert(On::<Pointer<Out>>::run(
-            move |mut state_query: Query<&mut IconButtonState>| {
+        )
+        .observe(
+            move |_: Trigger<Pointer<Out>>, mut state_query: Query<&mut IconButtonState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
                 state.hovering = false;
             },
-        ));
+        );
 
     children.apply(current_widget.as_parent());
 }

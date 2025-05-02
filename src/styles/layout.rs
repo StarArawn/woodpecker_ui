@@ -94,7 +94,6 @@ impl From<WidgetOverflow> for taffy::Overflow {
 ///
 /// [`WidgetPosition::Relative`] is the default value, in contrast to the default behavior in CSS.
 #[derive(Default, Reflect, Copy, Clone, PartialEq, Eq, Debug)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum WidgetPosition {
     /// The offset is computed relative to the final position given by the layout algorithm.
     /// Offsets do not affect the position of any other items; they are effectively a correction factor applied at the end.

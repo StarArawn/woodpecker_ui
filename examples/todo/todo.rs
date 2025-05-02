@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_mod_picking::DefaultPickingPlugins;
+use bevy_vello::render::VelloView;
 use woodpecker_ui::prelude::*;
 
 mod input;
@@ -15,8 +15,6 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new())
-        .add_plugins(DefaultPickingPlugins)
         .register_widget::<TodoList>()
         .register_widget::<TodoInput>()
         .insert_resource(TodoListData(vec![
@@ -35,7 +33,7 @@ fn main() {
 }
 
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2d, VelloView));
 
     let root = commands
         .spawn(WoodpeckerAppBundle {

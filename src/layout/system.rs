@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use bevy::{ecs::system::SystemParam, prelude::*, utils::HashMap};
+use bevy::{ecs::system::SystemParam, platform::collections::HashMap, prelude::*};
 use bevy_trait_query::One;
 use taffy::Layout;
 
@@ -145,7 +145,7 @@ pub(crate) struct LayoutSystemParam<'w, 's> {
             Entity,
             One<&'static dyn Widget>,
             &'static WoodpeckerStyle,
-            Option<&'static Parent>,
+            Option<&'static ChildOf>,
             Option<&'static Children>,
         ),
         (Without<StateMarker>, Without<PreviousWidget>),
@@ -203,15 +203,14 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
             .iter()
             // We only want to add non-fixed entities as children
             .filter(|child| {
-                let Ok((_, _, styles, _, _)) = query.get(**child) else {
+                let Ok((_, _, styles, _, _)) = query.get(*child) else {
                     return true;
                 };
                 !matches!(styles.position, WidgetPosition::Fixed)
             })
             .filter(|child| {
-                !state_marker_query.contains(**child) && !prev_marker_query.contains(**child)
+                !state_marker_query.contains(*child) && !prev_marker_query.contains(*child)
             })
-            .copied()
             .collect::<Vec<_>>();
         ui_layout.add_children(entity, &normal_children);
 
@@ -232,13 +231,20 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
     else {
         return;
     };
-
     ui_layout.compute(root_node, Vec2::new(width, height));
 
     // TODO(PERF): Figure out how we can combine traversal and compute together..
     let mut order = 0;
     let mut cache = HashMap::default();
-    traverse_layout_update(&mut commands, root_node, &ui_layout, &query, &layout_query, &mut cache, &mut order);
+    traverse_layout_update(
+        &mut commands,
+        root_node,
+        &ui_layout,
+        &query,
+        &layout_query,
+        &mut cache,
+        &mut order,
+    );
 }
 
 fn traverse_layout_update(
@@ -250,7 +256,7 @@ fn traverse_layout_update(
             Entity,
             One<&dyn Widget>,
             &WoodpeckerStyle,
-            Option<&Parent>,
+            Option<&ChildOf>,
             Option<&Children>,
         ),
         (Without<StateMarker>, Without<PreviousWidget>),
@@ -271,26 +277,37 @@ fn traverse_layout_update(
         }
 
         if let Some(parent_layout) = parent.map(|parent| {
-            cache.get(&parent.get()).unwrap_or(ui_layout
-                .get_layout(parent.get()).unwrap())
+            cache
+                .get(&parent.parent())
+                .unwrap_or(ui_layout.get_layout(parent.parent()).unwrap())
         }) {
             if styles.position != WidgetPosition::Fixed {
                 layout.location.x += parent_layout.location.x;
                 layout.location.y += parent_layout.location.y;
             }
         }
-    
+
         layout.order = *order;
         cache.insert(entity, layout);
-        commands.entity(entity).insert(WidgetLayout((&layout).into()));
+        commands
+            .entity(entity)
+            .insert(WidgetLayout((&layout).into()));
 
-        let Some(children) = children.map(|c| c.iter().copied().collect::<Vec<_>>()) else {
+        let Some(children) = children.map(|c| c.iter().collect::<Vec<_>>()) else {
             return;
         };
 
         for child in children.iter() {
             *order += 1;
-            traverse_layout_update(commands, *child, ui_layout, query, layout_query, cache, order);
+            traverse_layout_update(
+                commands,
+                *child,
+                ui_layout,
+                query,
+                layout_query,
+                cache,
+                order,
+            );
             *order -= 1;
         }
     }
@@ -303,7 +320,7 @@ fn traverse_upsert_node(
             Entity,
             One<&dyn Widget>,
             &WoodpeckerStyle,
-            Option<&Parent>,
+            Option<&ChildOf>,
             Option<&Children>,
         ),
         (Without<StateMarker>, Without<PreviousWidget>),
@@ -322,7 +339,7 @@ fn traverse_upsert_node(
 
     let layout_measure = if let Ok(widget_render) = query_widget_render.get(entity) {
         if let Some(parent_layout) = if let Some(parent_entity) = parent {
-            layout.get_layout(parent_entity.get())
+            layout.get_layout(parent_entity.parent())
         } else {
             layout.get_layout(root_node)
         } {
@@ -356,7 +373,7 @@ fn traverse_upsert_node(
             image_assets,
             svg_assets,
             layout,
-            *child,
+            child,
         );
     }
 }

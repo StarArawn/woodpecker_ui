@@ -1,9 +1,5 @@
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Pointer},
-    prelude::On,
-    DefaultPickingPlugins,
-};
+use bevy_vello::render::VelloView;
 use woodpecker_ui::prelude::*;
 
 #[derive(Component, Clone, Default, Debug, Copy, PartialEq)]
@@ -52,8 +48,8 @@ fn render(
         return;
     };
 
-    widget_children.add::<WButton>((
-        WButtonBundle {
+    widget_children
+        .add::<WButton>(WButtonBundle {
             children: WidgetChildren::default().with_child::<Element>((
                 ElementBundle {
                     styles: WoodpeckerStyle {
@@ -68,13 +64,14 @@ fn render(
                 },
             )),
             ..Default::default()
-        },
-        On::<Pointer<Click>>::run(move |mut query: Query<&mut MyWidgetState>| {
-            if let Ok(mut state) = query.get_mut(state_entity) {
-                state.show_modal = true;
-            }
-        }),
-    ));
+        })
+        .observe(
+            move |_: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
+                if let Ok(mut state) = query.get_mut(state_entity) {
+                    state.show_modal = true;
+                }
+            },
+        );
 
     widget_children.add::<Modal>(ModalBundle {
         modal: Modal {
@@ -126,12 +123,14 @@ fn render(
                             )),
                             ..Default::default()
                         },
-                        On::<Pointer<Click>>::run(move |mut query: Query<&mut MyWidgetState>| {
+                    ))
+                    .with_observe(
+                        move |_: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                             if let Ok(mut state) = query.get_mut(state_entity) {
                                 state.show_modal = false;
                             }
-                        }),
-                    ))
+                        },
+                    )
                     .with_child::<MyWidget>(MyWidgetBundle {
                         my_widget: MyWidget { depth: my_widget.depth - 1, total: my_widget.total },
                         styles: WoodpeckerStyle {
@@ -154,14 +153,13 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(DefaultPickingPlugins)
         .register_widget::<MyWidget>()
         .add_systems(Startup, startup)
         .run();
 }
 
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2d, VelloView));
 
     let number_of_modals = 5;
 

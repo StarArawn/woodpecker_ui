@@ -1,9 +1,9 @@
 use crate::prelude::*;
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Pointer},
-    prelude::{ListenerMut, On, Pickable, PointerInteraction},
-};
+// use bevy_mod_picking::{
+//     events::{Click, Pointer},
+//     prelude::{ListenerMut, On, Pickable, PointerInteraction},
+// };
 
 /// A textbox change event.
 #[derive(Debug, Clone, Reflect)]
@@ -83,7 +83,7 @@ impl Default for DropdownStyles {
 }
 
 /// Dropdown state
-#[derive(Default, Component, Clone, PartialEq, Reflect)]
+#[derive(Default, Debug, Component, Clone, PartialEq, Reflect)]
 pub struct DropdownState {
     /// Is open?
     is_open: bool,
@@ -118,8 +118,6 @@ pub struct DropdownBundle {
     pub children: WidgetChildren,
     /// Picking
     pub pickable: Pickable,
-    /// Pointer interaction
-    pub interaction: PointerInteraction,
     /// Can focus
     pub focusable: Focusable,
 }
@@ -132,7 +130,6 @@ impl Default for DropdownBundle {
             widget_render: WidgetRender::Quad,
             children: Default::default(),
             pickable: Default::default(),
-            interaction: Default::default(),
             focusable: Focusable,
         }
     }
@@ -141,6 +138,7 @@ impl Default for DropdownBundle {
 fn render(
     mut commands: Commands,
     mut hooks: ResMut<HookHelper>,
+    mut widget_mapper: ResMut<WidgetMapper>,
     current_widget: Res<CurrentWidget>,
     asset_server: Res<AssetServer>,
     mut query: Query<(&Dropdown, &mut WoodpeckerStyle, &mut WidgetChildren)>,
@@ -163,17 +161,27 @@ fn render(
         return;
     };
 
-    commands
-        .entity(**current_widget)
-        .insert((On::<Pointer<Click>>::run(
-            move |mut state_query: Query<&mut DropdownState>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
+    let base_widget = **current_widget;
+    widget_mapper
+        // Slot 0 might be used so lets just use some random gen'd value
+        .map_observer(10836065465138027339, base_widget)
+        .or_insert_with(move || {
+            commands
+                .spawn(
+                    Observer::new(
+                        move |_trigger: Trigger<Pointer<Click>>,
+                              mut state_query: Query<&mut DropdownState>| {
+                            let Ok(mut state) = state_query.get_mut(state_entity) else {
+                                return;
+                            };
 
-                state.is_open = !state.is_open;
-            },
-        ),));
+                            state.is_open = !state.is_open;
+                        },
+                    )
+                    .with_entity(base_widget),
+                )
+                .id()
+        });
 
     *styles = dropdown.styles.background;
 
@@ -210,8 +218,8 @@ fn render(
     let dropdown_entity = **current_widget;
     let mut list_children = WidgetChildren::default();
     for (i, item) in dropdown.list.iter().enumerate() {
-        list_children.add::<WButton>((
-            WButtonBundle {
+        list_children
+            .add::<WButton>((WButtonBundle {
                 children: WidgetChildren::default().with_child::<Element>((
                     ElementBundle {
                         styles: dropdown.styles.text,
@@ -224,13 +232,13 @@ fn render(
                 )),
                 button_styles: dropdown.styles.list_item,
                 ..Default::default()
-            },
-            On::<Pointer<Click>>::run(
-                move |mut event: ListenerMut<Pointer<Click>>,
+            },))
+            .observe(
+                move |mut trigger: Trigger<Pointer<Click>>,
+                      mut commands: Commands,
                       mut state_query: Query<&mut DropdownState>,
-                      dropdown_query: Query<&Dropdown>,
-                      mut event_writer: EventWriter<Change<DropdownChanged>>| {
-                    event.stop_propagation();
+                      dropdown_query: Query<&Dropdown>| {
+                    trigger.propagate(false);
                     let Ok(mut state) = state_query.get_mut(state_entity) else {
                         return;
                     };
@@ -239,15 +247,17 @@ fn render(
                     };
                     state.current_value.clone_from(&dropdown.list[i]);
                     state.is_open = false;
-                    event_writer.send(Change {
-                        target: dropdown_entity,
-                        data: DropdownChanged {
-                            value: state.current_value.clone(),
+                    commands.trigger_targets(
+                        Change {
+                            target: dropdown_entity,
+                            data: DropdownChanged {
+                                value: state.current_value.clone(),
+                            },
                         },
-                    });
+                        dropdown_entity,
+                    );
                 },
-            ),
-        ));
+            );
     }
     children.add::<Element>((
         ElementBundle {

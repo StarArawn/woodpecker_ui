@@ -1,13 +1,14 @@
 use std::cmp::Ordering;
 
-use bevy::{input::mouse::MouseWheel, prelude::*, window::PrimaryWindow};
-use bevy_mod_picking::{
-    backend::{HitData, PointerHits},
-    events::Pointer,
-    focus::HoverMap,
-    picking_core::Pickable,
-    pointer::{PointerId, PointerLocation},
-    prelude::PointerMap,
+use bevy::{
+    input::mouse::MouseWheel,
+    picking::{
+        backend::{HitData, PointerHits},
+        hover::HoverMap,
+        pointer::{PointerId, PointerLocation, PointerMap},
+    },
+    prelude::*,
+    window::PrimaryWindow,
 };
 
 use crate::{
@@ -17,7 +18,7 @@ use crate::{
 
 pub(crate) fn system(
     pointers: Query<(&PointerId, &PointerLocation)>,
-    cameras: Query<(Entity, &Camera, &GlobalTransform, &OrthographicProjection)>,
+    cameras: Query<(Entity, &Camera, &GlobalTransform, &Projection)>,
     primary_window: Query<Entity, With<PrimaryWindow>>,
     layout_query: Query<(Entity, &WidgetLayout, &WoodpeckerStyle), With<Pickable>>,
     mut output: EventWriter<PointerHits>,
@@ -41,7 +42,7 @@ pub(crate) fn system(
             .find(|(_, camera, _, _)| {
                 camera
                     .target
-                    .normalize(Some(match primary_window.get_single() {
+                    .normalize(Some(match primary_window.single() {
                         Ok(w) => w,
                         Err(_) => return false,
                     }))
@@ -52,7 +53,7 @@ pub(crate) fn system(
             continue;
         };
 
-        let Some(mut cursor_pos_world) =
+        let Ok(mut cursor_pos_world) =
             camera.viewport_to_world_2d(cam_transform, location.position)
         else {
             continue;
@@ -62,7 +63,7 @@ pub(crate) fn system(
         cursor_pos_world.x += screen_half_size.x;
         cursor_pos_world.y = -cursor_pos_world.y + screen_half_size.y;
 
-        let picks = layout_query
+        let picks = sorted_layouts
             .iter()
             .filter_map(|(entity, layout, style)| {
                 if matches!(style.visibility, WidgetVisibility::Hidden) {
@@ -91,9 +92,8 @@ pub(crate) fn system(
                         });
                         gizmos.linestrip_2d([tl, tr, br, bl, tl], Srgba::RED);
                     }
-
                     Some((
-                        entity,
+                        *entity,
                         // Is 10k entities enough? :shrug:
                         HitData::new(cam_entity, total as f32 - layout.order as f32, None, None),
                     ))
@@ -104,7 +104,7 @@ pub(crate) fn system(
             .collect::<Vec<_>>();
 
         let order = camera.order as f32;
-        output.send(PointerHits::new(*pointer, picks, order));
+        output.write(PointerHits::new(*pointer, picks, order));
     }
 }
 
@@ -115,13 +115,13 @@ pub struct MouseWheelScroll {
 }
 
 pub fn mouse_wheel_system(
+    mut commands: Commands,
     // Input
     hover_map: Res<HoverMap>,
     pointer_map: Res<PointerMap>,
     pointers: Query<&PointerLocation>,
     // Bevy Input
     mut evr_scroll: EventReader<MouseWheel>,
-    mut pointer_scroll: EventWriter<Pointer<MouseWheelScroll>>,
 ) {
     let pointer_location = |pointer_id: PointerId| {
         pointer_map
@@ -144,12 +144,15 @@ pub fn mouse_wheel_system(
 
         for mwe in evr_scroll.read() {
             let scroll = Vec2::new(mwe.x, mwe.y);
-            pointer_scroll.send(Pointer::new(
-                pointer_id,
-                location.clone(),
+            commands.trigger_targets(
+                Pointer::new(
+                    pointer_id,
+                    location.clone(),
+                    hovered_entity,
+                    MouseWheelScroll { scroll },
+                ),
                 hovered_entity,
-                MouseWheelScroll { scroll },
-            ));
+            );
         }
     }
 }

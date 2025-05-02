@@ -5,16 +5,17 @@ use std::{
 
 use bevy::prelude::*;
 use bevy_vello::{
-    text::VelloFont,
+    prelude::VelloFont,
     vello::{
         self,
-        glyph::{skrifa::MetadataProvider, Glyph},
         kurbo::{self, Affine, RoundedRectRadii},
-        peniko::{self, Brush},
+        peniko::{self, Blob, Brush},
+        Glyph,
     },
     VelloScene,
 };
 use image::GenericImage;
+use skrifa::MetadataProvider;
 
 use crate::{
     font::FontManager,
@@ -67,7 +68,7 @@ pub enum WidgetRender {
         /// An asset handle to a nine patch image.
         handle: Handle<Image>,
         /// A bevy image scale mode.
-        scale_mode: ImageScaleMode,
+        scale_mode: SpriteImageMode,
     },
     /// A SVG asset.
     Svg {
@@ -141,12 +142,12 @@ impl WidgetRender {
                 vello_scene.fill(
                     peniko::Fill::NonZero,
                     kurbo::Affine::default(),
-                    peniko::Color::rgba(
-                        border_color.red as f64,
-                        border_color.green as f64,
-                        border_color.blue as f64,
-                        border_color.alpha as f64,
-                    ),
+                    peniko::Color::new([
+                        border_color.red,
+                        border_color.green,
+                        border_color.blue,
+                        border_color.alpha,
+                    ]),
                     None,
                     &rect,
                 );
@@ -166,12 +167,7 @@ impl WidgetRender {
                 vello_scene.fill(
                     peniko::Fill::NonZero,
                     kurbo::Affine::default(),
-                    peniko::Color::rgba(
-                        color.red as f64,
-                        color.green as f64,
-                        color.blue as f64,
-                        color.alpha as f64,
-                    ),
+                    peniko::Color::new([color.red, color.green, color.blue, color.alpha]),
                     None,
                     &rect,
                 );
@@ -199,7 +195,6 @@ impl WidgetRender {
                 };
 
                 let font_ref = font_manager.get_vello_font(&font_handle);
-
                 for run in buffer.layout_runs() {
                     let mut glyphs = vec![];
                     for glyph in run.glyphs.iter() {
@@ -218,17 +213,21 @@ impl WidgetRender {
                     let axes = font_ref.axes();
                     let var_loc = axes.location(VARIATIONS);
                     let color = widget_style.color.to_srgba();
+                    let font = bevy_vello::vello::peniko::Font::new(
+                        Blob::new(Arc::new(vello_font.bytes.clone())),
+                        0,
+                    );
                     vello_scene
-                        .draw_glyphs(&vello_font.font)
+                        .draw_glyphs(&font)
                         .font_size(widget_style.font_size)
                         .transform(transform)
-                        .normalized_coords(var_loc.coords())
-                        .brush(&Brush::Solid(vello::peniko::Color::rgba(
-                            color.red as f64,
-                            color.green as f64,
-                            color.blue as f64,
-                            color.alpha as f64,
-                        )))
+                        .normalized_coords(bytemuck::cast_slice(var_loc.coords()))
+                        .brush(&Brush::Solid(vello::peniko::Color::new([
+                            color.red,
+                            color.green,
+                            color.blue,
+                            color.alpha,
+                        ])))
                         .draw(vello::peniko::Fill::NonZero, glyphs.into_iter());
                 }
             }
@@ -283,8 +282,8 @@ impl WidgetRender {
                     .entry(image_handle.into())
                     .or_insert_with(|| {
                         peniko::Image::new(
-                            image.data.clone().into(),
-                            peniko::Format::Rgba8,
+                            image.data.clone().unwrap().into(), // TODO: Don't unwrap here.
+                            peniko::ImageFormat::Rgba8,
                             image.size().x,
                             image.size().y,
                         )
@@ -329,10 +328,13 @@ impl WidgetRender {
                 };
                 let layout_size = Vec2::new(layout.size.x, layout.size.y);
                 let slices = match scale_mode {
-                    ImageScaleMode::Sliced(slicer) => {
+                    SpriteImageMode::Auto => {
+                        todo!("Not supported yet!");
+                    }
+                    SpriteImageMode::Sliced(slicer) => {
                         slicer.compute_slices(image_rect, Some(layout_size))
                     }
-                    ImageScaleMode::Tiled {
+                    SpriteImageMode::Tiled {
                         tile_x,
                         tile_y,
                         stretch_value,
@@ -344,6 +346,7 @@ impl WidgetRender {
                         };
                         slice.tiled(*stretch_value, (*tile_x, *tile_y))
                     }
+                    SpriteImageMode::Scale(_) => todo!("Not supported yet!"),
                 };
 
                 fn subsection_image_data(image: &mut image::DynamicImage, region: Rect) -> Vec<u8> {
@@ -376,7 +379,7 @@ impl WidgetRender {
                         let image = image::RgbaImage::from_raw(
                             image.size().x,
                             image.size().y,
-                            image.data.clone(),
+                            image.data.clone().unwrap().clone(), // TODO: replace unwrap with continue/return.
                         )
                         .unwrap();
                         let mut image: image::DynamicImage = image::DynamicImage::ImageRgba8(image);
@@ -384,7 +387,7 @@ impl WidgetRender {
                             subsection_image_data(&mut image, texture_rect_floor);
                         let vello_image = peniko::Image::new(
                             sub_section_data.into(),
-                            peniko::Format::Rgba8,
+                            peniko::ImageFormat::Rgba8,
                             texture_rect_floor.size().x as u32,
                             texture_rect_floor.size().y as u32,
                         );

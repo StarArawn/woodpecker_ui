@@ -1,6 +1,9 @@
 use bevy::{
+    platform::{
+        collections::{hash_map::Entry, HashMap, HashSet},
+        hash::FixedHasher,
+    },
     prelude::*,
-    utils::{HashMap, HashSet},
 };
 
 use crate::{context::Widget, ParentWidget};
@@ -11,6 +14,7 @@ use crate::{context::Widget, ParentWidget};
 pub struct WidgetMapper {
     parent_entity_to_child: HashMap<ParentWidget, Vec<EntityMappping>>,
     new_this_tick: HashSet<Entity>,
+    pub(crate) observers: HashMap<(usize, Entity), Entity>,
 }
 
 /// The mapped entity with a key and entity id.
@@ -28,7 +32,19 @@ impl WidgetMapper {
         Self {
             parent_entity_to_child: HashMap::default(),
             new_this_tick: HashSet::default(),
+            observers: HashMap::default(),
         }
+    }
+
+    /// Maps an observer to an entity using the entity id and a slot.
+    /// Note: Slots can be overwritten so be careful.
+    /// This is mostly a hack until bevy lets us remove entities from observers.
+    pub fn map_observer(
+        &mut self,
+        slot: usize,
+        entity: Entity,
+    ) -> Entry<'_, (usize, Entity), Entity, FixedHasher> {
+        self.observers.entry((slot, entity))
     }
 
     fn add(
@@ -99,12 +115,12 @@ impl WidgetMapper {
                     self.new_this_tick.insert(mapping.entity);
                     return mapping.entity;
                 } else {
-                    world.entity_mut(mapping.entity).despawn_recursive();
+                    world.entity_mut(mapping.entity).despawn();
                 }
             }
         }
 
-        let child_entity = world.spawn_empty().set_parent(*parent).id();
+        let child_entity = world.spawn(ChildOf(*parent)).id();
         self.add(key, parent, child_entity, child_position_index);
 
         self.new_this_tick.insert(child_entity);

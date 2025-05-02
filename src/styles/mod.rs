@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_vello::text::VelloFont;
+use bevy_vello::prelude::VelloFont;
 pub use corner::Corner;
 pub use edge::Edge;
 pub use layout::*;

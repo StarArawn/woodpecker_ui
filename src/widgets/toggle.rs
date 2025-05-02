@@ -1,10 +1,13 @@
 use crate::prelude::*;
-use bevy::{ecs::component::Tick, prelude::*};
-use bevy_mod_picking::{
-    events::{Click, Out, Over, Pointer},
-    focus::PickingInteraction,
-    prelude::{On, Pickable},
+use bevy::{
+    ecs::{change_detection::MaybeLocation, component::Tick},
+    prelude::*,
 };
+// use bevy_mod_picking::{
+//     events::{Click, Out, Over, Pointer},
+//     focus::PickingInteraction,
+//     prelude::{On, Pickable},
+// };
 
 use super::colors;
 
@@ -187,12 +190,8 @@ pub struct ToggleBundle {
     pub render: WidgetRender,
     /// Provides overrides for picking behavior.
     pub pickable: Pickable,
-    /// Tracks entity interaction state.
-    pub interaction: PickingInteraction,
     /// Used to animate..
     pub transition: Transition,
-    /// Change detection event
-    pub on_changed: On<Change<ToggleChanged>>,
 }
 
 impl Default for ToggleBundle {
@@ -204,12 +203,10 @@ impl Default for ToggleBundle {
             styles: Default::default(),
             render: WidgetRender::Quad,
             pickable: Default::default(),
-            interaction: Default::default(),
             transition: Transition {
                 playing: false,
                 ..default()
             },
-            on_changed: On::<Change<ToggleChanged>>::run(|| {}),
         }
     }
 }
@@ -217,6 +214,7 @@ impl Default for ToggleBundle {
 fn render(
     mut commands: Commands,
     current_widget: Res<CurrentWidget>,
+    mut widget_mapper: ResMut<WidgetMapper>,
     mut hooks: ResMut<HookHelper>,
     mut query: Query<(
         &ToggleWidgetStyles,
@@ -240,6 +238,7 @@ fn render(
     let mut tick_2 = Tick::default();
     let tick_3 = Tick::default();
     let tick_4 = Tick::default();
+    let mut caller = MaybeLocation::caller();
 
     if !state_query.contains(state_entity) {
         *styles = toggle_styles.background.get_style(&default_state, false);
@@ -251,6 +250,7 @@ fn render(
         &mut tick_2,
         tick_3,
         tick_4,
+        caller.as_mut(),
     ));
 
     if !transition.is_playing() {
@@ -287,39 +287,64 @@ fn render(
 
     // Insert event listeners
     let current_widget = *current_widget;
-    commands
-        .entity(*current_widget)
-        .insert(On::<Pointer<Over>>::run(
-            move |mut state_query: Query<&mut ToggleState>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
-                state.is_hovering = true;
-            },
-        ))
-        .insert(On::<Pointer<Out>>::run(
-            move |mut state_query: Query<&mut ToggleState>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
-                state.is_hovering = false;
-            },
-        ))
-        .insert(On::<Pointer<Click>>::run(
-            move |mut state_query: Query<&mut ToggleState>,
-                  mut event_writer: EventWriter<Change<ToggleChanged>>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
-                state.is_checked = !state.is_checked;
-                event_writer.send(Change {
-                    target: *current_widget,
-                    data: ToggleChanged {
-                        checked: state.is_checked,
-                    },
-                });
-            },
-        ));
+    widget_mapper
+        // Slot 0 might be used so lets just use some random gen'd value
+        .map_observer(10836065465138027339, *current_widget)
+        .or_insert_with(move || {
+            commands
+                .spawn(
+                    Observer::new(
+                        move |_: Trigger<Pointer<Click>>,
+                              mut commands: Commands,
+                              mut state_query: Query<&mut ToggleState>| {
+                            let Ok(mut state) = state_query.get_mut(state_entity) else {
+                                return;
+                            };
+
+                            state.is_checked = !state.is_checked;
+
+                            commands.trigger_targets(
+                                Change {
+                                    target: *current_widget,
+                                    data: ToggleChanged {
+                                        checked: state.is_checked,
+                                    },
+                                },
+                                *current_widget,
+                            );
+                        },
+                    )
+                    .with_entity(*current_widget),
+                )
+                // You can add other observers as children.
+                .with_child(
+                    Observer::new(
+                        move |_: Trigger<Pointer<Over>>,
+                              mut state_query: Query<&mut ToggleState>| {
+                            let Ok(mut state) = state_query.get_mut(state_entity) else {
+                                return;
+                            };
+
+                            state.is_hovering = true;
+                        },
+                    )
+                    .with_entity(*current_widget),
+                )
+                .with_child(
+                    Observer::new(
+                        move |_: Trigger<Pointer<Out>>,
+                              mut state_query: Query<&mut ToggleState>| {
+                            let Ok(mut state) = state_query.get_mut(state_entity) else {
+                                return;
+                            };
+
+                            state.is_hovering = false;
+                        },
+                    )
+                    .with_entity(*current_widget),
+                )
+                .id()
+        });
 
     children.add::<Element>((
         ElementBundle::default(),

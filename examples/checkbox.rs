@@ -1,18 +1,11 @@
-use bevy::{
-    prelude::*,
-    sprite::{MaterialMesh2dBundle, Mesh2dHandle},
-};
-use bevy_mod_picking::{
-    prelude::{Listener, On},
-    DefaultPickingPlugins,
-};
+use bevy::prelude::*;
+use bevy_vello::render::VelloView;
 use woodpecker_ui::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)
         .run();
 }
@@ -29,7 +22,7 @@ fn startup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2d, VelloView));
 
     let material_red = materials.add(Color::Srgba(Srgba::RED));
     let material_blue = materials.add(Color::Srgba(Srgba::BLUE));
@@ -39,12 +32,11 @@ fn startup(
         blue: material_blue,
     });
 
-    commands.spawn(MaterialMesh2dBundle {
-        mesh: Mesh2dHandle(meshes.add(Circle { radius: 50.0 })),
-        material: material_red,
-        transform: Transform::from_xyz(0.0, 0.0, 0.0),
-        ..default()
-    });
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::default())),
+        MeshMaterial2d(material_red),
+        Transform::default().with_scale(Vec3::splat(128.)),
+    ));
 
     let root = commands
         .spawn((WoodpeckerAppBundle {
@@ -52,26 +44,27 @@ fn startup(
                 padding: Edge::all(10.0),
                 ..default()
             },
-            children: WidgetChildren::default().with_child::<Checkbox>(CheckboxBundle {
-                on_changed: On::run(
-                    |event: Listener<Change<CheckboxChanged>>,
-                     material_list: Res<MaterialList>,
-                     mut query: Query<&mut Handle<ColorMaterial>>| {
-                        for mut material in query.iter_mut() {
-                            if event.data.checked {
-                                info!("Checkmark is now checked!");
-                                *material = material_list.blue.clone();
-                            } else {
-                                info!("Checkmark is now unchecked!");
-                                *material = material_list.red.clone();
-                            }
-                        }
-                    },
-                ),
-                ..default()
-            }),
+            children: WidgetChildren::default()
+                .with_child::<Checkbox>(CheckboxBundle { ..default() })
+                .with_observe(on_change),
             ..default()
         },))
         .id();
     ui_context.set_root_widget(root);
+}
+
+fn on_change(
+    trigger: Trigger<Change<CheckboxChanged>>,
+    material_list: Res<MaterialList>,
+    mut query: Query<&mut MeshMaterial2d<ColorMaterial>>,
+) {
+    for mut material in query.iter_mut() {
+        if trigger.event().data.checked {
+            info!("Checkmark is now checked!");
+            *material = MeshMaterial2d(material_list.blue.clone());
+        } else {
+            info!("Checkmark is now unchecked!");
+            *material = MeshMaterial2d(material_list.red.clone());
+        }
+    }
 }

@@ -64,11 +64,10 @@
 use bevy::{
     asset::embedded_asset, prelude::*, reflect::GetTypeRegistration, render::view::RenderLayers,
 };
-use bevy_mod_picking::{events::Pointer, prelude::EventListenerPlugin};
+// use bevy_mod_picking::{events::Pointer, prelude::EventListenerPlugin};
 use bevy_trait_query::RegisterExt;
-use bevy_vello::{
-    text::VelloFont, vello::AaConfig, CoordinateSpace, VelloPlugin, VelloSceneBundle,
-};
+use bevy_vello::prelude::VelloFont;
+use bevy_vello::{vello::AaConfig, VelloPlugin, VelloSceneBundle};
 use context::{Widget, WoodpeckerContext};
 use entity_mapping::WidgetMapper;
 use font::FontManager;
@@ -76,7 +75,7 @@ use hook_helper::HookHelper;
 use image::ImageManager;
 use layout::WoodpeckerLayoutPlugin;
 use metrics::WidgetMetrics;
-use picking_backend::MouseWheelScroll;
+// use picking_backend::MouseWheelScroll;
 use svg::{SvgAsset, SvgLoader, SvgManager};
 use widgets::WoodpeckerUIWidgetPlugin;
 
@@ -96,8 +95,8 @@ mod render;
 mod runner;
 mod styles;
 mod svg;
-mod vello_svg;
 mod vello_renderer;
+mod vello_svg;
 mod widgets;
 
 /// A module that exports all publicly exposed types.
@@ -208,14 +207,14 @@ impl Plugin for WoodpeckerUIPlugin {
                 antialiasing: self.render_settings.antialiasing,
             })
             .add_plugins(WoodpeckerUIWidgetPlugin)
-            .add_plugins(EventListenerPlugin::<focus::WidgetFocus>::default())
-            .add_plugins(EventListenerPlugin::<focus::WidgetBlur>::default())
-            .add_plugins(EventListenerPlugin::<keyboard_input::WidgetKeyboardCharEvent>::default())
-            .add_plugins(EventListenerPlugin::<
-                keyboard_input::WidgetKeyboardButtonEvent,
-            >::default())
-            .add_plugins(EventListenerPlugin::<Pointer<MouseWheelScroll>>::default())
-            .add_plugins(EventListenerPlugin::<keyboard_input::WidgetPasteEvent>::default())
+            .add_event::<focus::WidgetFocus>()
+            .add_event::<focus::WidgetBlur>()
+            // .add_plugins(EventListenerPlugin::<keyboard_input::WidgetKeyboardCharEvent>::default())
+            // .add_plugins(EventListenerPlugin::<
+            //     keyboard_input::WidgetKeyboardButtonEvent,
+            // >::default())
+            // .add_plugins(EventListenerPlugin::<Pointer<MouseWheelScroll>>::default())
+            // .add_plugins(EventListenerPlugin::<keyboard_input::WidgetPasteEvent>::default())
             .insert_resource(focus::CurrentFocus::new(Entity::PLACEHOLDER))
             .init_resource::<FontManager>()
             .init_resource::<HookHelper>()
@@ -283,8 +282,12 @@ fn has_root() -> impl Condition<(), ()> {
 
 fn startup(mut commands: Commands, render_settings: Res<RenderSettings>) {
     commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            ..default()
+        },
+        Interaction::default(),
         VelloSceneBundle {
-            coordinate_space: CoordinateSpace::ScreenSpace,
             transform: Transform::from_xyz(0.0, 0.0, f32::MAX),
             ..Default::default()
         },

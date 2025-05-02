@@ -1,13 +1,17 @@
 use bevy::prelude::*;
-use bevy_mod_picking::DefaultPickingPlugins;
+use bevy_vello::render::VelloView;
 use woodpecker_ui::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new())
+        .add_plugins((
+            bevy_inspector_egui::bevy_egui::EguiPlugin {
+                enable_multipass_for_primary_context: false,
+            },
+            bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
+        ))
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)
         .run();
 }
@@ -17,7 +21,7 @@ fn startup(
     mut ui_context: ResMut<WoodpeckerContext>,
     asset_server: Res<AssetServer>,
 ) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2d, VelloView));
 
     let mut tab_buttons = WidgetChildren::default();
     let mut tab_content = WidgetChildren::default();

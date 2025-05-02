@@ -22,7 +22,7 @@ mod transition;
 mod window;
 
 pub use app::{WoodpeckerApp, WoodpeckerAppBundle};
-use bevy_mod_picking::prelude::EventListenerPlugin;
+// use bevy_mod_picking::prelude::EventListenerPlugin;
 pub use button::{ButtonStyles, WButton, WButtonBundle};
 pub use checkbox::{
     Checkbox, CheckboxBundle, CheckboxChanged, CheckboxState, CheckboxStyles, CheckboxWidgetStyles,
@@ -51,12 +51,12 @@ pub use window::{WindowState, WoodpeckerWindow, WoodpeckerWindowBundle};
 pub(crate) struct WoodpeckerUIWidgetPlugin;
 impl Plugin for WoodpeckerUIWidgetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(EventListenerPlugin::<Change<TextChanged>>::default())
-            .add_plugins(EventListenerPlugin::<Change<ToggleChanged>>::default())
-            .add_plugins(EventListenerPlugin::<Change<CheckboxChanged>>::default())
-            .add_plugins(EventListenerPlugin::<Change<SliderChanged>>::default())
-            .add_plugins(EventListenerPlugin::<Change<DropdownChanged>>::default())
-            .add_plugins(EventListenerPlugin::<Change<ColorPickerChanged>>::default())
+        app.add_event::<Change<TextChanged>>()
+            .add_event::<Change<ToggleChanged>>()
+            .add_event::<Change<CheckboxChanged>>()
+            .add_event::<Change<SliderChanged>>()
+            .add_event::<Change<DropdownChanged>>()
+            .add_event::<Change<ColorPickerChanged>>()
             .register_widget::<WoodpeckerApp>()
             .register_widget::<Element>()
             .register_widget::<WButton>()

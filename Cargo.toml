@@ -13,19 +13,20 @@ debug-render = []
 metrics = []
 
 [dependencies]
-bevy_mod_picking = "0.20"
-bevy_vello = { version = "0.5", features = ["svg"] }
-bevy-inspector-egui = "0.25"
-bevy-trait-query = { git = "https://github.com/RobWalt/bevy-trait-query", rev = "215b9068e8457d96ddcd4c8efa9605ba0f8feda5" }
+bevy_vello = { path = "../bevy_vello", features = ["text", "default_font"] } #{ version = "0.8", features = ["svg", "text", "default_font"] }
+bevy-inspector-egui = "0.31"
+bevy-trait-query = "0.16" #{ git = "https://github.com/RobWalt/bevy-trait-query", rev = "215b9068e8457d96ddcd4c8efa9605ba0f8feda5" }
+bytemuck = "1.23.0"
 cosmic-text = "0.12"
 image = "0.24"
 interpolation = "0.2"
 palette = "0.7.6"
+skrifa = "0.30.0"
 smol_str = { version = "0.2", default-features = false }
 taffy = { version = "0.5", features = ["flexbox", "grid"] }
 thiserror = "1.0"
 unicode-segmentation = "1.10.0"
-usvg = "0.42"
+usvg = "0.44"
 web-time = "1.1"
 
 # Local
@@ -33,23 +34,20 @@ woodpecker_ui_macros.path = "crates/woodpecker_ui_macros" # TODO: Make this crat
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 arboard = "3.4"
-bevy = "0.14"
+bevy = { version = "0.16" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-bevy = { version = "0.14", default-features = false, features = ["webgpu"] }
+bevy = { version = "0.16", default-features = false, features = ["webgpu"] }
 web-sys = "0.3"
 wasm-bindgen-futures = "0.4"
 futures-channel = "0.3"
 
-
 [dev-dependencies]
 calc = { version = "0.4.0", default-features = false }
-bevy = { version = "0.14", features = ["jpeg"] }
+bevy = { version = "0.16", features = ["jpeg", "bevy_dev_tools"] }
 
-[patch.crates-io]
-bevy_mod_picking = { git = "https://github.com/StarArawn/bevy_mod_picking", branch = "main" }
-bevy_eventlistener = { git = "https://github.com/StarArawn/bevy_eventlistener", branch = "main" }
-bevy_vello = { git = "https://github.com/linebender/bevy_vello", rev = "7fe648ccb9766ecf2ef469f08c9f21093c3544e6" }
+# [patch.crates-io]
+# bevy_vello = { git = "https://github.com/linebender/bevy_vello", rev = "7fe648ccb9766ecf2ef469f08c9f21093c3544e6" }
 
 [[example]]
 name = "todo"

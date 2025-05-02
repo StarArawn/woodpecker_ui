@@ -8,8 +8,8 @@
 
 use bevy::{
     ecs::component::Tick,
+    platform::collections::{HashMap, HashSet},
     prelude::*,
-    utils::{HashMap, HashSet},
 };
 use bevy_trait_query::One;
 
@@ -43,7 +43,7 @@ pub(crate) fn system(world: &mut World) {
             .into_iter()
             .chain(get_all_children(world, root_widget))
             .filter(|e| {
-                if world.get_entity(*e).is_none() {
+                if world.get_entity(*e).is_err() {
                     return false;
                 }
                 !world.entity(*e).contains::<PreviousWidget>()
@@ -131,7 +131,7 @@ fn get_all_children(world: &mut World, parent_entity: Entity) -> Vec<Entity> {
     let Some(bevy_children) = world
         .entity(parent_entity)
         .get::<Children>()
-        .map(|c| c.iter().copied().collect::<Vec<_>>())
+        .map(|c| c.iter().collect::<Vec<_>>())
     else {
         return vec![];
     };
@@ -257,12 +257,12 @@ fn run_render_system(
                 removed_list.insert(*child);
                 // Entity and its children were despawned lets make sure all of the descendants are removed from the mapper!
                 for child in get_all_children(world, *child) {
-                    let parent = world.entity(child).get::<Parent>().expect("Unknown dangling child! This is an error with woodpecker UI source please file a bug report.").get();
+                    let parent = world.entity(child).get::<ChildOf>().expect("Unknown dangling child! This is an error with woodpecker UI source please file a bug report.").parent();
                     widget_mapper.remove_by_entity_id(parent, child);
                     removed_list.insert(child);
                 }
                 // Do this last so the parent query still works.
-                world.entity_mut(*child).despawn_recursive();
+                world.entity_mut(*child).despawn();
             }
         }
     });

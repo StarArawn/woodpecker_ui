@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use bevy_vello::vello::kurbo::{Affine, BezPath, Point, Rect, Stroke};
+use bevy_vello::vello::peniko::color::DynamicColor;
 use bevy_vello::vello::peniko::{Blob, Brush, Color, Fill, Image};
 use bevy_vello::vello::Scene;
 
@@ -96,7 +97,7 @@ pub fn into_image(image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>>) -> Image 
     let image_data: Vec<u8> = image.into_vec();
     Image::new(
         Blob::new(std::sync::Arc::new(image_data)),
-        bevy_vello::vello::peniko::Format::Rgba8,
+        bevy_vello::vello::peniko::ImageFormat::Rgba8,
         width,
         height,
     )
@@ -113,7 +114,7 @@ pub fn to_brush(
 
     match paint {
         usvg::Paint::Color(color) => Some((
-            Brush::Solid(Color::rgba8(
+            Brush::Solid(Color::from_rgba8(
                 color.red,
                 color.green,
                 color.blue,
@@ -126,12 +127,17 @@ pub fn to_brush(
                 .stops()
                 .iter()
                 .map(|stop| {
-                    let mut cstop = bevy_vello::vello::peniko::ColorStop::default();
-                    cstop.color.r = stop.color().red;
-                    cstop.color.g = stop.color().green;
-                    cstop.color.b = stop.color().blue;
-                    cstop.color.a = (stop.opacity() * opacity).to_u8();
-                    cstop.offset = stop.offset().get();
+                    let cstop = bevy_vello::vello::peniko::ColorStop {
+                        offset: stop.offset().get(),
+                        color: DynamicColor::from_alpha_color(
+                            bevy_vello::vello::peniko::Color::from_rgba8(
+                                stop.color().red,
+                                stop.color().green,
+                                stop.color().blue,
+                                (stop.opacity() * opacity).to_u8(),
+                            ),
+                        ),
+                    };
                     cstop
                 })
                 .collect();
@@ -156,12 +162,17 @@ pub fn to_brush(
                 .stops()
                 .iter()
                 .map(|stop| {
-                    let mut cstop = bevy_vello::vello::peniko::ColorStop::default();
-                    cstop.color.r = stop.color().red;
-                    cstop.color.g = stop.color().green;
-                    cstop.color.b = stop.color().blue;
-                    cstop.color.a = (stop.opacity() * opacity).to_u8();
-                    cstop.offset = stop.offset().get();
+                    let cstop = bevy_vello::vello::peniko::ColorStop {
+                        offset: stop.offset().get(),
+                        color: DynamicColor::from_alpha_color(
+                            bevy_vello::vello::peniko::Color::from_rgba8(
+                                stop.color().red,
+                                stop.color().green,
+                                stop.color().blue,
+                                (stop.opacity() * opacity).to_u8(),
+                            ),
+                        ),
+                    };
                     cstop
                 })
                 .collect();
@@ -206,7 +217,7 @@ pub fn default_error_handler(scene: &mut Scene, node: &usvg::Node) {
     scene.fill(
         Fill::NonZero,
         Affine::IDENTITY,
-        Color::RED.with_alpha_factor(0.5),
+        Color::new([1.0, 0.0, 0.0, 0.5]),
         None,
         &rect,
     );
@@ -224,6 +235,9 @@ pub fn decode_raw_raster_image(
         }
         usvg::ImageKind::GIF(data) => {
             image::load_from_memory_with_format(data, image::ImageFormat::Gif)
+        }
+        usvg::ImageKind::WEBP(data) => {
+            image::load_from_memory_with_format(data, image::ImageFormat::WebP)
         }
         usvg::ImageKind::SVG(_) => unreachable!(),
     }?

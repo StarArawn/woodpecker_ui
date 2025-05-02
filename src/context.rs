@@ -1,6 +1,6 @@
 use bevy::{
+    platform::collections::{HashMap, HashSet},
     prelude::*,
-    utils::{HashMap, HashSet},
 };
 
 /// A trait used to mark an entity as a widget.

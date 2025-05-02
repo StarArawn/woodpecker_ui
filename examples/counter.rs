@@ -1,9 +1,5 @@
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Pointer},
-    prelude::On,
-    DefaultPickingPlugins,
-};
+use bevy_vello::render::VelloView;
 use woodpecker_ui::prelude::*;
 
 #[derive(Component, PartialEq, Default, Debug, Clone)]
@@ -74,31 +70,31 @@ fn render(
                     word_wrap: false,
                 },
             ))
-            .with_child::<WButton>((
-                WButtonBundle {
-                    children: WidgetChildren::default().with_child::<Element>((
-                        ElementBundle {
-                            styles: WoodpeckerStyle {
-                                font_size: 14.0,
-                                margin: Edge::all(10.0),
-                                ..Default::default()
-                            },
+            .with_child::<WButton>(WButtonBundle {
+                children: WidgetChildren::default().with_child::<Element>((
+                    ElementBundle {
+                        styles: WoodpeckerStyle {
+                            font_size: 14.0,
+                            margin: Edge::all(10.0),
                             ..Default::default()
                         },
-                        WidgetRender::Text {
-                            content: "Increase Count".into(),
-                            word_wrap: false,
-                        },
-                    )),
-                    ..Default::default()
-                },
-                On::<Pointer<Click>>::run(move |mut query: Query<&mut CounterState>| {
+                        ..Default::default()
+                    },
+                    WidgetRender::Text {
+                        content: "Increase Count".into(),
+                        word_wrap: false,
+                    },
+                )),
+                ..Default::default()
+            })
+            .with_observe(
+                move |_: Trigger<Pointer<Click>>, mut query: Query<&mut CounterState>| {
                     let Ok(mut state) = query.get_mut(state_entity) else {
                         return;
                     };
                     state.count += 1;
-                }),
-            )),
+                },
+            ),
         ..Default::default()
     });
 
@@ -109,7 +105,6 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)
         .register_widget::<CounterWidget>()
         .run();
@@ -121,7 +116,7 @@ fn startup(
     mut font_manager: ResMut<FontManager>,
     asset_server: Res<AssetServer>,
 ) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2d, VelloView));
 
     let font = asset_server.load("Outfit/static/Outfit-Regular.ttf");
     font_manager.add(&font);

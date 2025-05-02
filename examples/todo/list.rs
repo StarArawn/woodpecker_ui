@@ -1,8 +1,4 @@
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Pointer},
-    prelude::On,
-};
 use woodpecker_ui::prelude::*;
 
 use crate::TodoListData;
@@ -79,41 +75,40 @@ fn render(
                             word_wrap: true,
                         },
                     ))
-                    .with_child::<WButton>((
-                        WButtonBundle {
-                            button_styles: ButtonStyles {
-                                normal: WoodpeckerStyle {
-                                    margin: Edge::new(0.0, 0.0, 0.0, 0.0),
-                                    width: 100.0.into(),
-                                    ..ButtonStyles::default().normal
-                                },
-                                hovered: WoodpeckerStyle {
-                                    margin: Edge::new(0.0, 0.0, 0.0, 0.0),
-                                    width: 100.0.into(),
-                                    ..ButtonStyles::default().hovered
-                                },
+                    .with_child::<WButton>(WButtonBundle {
+                        button_styles: ButtonStyles {
+                            normal: WoodpeckerStyle {
+                                margin: Edge::new(0.0, 0.0, 0.0, 0.0),
+                                width: 100.0.into(),
+                                ..ButtonStyles::default().normal
                             },
-                            children: WidgetChildren::default().with_child::<Element>((
-                                ElementBundle {
-                                    styles: WoodpeckerStyle {
-                                        font_size: 14.0,
-                                        ..Default::default()
-                                    },
+                            hovered: WoodpeckerStyle {
+                                margin: Edge::new(0.0, 0.0, 0.0, 0.0),
+                                width: 100.0.into(),
+                                ..ButtonStyles::default().hovered
+                            },
+                        },
+                        children: WidgetChildren::default().with_child::<Element>((
+                            ElementBundle {
+                                styles: WoodpeckerStyle {
+                                    font_size: 14.0,
                                     ..Default::default()
                                 },
-                                WidgetRender::Text {
-                                    content: "Done".into(),
-                                    word_wrap: true,
-                                },
-                            )),
-                            ..Default::default()
-                        },
-                        On::<Pointer<Click>>::run(
-                            move |mut todo_list_data: ResMut<TodoListData>| {
-                                todo_list_data.remove(i);
+                                ..Default::default()
                             },
-                        ),
-                    )),
+                            WidgetRender::Text {
+                                content: "Done".into(),
+                                word_wrap: true,
+                            },
+                        )),
+                        ..Default::default()
+                    })
+                    .with_observe(
+                        move |_trigger: Trigger<Pointer<Click>>,
+                              mut todo_list_data: ResMut<TodoListData>| {
+                            todo_list_data.remove(i);
+                        },
+                    ),
                 ..Default::default()
             },
             WidgetRender::Quad,

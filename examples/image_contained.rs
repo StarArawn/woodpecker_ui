@@ -1,9 +1,5 @@
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Pointer},
-    prelude::On,
-    DefaultPickingPlugins,
-};
+use bevy_vello::render::VelloView;
 use woodpecker_ui::prelude::*;
 
 #[derive(Component, Clone, Default, Debug, Copy, PartialEq)]
@@ -46,8 +42,8 @@ fn render(
         return;
     };
 
-    widget_children.add::<WButton>((
-        WButtonBundle {
+    widget_children
+        .add::<WButton>(WButtonBundle {
             children: WidgetChildren::default().with_child::<Element>((
                 ElementBundle {
                     styles: WoodpeckerStyle {
@@ -62,13 +58,14 @@ fn render(
                 },
             )),
             ..Default::default()
-        },
-        On::<Pointer<Click>>::run(move |mut query: Query<&mut MyWidgetState>| {
-            if let Ok(mut state) = query.get_mut(state_entity) {
-                state.show_modal = true;
-            }
-        }),
-    ));
+        })
+        .observe(
+            move |_: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
+                if let Ok(mut state) = query.get_mut(state_entity) {
+                    state.show_modal = true;
+                }
+            },
+        );
 
     widget_children.add::<Modal>(ModalBundle {
         modal: Modal {
@@ -114,31 +111,31 @@ fn render(
                             color: Some(Srgba::RED.into()),
                         },
                     ))
-                    .with_child::<WButton>((
-                        WButtonBundle {
-                            children: WidgetChildren::default().with_child::<Element>((
-                                ElementBundle {
-                                    styles: WoodpeckerStyle {
-                                        width: Units::Percentage(100.0),
-                                        font_size: 20.0,
-                                        text_alignment: Some(TextAlign::Center),
-                                        ..Default::default()
-                                    },
+                    .with_child::<WButton>((WButtonBundle {
+                        children: WidgetChildren::default().with_child::<Element>((
+                            ElementBundle {
+                                styles: WoodpeckerStyle {
+                                    width: Units::Percentage(100.0),
+                                    font_size: 20.0,
+                                    text_alignment: Some(TextAlign::Center),
                                     ..Default::default()
                                 },
-                                WidgetRender::Text {
-                                    content: "Close Modal".into(),
-                                    word_wrap: true,
-                                },
-                            )),
-                            ..Default::default()
-                        },
-                        On::<Pointer<Click>>::run(move |mut query: Query<&mut MyWidgetState>| {
+                                ..Default::default()
+                            },
+                            WidgetRender::Text {
+                                content: "Close Modal".into(),
+                                word_wrap: true,
+                            },
+                        )),
+                        ..Default::default()
+                    },))
+                    .with_observe(
+                        move |_: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                             if let Ok(mut state) = query.get_mut(state_entity) {
                                 state.show_modal = false;
                             }
-                        }),
-                    )),
+                        },
+                    ),
                 ..Default::default()
             }),
         ),
@@ -152,14 +149,13 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(DefaultPickingPlugins)
         .register_widget::<MyWidget>()
         .add_systems(Startup, startup)
         .run();
 }
 
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2d, VelloView));
 
     let root = commands
         .spawn(WoodpeckerAppBundle {

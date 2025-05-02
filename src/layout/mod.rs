@@ -1,7 +1,7 @@
 mod measure;
 pub(crate) mod system;
 
-use bevy::{prelude::*, utils::EntityHashMap};
+use bevy::{ecs::entity::EntityHashMap, prelude::*};
 use measure::{LayoutMeasure, Measure};
 use taffy::{Size, TaffyTree};
 
@@ -20,7 +20,7 @@ impl Plugin for WoodpeckerLayoutPlugin {
 #[derive(Resource)]
 pub(crate) struct UiLayout {
     pub(crate) root_entity: Entity,
-    entity_to_taffy: EntityHashMap<Entity, taffy::NodeId>,
+    entity_to_taffy: EntityHashMap<taffy::NodeId>,
     taffy: TaffyTree<LayoutMeasure>,
 }
 

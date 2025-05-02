@@ -1,3 +1,4 @@
+use bevy_vello::prelude::VelloFont;
 use web_time::Instant;
 
 use crate::{
@@ -6,13 +7,12 @@ use crate::{
     DefaultFont,
 };
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Out, Over, Pointer},
-    focus::PickingInteraction,
-    picking_core::Pickable,
-    prelude::{ListenerInput, On},
-};
-use bevy_vello::text::VelloFont;
+// use bevy_mod_picking::{
+//     events::{Out, Over, Pointer},
+//     focus::PickingInteraction,
+//     picking_core::Pickable,
+//     prelude::{ListenerInput, On},
+// };
 use unicode_segmentation::UnicodeSegmentation;
 
 use super::{colors, Clip, ClipBundle, Element, ElementBundle};
@@ -74,8 +74,6 @@ pub struct TextBoxBundle {
     pub textbox_styles: TextboxStyles,
     /// Provides overrides for picking behavior.
     pub pickable: Pickable,
-    /// Tracks entity interaction state.
-    pub interaction: PickingInteraction,
     /// Tells woodpecker we want this widget to get focus events.
     pub focuable: Focusable,
 }
@@ -88,7 +86,6 @@ impl Default for TextBoxBundle {
             children: Default::default(),
             styles: Default::default(),
             pickable: Default::default(),
-            interaction: Default::default(),
             textbox_styles: TextboxStyles::default(),
             focuable: Focusable,
         }
@@ -146,6 +143,7 @@ impl Default for TextBoxState {
 pub fn render(
     mut commands: Commands,
     current_widget: Res<CurrentWidget>,
+    mut widget_mapper: ResMut<WidgetMapper>,
     mut hook_helper: ResMut<HookHelper>,
     mut font_manager: ResMut<FontManager>,
     default_font: Res<DefaultFont>,
@@ -196,235 +194,142 @@ pub fn render(
 
     // Hook up events
     let widget_entity = **current_widget;
-    commands
-        .entity(widget_entity)
-        // Char event
-        .insert((
-            On::<WidgetKeyboardCharEvent>::run(
-                move |event: ResMut<ListenerInput<WidgetKeyboardCharEvent>>,
-                      style_query: Query<&WoodpeckerStyle>,
-                      mut state_query: Query<&mut TextBoxState>,
-                      default_font: Res<DefaultFont>,
-                      mut font_manager: ResMut<FontManager>,
-                      mut event_writer: EventWriter<Change<TextChanged>>| {
-                    let Ok(styles) = style_query.get(event.target) else {
-                        return;
-                    };
-                    let Ok(mut state) = state_query.get_mut(state_entity) else {
-                        return;
-                    };
+    widget_mapper
+        // Slot 0 might be used so lets just use some random gen'd value
+        .map_observer(10836065465138027339, widget_entity)
+        .or_insert_with(move || {
+            commands
+                .spawn(
+                    Observer::new(
+                        move |trigger: Trigger<WidgetKeyboardCharEvent>,
+                              mut commands: Commands,
+                              style_query: Query<&WoodpeckerStyle>,
+                              default_font: Res<DefaultFont>,
+                              mut font_manager: ResMut<FontManager>,
+                              mut state_query: Query<&mut TextBoxState>| {
+                            let Ok(styles) = style_query.get(trigger.target) else {
+                                return;
+                            };
+                            let Ok(mut state) = state_query.get_mut(state_entity) else {
+                                return;
+                            };
+                            let cursor_pos = state.cursor_position;
 
-                    let cursor_pos = state.cursor_position;
-
-                    let char_pos: usize =
-                        state.graphemes[0..cursor_pos].iter().map(|g| g.len()).sum();
-                    state.current_value.insert_str(char_pos, &event.c);
-                    state.cursor_position += 1;
-
-                    event_writer.send(Change {
-                        target: widget_entity,
-                        data: TextChanged {
-                            value: state.current_value.clone(),
-                        },
-                    });
-
-                    // Update graphemes
-                    set_graphemes(&mut state);
-
-                    set_new_cursor_position(
-                        &mut state,
-                        &mut font_manager,
-                        &styles
-                            .font
-                            .map(Handle::Weak)
-                            .unwrap_or(default_font.0.clone_weak()),
-                        styles.font_size,
-                    );
-                },
-            ),
-            On::<Pointer<Over>>::run(move |mut state_query: Query<&mut TextBoxState>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
-                if !state.focused {
-                    state.hovering = true;
-                }
-            }),
-            On::<Pointer<Out>>::run(move |mut state_query: Query<&mut TextBoxState>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
-                state.hovering = false;
-            }),
-            On::<WidgetFocus>::run(move |mut state_query: Query<&mut TextBoxState>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
-                state.hovering = false;
-                state.focused = true;
-            }),
-            On::<WidgetBlur>::run(move |mut state_query: Query<&mut TextBoxState>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
-                state.focused = false;
-            }),
-        ))
-        // Paste event
-        .insert(On::<WidgetPasteEvent>::run(
-            move |event: ResMut<ListenerInput<WidgetPasteEvent>>,
-                  default_font: Res<DefaultFont>,
-                  style_query: Query<&WoodpeckerStyle>,
-                  mut state_query: Query<&mut TextBoxState>,
-                  mut font_manager: ResMut<FontManager>,
-                  mut event_writer: EventWriter<Change<TextChanged>>| {
-                let Ok(styles) = style_query.get(event.target) else {
-                    return;
-                };
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
-                let char_pos: usize = state.graphemes[0..state.cursor_position]
-                    .iter()
-                    .map(|g| g.len())
-                    .sum();
-                state.current_value.insert_str(char_pos, &event.paste);
-
-                event_writer.send(Change {
-                    target: widget_entity,
-                    data: TextChanged {
-                        value: state.current_value.clone(),
-                    },
-                });
-
-                state.cursor_position += get_graphemes(&event.paste).len();
-
-                // Update graphemes
-                set_graphemes(&mut state);
-                set_new_cursor_position(
-                    &mut state,
-                    &mut font_manager,
-                    &styles
-                        .font
-                        .map(Handle::Weak)
-                        .unwrap_or(default_font.0.clone_weak()),
-                    styles.font_size,
-                );
-            },
-        ))
-        .insert(On::<WidgetKeyboardButtonEvent>::run(
-            move |event: ResMut<ListenerInput<WidgetKeyboardButtonEvent>>,
-                  style_query: Query<&WoodpeckerStyle>,
-                  mut state_query: Query<&mut TextBoxState>,
-                  default_font: Res<DefaultFont>,
-                  mut font_manager: ResMut<FontManager>,
-                  mut event_writer: EventWriter<Change<TextChanged>>,
-                  keyboard_input: Res<ButtonInput<KeyCode>>| {
-                if event.code == KeyCode::ArrowRight {
-                    let Ok(styles) = style_query.get(event.target) else {
-                        return;
-                    };
-                    let Ok(mut state) = state_query.get_mut(state_entity) else {
-                        return;
-                    };
-                    if state.cursor_position < state.graphemes.len() {
-                        if keyboard_input.pressed(KeyCode::ControlLeft) {
-                            if state
-                                .graphemes
-                                .get(state.cursor_position)
-                                .map(|g| g.contains(' '))
-                                .unwrap_or_default()
-                            {
-                                state.cursor_position += 1;
-                            } else {
-                                while !state
-                                    .graphemes
-                                    .get(state.cursor_position)
-                                    .map(|g| g.contains(' '))
-                                    .unwrap_or(true)
-                                {
-                                    state.cursor_position += 1;
-                                }
-                            }
-                        } else {
+                            let char_pos: usize =
+                                state.graphemes[0..cursor_pos].iter().map(|g| g.len()).sum();
+                            state.current_value.insert_str(char_pos, &trigger.c);
                             state.cursor_position += 1;
-                        }
-                    }
-                    set_new_cursor_position(
-                        &mut state,
-                        &mut font_manager,
-                        &styles
-                            .font
-                            .map(Handle::Weak)
-                            .unwrap_or(default_font.0.clone_weak()),
-                        styles.font_size,
-                    );
-                }
-                if event.code == KeyCode::ArrowLeft {
-                    let Ok(styles) = style_query.get(event.target) else {
-                        return;
-                    };
-                    let Ok(mut state) = state_query.get_mut(state_entity) else {
-                        return;
-                    };
 
-                    if keyboard_input.pressed(KeyCode::ControlLeft) {
-                        if state.cursor_position > 0 {
-                            if state
-                                .graphemes
-                                .get(state.cursor_position - 1)
-                                .map(|g| g.contains(' '))
-                                .unwrap_or_default()
-                            {
-                                state.cursor_position -= 1;
-                            } else {
-                                while !state
-                                    .graphemes
-                                    .get(state.cursor_position - 1)
-                                    .map(|g| g.contains(' '))
-                                    .unwrap_or(true)
-                                {
-                                    state.cursor_position -= 1;
-                                }
+                            commands.trigger_targets(
+                                Change {
+                                    target: widget_entity,
+                                    data: TextChanged {
+                                        value: state.current_value.clone(),
+                                    },
+                                },
+                                widget_entity,
+                            );
+
+                            // Update graphemes
+                            set_graphemes(&mut state);
+
+                            set_new_cursor_position(
+                                &mut state,
+                                &mut font_manager,
+                                &styles
+                                    .font
+                                    .map(Handle::Weak)
+                                    .unwrap_or(default_font.0.clone_weak()),
+                                styles.font_size,
+                            );
+                        },
+                    )
+                    .with_entity(widget_entity),
+                )
+                .with_child(
+                    Observer::new(
+                        move |_trigger: Trigger<Pointer<Over>>,
+                              mut state_query: Query<&mut TextBoxState>| {
+                            let Ok(mut state) = state_query.get_mut(state_entity) else {
+                                return;
+                            };
+                            if !state.focused {
+                                state.hovering = true;
                             }
-                        }
-                    } else if state.cursor_position > 0 {
-                        state.cursor_position -= 1;
-                    }
+                        },
+                    )
+                    .with_entity(widget_entity),
+                )
+                .with_child(
+                    Observer::new(
+                        move |_trigger: Trigger<Pointer<Out>>,
+                              mut state_query: Query<&mut TextBoxState>| {
+                            let Ok(mut state) = state_query.get_mut(state_entity) else {
+                                return;
+                            };
+                            if !state.focused {
+                                state.hovering = false;
+                            }
+                        },
+                    )
+                    .with_entity(widget_entity),
+                )
+                .with_child(
+                    Observer::new(
+                        move |_trigger: Trigger<WidgetFocus>,
+                              mut state_query: Query<&mut TextBoxState>| {
+                            let Ok(mut state) = state_query.get_mut(state_entity) else {
+                                return;
+                            };
+                            state.hovering = false;
+                            state.focused = true;
+                        },
+                    )
+                    .with_entity(widget_entity),
+                )
+                .with_child(
+                    Observer::new(
+                        move |_trigger: Trigger<WidgetBlur>,
+                              mut state_query: Query<&mut TextBoxState>| {
+                            let Ok(mut state) = state_query.get_mut(state_entity) else {
+                                return;
+                            };
+                            state.hovering = false;
+                            state.focused = false;
+                        },
+                    )
+                    .with_entity(widget_entity),
+                )
+                .with_child(Observer::new(
+                    move |trigger: Trigger<WidgetPasteEvent>,
+                          mut commands: Commands,
+                          style_query: Query<&WoodpeckerStyle>,
+                          mut state_query: Query<&mut TextBoxState>,
+                          default_font: Res<DefaultFont>,
+                          mut font_manager: ResMut<FontManager>| {
+                        let Ok(styles) = style_query.get(trigger.target) else {
+                            return;
+                        };
+                        let Ok(mut state) = state_query.get_mut(state_entity) else {
+                            return;
+                        };
 
-                    set_new_cursor_position(
-                        &mut state,
-                        &mut font_manager,
-                        &styles
-                            .font
-                            .map(Handle::Weak)
-                            .unwrap_or(default_font.0.clone_weak()),
-                        styles.font_size,
-                    );
-                }
-                if event.code == KeyCode::Backspace {
-                    let Ok(styles) = style_query.get(event.target) else {
-                        return;
-                    };
-                    let Ok(mut state) = state_query.get_mut(state_entity) else {
-                        return;
-                    };
-                    let cursor_pos = state.cursor_position;
+                        let cursor_pos = state.cursor_position;
 
-                    if !state.current_value.is_empty() && cursor_pos != 0 {
-                        let char_pos: usize = state.graphemes[0..cursor_pos - 1]
-                            .iter()
-                            .map(|g| g.len())
-                            .sum();
-                        state.current_value.remove(char_pos);
-                        state.cursor_position -= 1;
+                        let char_pos: usize =
+                            state.graphemes[0..cursor_pos].iter().map(|g| g.len()).sum();
+                        state.current_value.insert_str(char_pos, &trigger.paste);
+                        state.cursor_position += trigger.paste.len();
 
-                        event_writer.send(Change {
-                            target: widget_entity,
-                            data: TextChanged {
-                                value: state.current_value.clone(),
+                        commands.trigger_targets(
+                            Change {
+                                target: widget_entity,
+                                data: TextChanged {
+                                    value: state.current_value.clone(),
+                                },
                             },
-                        });
+                            widget_entity,
+                        );
 
                         // Update graphemes
                         set_graphemes(&mut state);
@@ -438,10 +343,146 @@ pub fn render(
                                 .unwrap_or(default_font.0.clone_weak()),
                             styles.font_size,
                         );
-                    }
-                }
-            },
-        ));
+                    },
+                ))
+                .with_child(
+                    Observer::new(
+                        move |trigger: Trigger<WidgetKeyboardButtonEvent>,
+                              mut commands: Commands,
+                              style_query: Query<&WoodpeckerStyle>,
+                              mut state_query: Query<&mut TextBoxState>,
+                              default_font: Res<DefaultFont>,
+                              mut font_manager: ResMut<FontManager>,
+                              keyboard_input: Res<ButtonInput<KeyCode>>| {
+                            if trigger.code == KeyCode::ArrowRight {
+                                let Ok(styles) = style_query.get(trigger.target) else {
+                                    return;
+                                };
+                                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                                    return;
+                                };
+                                if state.cursor_position < state.graphemes.len() {
+                                    if keyboard_input.pressed(KeyCode::ControlLeft) {
+                                        if state
+                                            .graphemes
+                                            .get(state.cursor_position)
+                                            .map(|g| g.contains(' '))
+                                            .unwrap_or_default()
+                                        {
+                                            state.cursor_position += 1;
+                                        } else {
+                                            while !state
+                                                .graphemes
+                                                .get(state.cursor_position)
+                                                .map(|g| g.contains(' '))
+                                                .unwrap_or(true)
+                                            {
+                                                state.cursor_position += 1;
+                                            }
+                                        }
+                                    } else {
+                                        state.cursor_position += 1;
+                                    }
+                                }
+                                set_new_cursor_position(
+                                    &mut state,
+                                    &mut font_manager,
+                                    &styles
+                                        .font
+                                        .map(Handle::Weak)
+                                        .unwrap_or(default_font.0.clone_weak()),
+                                    styles.font_size,
+                                );
+                            }
+                            if trigger.code == KeyCode::ArrowLeft {
+                                let Ok(styles) = style_query.get(trigger.target) else {
+                                    return;
+                                };
+                                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                                    return;
+                                };
+
+                                if keyboard_input.pressed(KeyCode::ControlLeft) {
+                                    if state.cursor_position > 0 {
+                                        if state
+                                            .graphemes
+                                            .get(state.cursor_position - 1)
+                                            .map(|g| g.contains(' '))
+                                            .unwrap_or_default()
+                                        {
+                                            state.cursor_position -= 1;
+                                        } else {
+                                            while !state
+                                                .graphemes
+                                                .get(state.cursor_position - 1)
+                                                .map(|g| g.contains(' '))
+                                                .unwrap_or(true)
+                                            {
+                                                state.cursor_position -= 1;
+                                            }
+                                        }
+                                    }
+                                } else if state.cursor_position > 0 {
+                                    state.cursor_position -= 1;
+                                }
+
+                                set_new_cursor_position(
+                                    &mut state,
+                                    &mut font_manager,
+                                    &styles
+                                        .font
+                                        .map(Handle::Weak)
+                                        .unwrap_or(default_font.0.clone_weak()),
+                                    styles.font_size,
+                                );
+                            }
+                            if trigger.code == KeyCode::Backspace {
+                                let Ok(styles) = style_query.get(trigger.target) else {
+                                    return;
+                                };
+                                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                                    return;
+                                };
+                                let cursor_pos = state.cursor_position;
+
+                                if !state.current_value.is_empty() && cursor_pos != 0 {
+                                    let char_pos: usize = state.graphemes[0..cursor_pos - 1]
+                                        .iter()
+                                        .map(|g| g.len())
+                                        .sum();
+                                    state.current_value.remove(char_pos);
+                                    state.cursor_position -= 1;
+
+                                    commands.trigger_targets(
+                                        Change {
+                                            target: widget_entity,
+                                            data: TextChanged {
+                                                value: state.current_value.clone(),
+                                            },
+                                        },
+                                        widget_entity,
+                                    );
+
+                                    // Update graphemes
+                                    set_graphemes(&mut state);
+
+                                    set_new_cursor_position(
+                                        &mut state,
+                                        &mut font_manager,
+                                        &styles
+                                            .font
+                                            .map(Handle::Weak)
+                                            .unwrap_or(default_font.0.clone_weak()),
+                                        styles.font_size,
+                                    );
+                                }
+                            }
+                        },
+                    )
+                    .with_entity(widget_entity),
+                )
+                .id()
+        });
 
     if state.focused {
         *style = styles.focused

@@ -1,11 +1,11 @@
 use crate::prelude::*;
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Out, Over, Pointer},
-    focus::PickingInteraction,
-    picking_core::Pickable,
-    prelude::On,
-};
+// use bevy_mod_picking::{
+//     events::{Out, Over, Pointer},
+//     focus::PickingInteraction,
+//     picking_core::Pickable,
+//     prelude::On,
+// };
 
 use super::colors;
 
@@ -60,8 +60,6 @@ pub struct WButtonBundle {
     pub button_styles: ButtonStyles,
     /// Provides overrides for picking behavior.
     pub pickable: Pickable,
-    /// Tracks entity interaction state.
-    pub interaction: PickingInteraction,
 }
 
 impl Default for WButtonBundle {
@@ -71,8 +69,7 @@ impl Default for WButtonBundle {
             render: WidgetRender::Quad,
             children: Default::default(),
             styles: ButtonStyles::default().normal,
-            pickable: Default::default(),
-            interaction: Default::default(),
+            pickable: Pickable::default(),
             button_styles: ButtonStyles::default(),
         }
     }
@@ -112,24 +109,22 @@ pub fn render(
         *styles = button_styles.normal;
     }
 
-    commands
-        .entity(**current_widget)
-        .insert(On::<Pointer<Over>>::run(
-            move |mut state_query: Query<&mut WButtonState>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
-                state.hovering = true;
-            },
-        ))
-        .insert(On::<Pointer<Out>>::run(
-            move |mut state_query: Query<&mut WButtonState>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
-                state.hovering = false;
-            },
-        ));
+    commands.entity(**current_widget).observe(
+        move |_: Trigger<Pointer<Over>>, mut state_query: Query<&mut WButtonState>| {
+            let Ok(mut state) = state_query.get_mut(state_entity) else {
+                return;
+            };
+            state.hovering = true;
+        },
+    );
+    commands.entity(**current_widget).observe(
+        move |_: Trigger<Pointer<Out>>, mut state_query: Query<&mut WButtonState>| {
+            let Ok(mut state) = state_query.get_mut(state_entity) else {
+                return;
+            };
+            state.hovering = false;
+        },
+    );
 
     children.apply(current_widget.as_parent());
 }

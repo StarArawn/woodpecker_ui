@@ -4,11 +4,11 @@ use crate::{
     prelude::*,
 };
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::Pointer,
-    prelude::{ListenerInput, On},
-    PickableBundle,
-};
+// use bevy_mod_picking::{
+//     events::Pointer,
+//     prelude::{ListenerInput, On},
+//     PickableBundle,
+// };
 
 use super::ScrollContext;
 
@@ -94,7 +94,7 @@ pub fn render(
     let hide_horizontal = scroll_box.hide_horizontal;
     let hide_vertical = scroll_box.hide_vertical;
     let scrollbar_thickness = scroll_box.scrollbar_thickness.unwrap_or(10.0);
-    let scroll_line = scroll_box.scroll_line.unwrap_or(128.0);
+    let scroll_line = scroll_box.scroll_line.unwrap_or(64.0);
     let thumb_color = scroll_box.thumb_color;
     let thumb_styles = scroll_box.thumb_styles;
     let track_color = scroll_box.track_color;
@@ -102,9 +102,6 @@ pub fn render(
 
     let scrollable_width = context.scrollable_width();
     let scrollable_height = context.scrollable_height();
-
-    let scroll_x = context.scroll_x();
-    let scroll_y = context.scroll_y();
 
     let hori_thickness = scrollbar_thickness;
     let vert_thickness = scrollbar_thickness;
@@ -189,20 +186,24 @@ pub fn render(
         });
     }
 
-    children.add::<Element>((
-        ElementBundle {
-            styles: hbox_styles,
-            children: element_wrapper_children,
-            ..Default::default()
-        },
-        PickableBundle::default(),
-        On::<Pointer<MouseWheelScroll>>::run(
-            move |mut event: ResMut<ListenerInput<Pointer<MouseWheelScroll>>>,
+    children
+        .add::<Element>((
+            ElementBundle {
+                styles: hbox_styles,
+                children: element_wrapper_children,
+                ..Default::default()
+            },
+            Pickable::default(),
+        ))
+        .observe(
+            move |mut trigger: Trigger<Pointer<MouseWheelScroll>>,
                   mut context_query: Query<&mut ScrollContext>| {
-                let x = event.scroll.x;
-                let y = event.scroll.y;
-                event.stop_propagation();
+                let x = trigger.scroll.x;
+                let y = trigger.scroll.y;
+                trigger.propagate(false);
                 if let Ok(mut context) = context_query.get_mut(context_entity) {
+                    let scroll_x = context.scroll_x();
+                    let scroll_y = context.scroll_y();
                     if !disable_horizontal {
                         context.set_scroll_x(scroll_x - x * scroll_line);
                     }
@@ -211,8 +212,7 @@ pub fn render(
                     }
                 }
             },
-        ),
-    ));
+        );
 
     children.apply(current_widget.as_parent());
 }
