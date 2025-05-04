@@ -88,6 +88,7 @@ fn render(
                 ..Default::default()
             })
             .with_observe(
+                current_widget,
                 move |_: Trigger<Pointer<Click>>, mut query: Query<&mut CounterState>| {
                     let Ok(mut state) = query.get_mut(state_entity) else {
                         return;

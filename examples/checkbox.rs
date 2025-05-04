@@ -38,18 +38,17 @@ fn startup(
         Transform::default().with_scale(Vec3::splat(128.)),
     ));
 
-    let root = commands
-        .spawn((WoodpeckerAppBundle {
-            styles: WoodpeckerStyle {
-                padding: Edge::all(10.0),
-                ..default()
-            },
-            children: WidgetChildren::default()
-                .with_child::<Checkbox>(CheckboxBundle { ..default() })
-                .with_observe(on_change),
+    let root = commands.spawn_empty().id();
+    commands.entity(root).insert(WoodpeckerAppBundle {
+        styles: WoodpeckerStyle {
+            padding: Edge::all(10.0),
             ..default()
-        },))
-        .id();
+        },
+        children: WidgetChildren::default()
+            .with_child::<Checkbox>(CheckboxBundle { ..default() })
+            .with_observe(CurrentWidget(root), on_change),
+        ..default()
+    });
     ui_context.set_root_widget(root);
 }
 

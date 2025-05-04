@@ -26,49 +26,49 @@ fn startup(
         Transform::from_xyz(0.0, 0.0, 0.0),
     ));
 
-    let root = commands
-        .spawn((WoodpeckerAppBundle {
-            styles: WoodpeckerStyle {
-                padding: Edge::all(10.0),
-                ..default()
-            },
-            children: WidgetChildren::default()
-                .with_child::<Slider>(SliderBundle {
-                    slider: Slider {
-                        start: 0.0,
-                        end: 1.0,
-                        value: 0.5,
-                    },
-                    // on_changed: On::run(
-                    //     |event: Listener<Change<SliderChanged>>,
-                    //      mut material_assets: ResMut<Assets<ColorMaterial>>,
-                    //      query: Query<&MeshMaterial2d>| {
-                    //         for material in query.iter() {
-                    //             material_assets
-                    //                 .get_mut(material)
-                    //                 .unwrap()
-                    //                 .color
-                    //                 .set_alpha(event.data.value)
-                    //         }
-                    //     },
-                    // ),
-                    ..default()
-                })
-                .with_observe(
-                    |trigger: Trigger<Change<SliderChanged>>,
-                     mut material_assets: ResMut<Assets<ColorMaterial>>,
-                     query: Query<&MeshMaterial2d<ColorMaterial>>| {
-                        for material in query.iter() {
-                            material_assets
-                                .get_mut(material)
-                                .unwrap()
-                                .color
-                                .set_alpha(trigger.data.value)
-                        }
-                    },
-                ),
+    let root = commands.spawn_empty().id();
+    commands.entity(root).insert(WoodpeckerAppBundle {
+        styles: WoodpeckerStyle {
+            padding: Edge::all(10.0),
             ..default()
-        },))
-        .id();
+        },
+        children: WidgetChildren::default()
+            .with_child::<Slider>(SliderBundle {
+                slider: Slider {
+                    start: 0.0,
+                    end: 1.0,
+                    value: 0.5,
+                },
+                // on_changed: On::run(
+                //     |event: Listener<Change<SliderChanged>>,
+                //      mut material_assets: ResMut<Assets<ColorMaterial>>,
+                //      query: Query<&MeshMaterial2d>| {
+                //         for material in query.iter() {
+                //             material_assets
+                //                 .get_mut(material)
+                //                 .unwrap()
+                //                 .color
+                //                 .set_alpha(event.data.value)
+                //         }
+                //     },
+                // ),
+                ..default()
+            })
+            .with_observe(
+                CurrentWidget(root),
+                |trigger: Trigger<Change<SliderChanged>>,
+                 mut material_assets: ResMut<Assets<ColorMaterial>>,
+                 query: Query<&MeshMaterial2d<ColorMaterial>>| {
+                    for material in query.iter() {
+                        material_assets
+                            .get_mut(material)
+                            .unwrap()
+                            .color
+                            .set_alpha(trigger.data.value)
+                    }
+                },
+            ),
+        ..default()
+    });
     ui_context.set_root_widget(root);
 }

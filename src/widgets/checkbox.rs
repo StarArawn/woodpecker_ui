@@ -166,8 +166,6 @@ fn render(
 
     let state = state_query.get(state_entity).unwrap_or(&default_state);
 
-    dbg!(state);
-
     // Insert event listeners
     let current_widget = *current_widget;
     widget_mapper

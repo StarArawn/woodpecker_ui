@@ -196,6 +196,7 @@ pub fn render(
             Pickable::default(),
         ))
         .observe(
+            *current_widget,
             move |mut trigger: Trigger<Pointer<MouseWheelScroll>>,
                   mut context_query: Query<&mut ScrollContext>| {
                 let x = trigger.scroll.x;

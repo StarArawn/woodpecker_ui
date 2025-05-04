@@ -26,32 +26,31 @@ fn startup(
         MeshMaterial2d(material_red),
         Transform::from_xyz(0.0, 0.0, 0.0),
     ));
-
-    let root = commands
-        .spawn(WoodpeckerAppBundle {
-            styles: WoodpeckerStyle {
-                align_items: Some(WidgetAlignItems::Center),
-                padding: Edge::all(0.0).left(50.0),
-                ..Default::default()
-            },
-            children: WidgetChildren::default()
-                .with_child::<ColorPicker>(ColorPickerBundle {
-                    color_picker: ColorPicker {
-                        initial_color: color,
-                    },
-                    ..Default::default()
-                })
-                .with_observe(
-                    |trigger: Trigger<Change<ColorPickerChanged>>,
-                     mut material_assets: ResMut<Assets<ColorMaterial>>,
-                     query: Query<&MeshMaterial2d<ColorMaterial>>| {
-                        for material in query.iter() {
-                            material_assets.get_mut(material).unwrap().color = trigger.data.color;
-                        }
-                    },
-                ),
+    let root = commands.spawn_empty().id();
+    commands.entity(root).insert(WoodpeckerAppBundle {
+        styles: WoodpeckerStyle {
+            align_items: Some(WidgetAlignItems::Center),
+            padding: Edge::all(0.0).left(50.0),
             ..Default::default()
-        })
-        .id();
+        },
+        children: WidgetChildren::default()
+            .with_child::<ColorPicker>(ColorPickerBundle {
+                color_picker: ColorPicker {
+                    initial_color: color,
+                },
+                ..Default::default()
+            })
+            .with_observe(
+                CurrentWidget(root),
+                |trigger: Trigger<Change<ColorPickerChanged>>,
+                 mut material_assets: ResMut<Assets<ColorMaterial>>,
+                 query: Query<&MeshMaterial2d<ColorMaterial>>| {
+                    for material in query.iter() {
+                        material_assets.get_mut(material).unwrap().color = trigger.data.color;
+                    }
+                },
+            ),
+        ..Default::default()
+    });
     ui_context.set_root_widget(root);
 }

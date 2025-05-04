@@ -60,6 +60,7 @@ fn render(
             ..Default::default()
         })
         .observe(
+            *current_widget,
             move |_: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                 if let Ok(mut state) = query.get_mut(state_entity) {
                     state.show_modal = true;
@@ -130,6 +131,7 @@ fn render(
                         ..Default::default()
                     },))
                     .with_observe(
+                        *current_widget,
                         move |_: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                             if let Ok(mut state) = query.get_mut(state_entity) {
                                 state.show_modal = false;

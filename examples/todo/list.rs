@@ -104,6 +104,7 @@ fn render(
                         ..Default::default()
                     })
                     .with_observe(
+                        *current_widget,
                         move |_trigger: Trigger<Pointer<Click>>,
                               mut todo_list_data: ResMut<TodoListData>| {
                             todo_list_data.remove(i);

@@ -38,31 +38,31 @@ fn startup(
         Transform::from_xyz(0.0, 0.0, 0.0),
     ));
 
-    let root = commands
-        .spawn((WoodpeckerAppBundle {
-            styles: WoodpeckerStyle {
-                padding: Edge::all(10.0),
-                ..default()
-            },
-            children: WidgetChildren::default()
-                .with_child::<Toggle>(ToggleBundle::default())
-                .with_observe(
-                    |trigger: Trigger<Change<ToggleChanged>>,
-                     material_list: Res<MaterialList>,
-                     mut query: Query<&mut MeshMaterial2d<ColorMaterial>>| {
-                        for mut material in query.iter_mut() {
-                            if trigger.data.checked {
-                                info!("Toggle is now checked!");
-                                *material = MeshMaterial2d(material_list.blue.clone());
-                            } else {
-                                info!("Toggle is now unchecked!");
-                                *material = MeshMaterial2d(material_list.red.clone());
-                            }
-                        }
-                    },
-                ),
+    let root = commands.spawn_empty().id();
+    commands.entity(root).insert(WoodpeckerAppBundle {
+        styles: WoodpeckerStyle {
+            padding: Edge::all(10.0),
             ..default()
-        },))
-        .id();
+        },
+        children: WidgetChildren::default()
+            .with_child::<Toggle>(ToggleBundle::default())
+            .with_observe(
+                CurrentWidget(root),
+                |trigger: Trigger<Change<ToggleChanged>>,
+                 material_list: Res<MaterialList>,
+                 mut query: Query<&mut MeshMaterial2d<ColorMaterial>>| {
+                    for mut material in query.iter_mut() {
+                        if trigger.data.checked {
+                            info!("Toggle is now checked!");
+                            *material = MeshMaterial2d(material_list.blue.clone());
+                        } else {
+                            info!("Toggle is now unchecked!");
+                            *material = MeshMaterial2d(material_list.red.clone());
+                        }
+                    }
+                },
+            ),
+        ..default()
+    });
     ui_context.set_root_widget(root);
 }

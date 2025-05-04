@@ -148,7 +148,11 @@ pub(crate) struct LayoutSystemParam<'w, 's> {
             Option<&'static ChildOf>,
             Option<&'static Children>,
         ),
-        (Without<StateMarker>, Without<PreviousWidget>),
+        (
+            Without<StateMarker>,
+            Without<PreviousWidget>,
+            Without<Observer>,
+        ),
     >,
     state_marker_query: Query<'w, 's, &'static StateMarker>,
     prev_marker_query: Query<'w, 's, &'static PreviousWidget>,
@@ -156,7 +160,11 @@ pub(crate) struct LayoutSystemParam<'w, 's> {
         'w,
         's,
         (Entity, &'static Children, One<&'static dyn Widget>),
-        (Changed<Children>, Without<PreviousWidget>),
+        (
+            Changed<Children>,
+            Without<PreviousWidget>,
+            Without<Observer>,
+        ),
     >,
     layout_query: Query<'w, 's, &'static WidgetLayout>,
     widget_render: Query<'w, 's, &'static WidgetRender>,
@@ -204,7 +212,7 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
             // We only want to add non-fixed entities as children
             .filter(|child| {
                 let Ok((_, _, styles, _, _)) = query.get(*child) else {
-                    return true;
+                    return false;
                 };
                 !matches!(styles.position, WidgetPosition::Fixed)
             })
@@ -259,7 +267,11 @@ fn traverse_layout_update(
             Option<&ChildOf>,
             Option<&Children>,
         ),
-        (Without<StateMarker>, Without<PreviousWidget>),
+        (
+            Without<StateMarker>,
+            Without<PreviousWidget>,
+            Without<Observer>,
+        ),
     >,
     layout_query: &Query<&WidgetLayout>,
     cache: &mut HashMap<Entity, Layout>,
@@ -323,7 +335,11 @@ fn traverse_upsert_node(
             Option<&ChildOf>,
             Option<&Children>,
         ),
-        (Without<StateMarker>, Without<PreviousWidget>),
+        (
+            Without<StateMarker>,
+            Without<PreviousWidget>,
+            Without<Observer>,
+        ),
     >,
     query_widget_render: &Query<&WidgetRender>,
     default_font: &DefaultFont,

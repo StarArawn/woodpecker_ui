@@ -154,6 +154,7 @@ fn render(
                         ..Default::default()
                     },))
                     .with_observe(
+                        *current_widget,
                         move |_trigger: Trigger<Pointer<Click>>,
                               state_query: Query<&ColorPickerState>| {
                             let Ok(state) = state_query.get(state_entity) else {
@@ -219,6 +220,7 @@ fn render(
                 Pickable::default(),
             ))
             .with_observe(
+                *current_widget,
                 move |trigger: Trigger<Pointer<Drag>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,
@@ -250,6 +252,7 @@ fn render(
                 },
             )
             .with_observe(
+                *current_widget,
                 move |_trigger: Trigger<Pointer<DragEnd>>,
                       mut query: Query<&mut ColorPickerState>| {
                     let Ok(mut state) = query.get_mut(state_entity) else {
@@ -260,6 +263,7 @@ fn render(
                 },
             )
             .with_observe(
+                *current_widget,
                 move |trigger: Trigger<Pointer<Click>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,
@@ -343,6 +347,7 @@ fn render(
                 Pickable::default(),
             ))
             .with_observe(
+                *current_widget,
                 move |trigger: Trigger<Pointer<Drag>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,
@@ -374,6 +379,7 @@ fn render(
                 },
             )
             .with_observe(
+                *current_widget,
                 move |_trigger: Trigger<Pointer<DragEnd>>,
                       mut query: Query<&mut ColorPickerState>| {
                     let Ok(mut state) = query.get_mut(state_entity) else {
@@ -384,6 +390,7 @@ fn render(
                 },
             )
             .with_observe(
+                *current_widget,
                 move |trigger: Trigger<Pointer<Click>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,
@@ -467,6 +474,7 @@ fn render(
                 Pickable::default(),
             ))
             .with_observe(
+                *current_widget,
                 move |trigger: Trigger<Pointer<Drag>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,
@@ -498,6 +506,7 @@ fn render(
                 },
             )
             .with_observe(
+                *current_widget,
                 move |_trigger: Trigger<Pointer<DragEnd>>,
                       mut query: Query<&mut ColorPickerState>| {
                     let Ok(mut state) = query.get_mut(state_entity) else {
@@ -508,6 +517,7 @@ fn render(
                 },
             )
             .with_observe(
+                *current_widget,
                 move |trigger: Trigger<Pointer<Click>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,

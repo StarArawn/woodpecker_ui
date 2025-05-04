@@ -19,7 +19,7 @@ use crate::{
     hook_helper::StateMarker,
     metrics::WidgetMetrics,
     prelude::{PreviousWidget, WidgetMapper},
-    CurrentWidget, WoodpeckerContext,
+    CurrentWidget, ObserverCache, WoodpeckerContext,
 };
 
 pub(crate) fn system(world: &mut World) {
@@ -46,7 +46,8 @@ pub(crate) fn system(world: &mut World) {
                 if world.get_entity(*e).is_err() {
                     return false;
                 }
-                !world.entity(*e).contains::<PreviousWidget>()
+                (!world.entity(*e).contains::<PreviousWidget>()
+                    && !world.entity(*e).contains::<Observer>())
                     && !world
                         .entity(*e)
                         .contains::<crate::hook_helper::StateMarker>()
@@ -204,6 +205,8 @@ fn run_render_system(
     widget_entity: Entity,
     widget_query_state: &mut QueryState<One<&dyn Widget>, Without<PreviousWidget>>,
 ) {
+    let root_widget = context.get_root_widget();
+
     // Pull widget data.
     let Ok(widget) = widget_query_state.get(world, widget_entity) else {
         error!("Woodpecker UI: Missing widget data for {}!", widget_entity);
@@ -219,6 +222,16 @@ fn run_render_system(
     };
     if is_uninitialized {
         render.initialize(world);
+    }
+
+    // Root observers never can be re-created so we don't want to despawn them.
+    if widget_entity != root_widget {
+        // Clear out observer entities on re-render
+        world.resource_scope(
+            |world: &mut World, mut observer_cache: Mut<ObserverCache>| {
+                observer_cache.despawn_for_widget(world, widget_entity);
+            },
+        );
     }
 
     trace!("re-rendering: {}-{}", widget_name, widget_entity);

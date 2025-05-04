@@ -234,6 +234,7 @@ fn render(
                 ..Default::default()
             },))
             .observe(
+                *current_widget,
                 move |mut trigger: Trigger<Pointer<Click>>,
                       mut commands: Commands,
                       mut state_query: Query<&mut DropdownState>,

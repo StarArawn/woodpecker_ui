@@ -56,6 +56,7 @@ fn focus_render(
                 // ),
             ))
             .observe(
+                *entity,
                 |trigger: Trigger<Pointer<Over>>, mut query: Query<&mut FocusWidget>| {
                     let Ok(mut widget) = query.get_mut(trigger.target) else {
                         return;
@@ -67,6 +68,7 @@ fn focus_render(
                 },
             )
             .observe(
+                *entity,
                 |trigger: Trigger<Pointer<Out>>, mut query: Query<&mut FocusWidget>| {
                     let Ok(mut widget) = query.get_mut(trigger.target) else {
                         return;
@@ -78,6 +80,7 @@ fn focus_render(
                 },
             )
             .observe(
+                *entity,
                 |trigger: Trigger<WidgetFocus>, mut query: Query<&mut FocusWidget>| {
                     let Ok(mut widget) = query.get_mut(trigger.target()) else {
                         return;
@@ -87,6 +90,7 @@ fn focus_render(
                 },
             )
             .observe(
+                *entity,
                 |trigger: Trigger<WidgetBlur>, mut query: Query<&mut FocusWidget>| {
                     let Ok(mut widget) = query.get_mut(trigger.target()) else {
                         return;
@@ -95,7 +99,7 @@ fn focus_render(
                     widget.hovered = false;
                 },
             )
-            .observe(|trigger: Trigger<WidgetKeyboardCharEvent>| {
+            .observe(*entity, |trigger: Trigger<WidgetKeyboardCharEvent>| {
                 info!("Widget {} got key {}!", trigger.target, trigger.c)
             });
     }

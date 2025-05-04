@@ -75,6 +75,7 @@ use hook_helper::HookHelper;
 use image::ImageManager;
 use layout::WoodpeckerLayoutPlugin;
 use metrics::WidgetMetrics;
+use observer_cache::ObserverCache;
 // use picking_backend::MouseWheelScroll;
 use svg::{SvgAsset, SvgLoader, SvgManager};
 use widgets::WoodpeckerUIWidgetPlugin;
@@ -89,6 +90,7 @@ mod image;
 mod keyboard_input;
 mod layout;
 mod metrics;
+mod observer_cache;
 mod on_change;
 mod picking_backend;
 mod render;
@@ -209,13 +211,8 @@ impl Plugin for WoodpeckerUIPlugin {
             .add_plugins(WoodpeckerUIWidgetPlugin)
             .add_event::<focus::WidgetFocus>()
             .add_event::<focus::WidgetBlur>()
-            // .add_plugins(EventListenerPlugin::<keyboard_input::WidgetKeyboardCharEvent>::default())
-            // .add_plugins(EventListenerPlugin::<
-            //     keyboard_input::WidgetKeyboardButtonEvent,
-            // >::default())
-            // .add_plugins(EventListenerPlugin::<Pointer<MouseWheelScroll>>::default())
-            // .add_plugins(EventListenerPlugin::<keyboard_input::WidgetPasteEvent>::default())
             .insert_resource(focus::CurrentFocus::new(Entity::PLACEHOLDER))
+            .init_resource::<ObserverCache>()
             .init_resource::<FontManager>()
             .init_resource::<HookHelper>()
             .init_resource::<WoodpeckerContext>()

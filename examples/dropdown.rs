@@ -41,37 +41,37 @@ fn startup(
         Transform::from_xyz(0.0, 0.0, 0.0),
     ));
 
-    let root = commands
-        .spawn((WoodpeckerAppBundle {
-            styles: WoodpeckerStyle {
-                padding: Edge::all(10.0),
-                ..default()
-            },
-            children: WidgetChildren::default()
-                .with_child::<Dropdown>((DropdownBundle {
-                    dropdown: Dropdown {
-                        current_value: "Red".into(),
-                        list: vec!["Red".into(), "Green".into(), "Blue".into()],
-                        ..Default::default()
-                    },
-                    ..default()
-                },))
-                .with_observe(
-                    |trigger: Trigger<Change<DropdownChanged>>,
-                     material_list: Res<MaterialList>,
-                     mut query: Query<&mut MeshMaterial2d<ColorMaterial>>| {
-                        for mut material in query.iter_mut() {
-                            match trigger.data.value.as_str() {
-                                "Red" => *material = MeshMaterial2d(material_list.red.clone()),
-                                "Green" => *material = MeshMaterial2d(material_list.green.clone()),
-                                "Blue" => *material = MeshMaterial2d(material_list.blue.clone()),
-                                _ => {}
-                            }
-                        }
-                    },
-                ),
+    let root = commands.spawn_empty().id();
+    commands.entity(root).insert(WoodpeckerAppBundle {
+        styles: WoodpeckerStyle {
+            padding: Edge::all(10.0),
             ..default()
-        },))
-        .id();
+        },
+        children: WidgetChildren::default()
+            .with_child::<Dropdown>((DropdownBundle {
+                dropdown: Dropdown {
+                    current_value: "Red".into(),
+                    list: vec!["Red".into(), "Green".into(), "Blue".into()],
+                    ..Default::default()
+                },
+                ..default()
+            },))
+            .with_observe(
+                CurrentWidget(root),
+                |trigger: Trigger<Change<DropdownChanged>>,
+                 material_list: Res<MaterialList>,
+                 mut query: Query<&mut MeshMaterial2d<ColorMaterial>>| {
+                    for mut material in query.iter_mut() {
+                        match trigger.data.value.as_str() {
+                            "Red" => *material = MeshMaterial2d(material_list.red.clone()),
+                            "Green" => *material = MeshMaterial2d(material_list.green.clone()),
+                            "Blue" => *material = MeshMaterial2d(material_list.blue.clone()),
+                            _ => {}
+                        }
+                    }
+                },
+            ),
+        ..default()
+    });
     ui_context.set_root_widget(root);
 }

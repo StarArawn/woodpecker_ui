@@ -49,6 +49,8 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
 
     let mut buttons = WidgetChildren::default();
 
+    let root = CurrentWidget(commands.spawn_empty().id());
+
     // Clear button
     buttons
         .add::<WButton>(WButtonBundle {
@@ -73,6 +75,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
             ..Default::default()
         })
         .observe(
+            root,
             |_: Trigger<Pointer<Click>>, mut calc_output: ResMut<CalcOutput>| {
                 calc_output.0 = "".into();
             },
@@ -137,6 +140,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                 ..Default::default()
             },))
             .observe(
+                root,
                 move |_: Trigger<Pointer<Click>>, mut calc_output: ResMut<CalcOutput>| {
                     if button == "=" {
                         if let Ok(result) = Context::<f64>::default().evaluate(&calc_output.0) {
@@ -149,46 +153,44 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
             );
     }
 
-    let root = commands
-        .spawn(WoodpeckerAppBundle {
-            children: WidgetChildren::default().with_child::<Element>(ElementBundle {
-                styles: WoodpeckerStyle {
-                    width: Units::Percentage(100.0),
-                    height: Units::Percentage(100.0),
-                    justify_content: Some(WidgetAlignContent::Center),
-                    align_content: Some(WidgetAlignContent::Center),
-                    padding: Edge {
-                        left: 0.0.into(),
-                        right: 0.0.into(),
-                        top: 25.0.into(),
-                        bottom: 0.0.into(),
-                    },
-                    ..Default::default()
+    commands.entity(root.entity()).insert(WoodpeckerAppBundle {
+        children: WidgetChildren::default().with_child::<Element>(ElementBundle {
+            styles: WoodpeckerStyle {
+                width: Units::Percentage(100.0),
+                height: Units::Percentage(100.0),
+                justify_content: Some(WidgetAlignContent::Center),
+                align_content: Some(WidgetAlignContent::Center),
+                padding: Edge {
+                    left: 0.0.into(),
+                    right: 0.0.into(),
+                    top: 25.0.into(),
+                    bottom: 0.0.into(),
                 },
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: WoodpeckerStyle {
-                            background_color: Srgba::hex("FF007F").unwrap().into(),
-                            border_radius: Corner::all(Units::Pixels(5.0)),
-                            width: WIDTH.into(),
-                            height: HEIGHT.into(),
-                            gap: (GAP.into(), GAP.into()),
-                            justify_content: Some(WidgetAlignContent::Center),
-                            align_content: Some(WidgetAlignContent::Center),
-                            flex_wrap: WidgetFlexWrap::Wrap,
-                            ..Default::default()
-                        },
-                        children: buttons,
+                ..Default::default()
+            },
+            children: WidgetChildren::default().with_child::<Element>((
+                ElementBundle {
+                    styles: WoodpeckerStyle {
+                        background_color: Srgba::hex("FF007F").unwrap().into(),
+                        border_radius: Corner::all(Units::Pixels(5.0)),
+                        width: WIDTH.into(),
+                        height: HEIGHT.into(),
+                        gap: (GAP.into(), GAP.into()),
+                        justify_content: Some(WidgetAlignContent::Center),
+                        align_content: Some(WidgetAlignContent::Center),
+                        flex_wrap: WidgetFlexWrap::Wrap,
                         ..Default::default()
                     },
-                    WidgetRender::Quad,
-                )),
-                ..Default::default()
-            }),
+                    children: buttons,
+                    ..Default::default()
+                },
+                WidgetRender::Quad,
+            )),
             ..Default::default()
-        })
-        .id();
-    ui_context.set_root_widget(root);
+        }),
+        ..Default::default()
+    });
+    ui_context.set_root_widget(root.entity());
 }
 
 #[derive(Debug, Resource)]

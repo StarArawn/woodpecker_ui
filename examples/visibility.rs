@@ -101,6 +101,7 @@ fn render(
             ..default()
         })
         .with_observe(
+            *current_widget,
             move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                 let Ok(mut input) = query.get_mut(state_entity) else {
                     return;
@@ -128,6 +129,7 @@ fn render(
             ..default()
         })
         .with_observe(
+            *current_widget,
             move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                 let Ok(mut input) = query.get_mut(state_entity) else {
                     return;
@@ -155,6 +157,7 @@ fn render(
             ..default()
         })
         .with_observe(
+            *current_widget,
             move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                 let Ok(mut input) = query.get_mut(state_entity) else {
                     return;
@@ -182,6 +185,7 @@ fn render(
             ..default()
         })
         .with_observe(
+            *current_widget,
             move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                 let Ok(mut input) = query.get_mut(state_entity) else {
                     return;
@@ -209,6 +213,7 @@ fn render(
             ..default()
         })
         .with_observe(
+            *current_widget,
             move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                 let Ok(mut input) = query.get_mut(state_entity) else {
                     return;
@@ -236,6 +241,7 @@ fn render(
             ..default()
         })
         .with_observe(
+            *current_widget,
             move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                 let Ok(mut input) = query.get_mut(state_entity) else {
                     return;
@@ -276,7 +282,7 @@ fn render(
             },
             Pickable::default(),
         ))
-        .observe(|_trigger: Trigger<Pointer<Click>>| {
+        .observe(*current_widget, |_trigger: Trigger<Pointer<Click>>| {
             info!("Clicked!");
         })
         .add::<Element>((
@@ -293,7 +299,7 @@ fn render(
             },
             Pickable::default(),
         ))
-        .observe(|_trigger: Trigger<Pointer<Click>>| {
+        .observe(*current_widget, |_trigger: Trigger<Pointer<Click>>| {
             info!("Clicked!");
         })
         .add::<Element>((
@@ -309,7 +315,7 @@ fn render(
             WidgetRender::Quad,
             Pickable::default(),
         ))
-        .observe(|_trigger: Trigger<Pointer<Click>>| {
+        .observe(*current_widget, |_trigger: Trigger<Pointer<Click>>| {
             info!("Clicked!");
         })
         .add::<Element>((
@@ -327,7 +333,7 @@ fn render(
             },
             Pickable::default(),
         ))
-        .observe(|_trigger: Trigger<Pointer<Click>>| {
+        .observe(*current_widget, |_trigger: Trigger<Pointer<Click>>| {
             info!("Clicked!");
         })
         .add::<Element>((
@@ -350,7 +356,7 @@ fn render(
             },
             Pickable::default(),
         ))
-        .observe(|_trigger: Trigger<Pointer<Click>>| {
+        .observe(*current_widget, |_trigger: Trigger<Pointer<Click>>| {
             info!("Clicked!");
         })
         .add::<Element>((
@@ -379,7 +385,7 @@ fn render(
             WidgetRender::Layer,
             Pickable::default(),
         ))
-        .observe(|_trigger: Trigger<Pointer<Click>>| {
+        .observe(*current_widget, |_trigger: Trigger<Pointer<Click>>| {
             info!("Clicked!");
         });
 

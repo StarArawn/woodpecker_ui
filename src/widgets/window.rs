@@ -153,6 +153,7 @@ fn render(
             Pickable::default(),
         ))
         .observe(
+            current_widget,
             move |trigger: Trigger<Pointer<Drag>>,
                   mut state_query: Query<&mut WindowState>,
                   layout_query: Query<&WidgetLayout>| {

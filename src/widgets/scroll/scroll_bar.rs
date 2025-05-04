@@ -187,20 +187,24 @@ pub fn render(
                         Pickable::default(),
                         WidgetRender::Quad,
                     ))
-                    .with_observe(|mut trigger: Trigger<Pointer<Click>>| {
+                    .with_observe(
+                        current_widget,|mut trigger: Trigger<Pointer<Click>>| {
                         trigger.propagate(false);
                     })
                     .with_observe(
+                        current_widget,
                         |trigger: Trigger<Pointer<DragStart>>, mut commands: Commands| {
                             commands.entity(trigger.target).insert(Pickable::IGNORE);
                         },
                     )
                     .with_observe(
+                        current_widget,
                         |trigger: Trigger<Pointer<DragEnd>>, mut commands: Commands| {
                             commands.entity(trigger.target).insert(Pickable::default());
                         },
                     )
                     .with_observe(
+                        current_widget,
                         move |trigger: Trigger<Pointer<Drag>>,
                         layout_query: Query<&WidgetLayout>,
                          mut context_query: Query<&mut ScrollContext>| {
@@ -246,7 +250,8 @@ pub fn render(
         },
         Pickable::default(),
         WidgetRender::Quad,
-    )).observe(move |trigger: Trigger<Pointer<Click>>, layout_query: Query<&WidgetLayout>, mut context_query: Query<&mut ScrollContext>| {
+    )).observe(
+        current_widget,move |trigger: Trigger<Pointer<Click>>, layout_query: Query<&WidgetLayout>, mut context_query: Query<&mut ScrollContext>| {
         let Ok(mut context) = context_query.get_mut(context_entity) else {
             return;
         };

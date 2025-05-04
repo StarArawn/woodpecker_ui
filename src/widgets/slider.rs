@@ -222,6 +222,7 @@ fn render(
             ..default()
         },))
         .observe(
+            current_widget,
             move |trigger: Trigger<Pointer<Drag>>,
                   mut commands: Commands,
                   layout_query: Query<&WidgetLayout>,
