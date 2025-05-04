@@ -55,8 +55,8 @@ pub enum WidgetRender {
     /// Render layers are two things
     /// 1. They clip child content that overflows outside of their own bounds(shape).
     /// 2. They stick children into a new opacity layer. This allows the children to have opacity
-    /// as a group instead of individually.
-    /// TODO: Allow users to define custom clip shapes (supported by vello we just need to expose somehow)
+    ///    as a group instead of individually.
+    // TODO: Allow users to define custom clip shapes (supported by vello we just need to expose somehow)
     Layer,
     /// A simple image renderer
     Image {

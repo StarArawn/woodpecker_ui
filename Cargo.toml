@@ -14,7 +14,6 @@ metrics = []
 
 [dependencies]
 bevy_vello = { path = "../bevy_vello", features = ["text", "default_font"] } #{ version = "0.8", features = ["svg", "text", "default_font"] }
-bevy-inspector-egui = "0.31"
 bevy-trait-query = "0.16" #{ git = "https://github.com/RobWalt/bevy-trait-query", rev = "215b9068e8457d96ddcd4c8efa9605ba0f8feda5" }
 bytemuck = "1.23.0"
 cosmic-text = "0.12"
@@ -45,6 +44,7 @@ futures-channel = "0.3"
 [dev-dependencies]
 calc = { version = "0.4.0", default-features = false }
 bevy = { version = "0.16", features = ["jpeg", "bevy_dev_tools"] }
+bevy-inspector-egui = "0.31"
 
 # [patch.crates-io]
 # bevy_vello = { git = "https://github.com/linebender/bevy_vello", rev = "7fe648ccb9766ecf2ef469f08c9f21093c3544e6" }

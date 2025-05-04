@@ -195,9 +195,9 @@ impl WidgetChildren {
                         let observer_entity = world
                             .spawn((ob.with_entity(target_entity), ChildOf(parent)))
                             .id();
-                        return Some(observer_entity);
+                        Some(observer_entity)
                     } else {
-                        return None;
+                        None
                     }
                 }),
             ));
@@ -214,9 +214,9 @@ impl WidgetChildren {
                         let observer_entity = world
                             .spawn((ob.with_entity(target_entity), ChildOf(parent)))
                             .id();
-                        return Some(observer_entity);
+                        Some(observer_entity)
                     } else {
-                        return None;
+                        None
                     }
                 }),
             ));
