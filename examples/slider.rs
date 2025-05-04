@@ -1,5 +1,4 @@
 use bevy::{prelude::*, sprite::MeshMaterial2d};
-use bevy_vello::render::VelloView;
 use woodpecker_ui::prelude::*;
 
 fn main() {
@@ -16,7 +15,7 @@ fn startup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    commands.spawn((Camera2d, VelloView));
+    commands.spawn((Camera2d, WoodpeckerView));
 
     let material_red = materials.add(Color::Srgba(Srgba::RED.with_alpha(0.5)));
 
@@ -39,19 +38,6 @@ fn startup(
                     end: 1.0,
                     value: 0.5,
                 },
-                // on_changed: On::run(
-                //     |event: Listener<Change<SliderChanged>>,
-                //      mut material_assets: ResMut<Assets<ColorMaterial>>,
-                //      query: Query<&MeshMaterial2d>| {
-                //         for material in query.iter() {
-                //             material_assets
-                //                 .get_mut(material)
-                //                 .unwrap()
-                //                 .color
-                //                 .set_alpha(event.data.value)
-                //         }
-                //     },
-                // ),
                 ..default()
             })
             .with_observe(

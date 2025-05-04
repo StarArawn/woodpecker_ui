@@ -1,5 +1,4 @@
 use bevy::{color::palettes::tailwind::*, prelude::*};
-use bevy_vello::render::VelloView;
 use woodpecker_ui::prelude::*;
 
 fn main() {
@@ -12,7 +11,7 @@ fn main() {
 }
 
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
-    commands.spawn((Camera2d, VelloView));
+    commands.spawn((Camera2d, WoodpeckerView));
 
     let root = commands
         .spawn(WoodpeckerAppBundle {

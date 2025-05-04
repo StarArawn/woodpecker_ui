@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_vello::render::VelloView;
 use woodpecker_ui::prelude::*;
 
 fn main() {
@@ -11,7 +10,7 @@ fn main() {
 }
 
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
-    commands.spawn((Camera2d, VelloView));
+    commands.spawn((Camera2d, WoodpeckerView));
 
     // Some default styles for our transition examples
     let quad_styles = WoodpeckerStyle {

@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_vello::render::VelloView;
 use woodpecker_ui::prelude::*;
 
 #[derive(Component, PartialEq, Default, Debug, Clone)]
@@ -117,7 +116,7 @@ fn startup(
     mut font_manager: ResMut<FontManager>,
     asset_server: Res<AssetServer>,
 ) {
-    commands.spawn((Camera2d, VelloView));
+    commands.spawn((Camera2d, WoodpeckerView));
 
     let font = asset_server.load("Outfit/static/Outfit-Regular.ttf");
     font_manager.add(&font);

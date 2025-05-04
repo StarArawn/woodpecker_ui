@@ -67,6 +67,7 @@ use bevy::{
 // use bevy_mod_picking::{events::Pointer, prelude::EventListenerPlugin};
 use bevy_trait_query::RegisterExt;
 use bevy_vello::prelude::VelloFont;
+use bevy_vello::render::VelloView;
 use bevy_vello::{vello::AaConfig, VelloPlugin, VelloSceneBundle};
 use context::{Widget, WoodpeckerContext};
 use entity_mapping::WidgetMapper;
@@ -116,6 +117,7 @@ pub mod prelude {
     pub use crate::render::{WidgetRender, WidgetRenderCustom};
     pub use crate::styles::*;
     pub use crate::widgets::*;
+    pub use crate::WoodpeckerView;
     pub use crate::{
         CurrentWidget, ParentWidget, RenderSettings, WidgetRegisterExt, WoodpeckerUIPlugin,
     };
@@ -184,6 +186,15 @@ impl CurrentWidget {
     pub fn as_parent(&self) -> ParentWidget {
         ParentWidget(self.0)
     }
+}
+
+/// A marker for woodpecker UI views.
+#[derive(Component, Clone, Copy, Debug)]
+#[require(VelloView = vello_view())]
+pub struct WoodpeckerView;
+
+fn vello_view() -> VelloView {
+    VelloView
 }
 
 /// The Woodpecker UI bevy Plugin

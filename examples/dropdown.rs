@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_vello::render::VelloView;
 use woodpecker_ui::prelude::*;
 
 fn main() {
@@ -23,7 +22,7 @@ fn startup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    commands.spawn((Camera2d, VelloView));
+    commands.spawn((Camera2d, WoodpeckerView));
 
     let material_red = materials.add(Color::Srgba(Srgba::RED));
     let material_green = materials.add(Color::Srgba(Srgba::GREEN));

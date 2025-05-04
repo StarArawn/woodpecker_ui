@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_vello::render::VelloView;
 use woodpecker_ui::prelude::*;
 
 fn main() {
@@ -21,7 +20,7 @@ fn startup(
     mut ui_context: ResMut<WoodpeckerContext>,
     asset_server: Res<AssetServer>,
 ) {
-    commands.spawn((Camera2d, VelloView));
+    commands.spawn((Camera2d, WoodpeckerView));
 
     let mut tab_buttons = WidgetChildren::default();
     let mut tab_content = WidgetChildren::default();

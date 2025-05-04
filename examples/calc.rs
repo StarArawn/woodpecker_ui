@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_vello::render::VelloView;
 use calc::Context;
 use woodpecker_ui::prelude::*;
 
@@ -45,7 +44,7 @@ pub const BUTTON_STYLES_HOVER: WoodpeckerStyle = WoodpeckerStyle {
 };
 
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
-    commands.spawn((Camera2d, VelloView));
+    commands.spawn((Camera2d, WoodpeckerView));
 
     let mut buttons = WidgetChildren::default();
 
