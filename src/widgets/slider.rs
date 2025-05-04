@@ -1,10 +1,5 @@
 use crate::prelude::*;
 use bevy::prelude::*;
-// use bevy_mod_picking::{
-//     events::{Click, Drag, Pointer},
-//     focus::PickingInteraction,
-//     prelude::{Listener, ListenerMut, On, Pickable},
-// };
 
 /// A slider change event.
 #[derive(Reflect, Debug, Clone, PartialEq, Default)]
@@ -130,7 +125,6 @@ impl Default for SliderBundle {
 
 fn render(
     mut commands: Commands,
-    mut widget_mapper: ResMut<WidgetMapper>,
     current_widget: Res<CurrentWidget>,
     mut hooks: ResMut<HookHelper>,
     mut query: Query<(
@@ -160,41 +154,31 @@ fn render(
     *styles = slider_styles.bar;
 
     let current_widget = *current_widget;
-    widget_mapper
-        // Slot 0 might be used so lets just use some random gen'd value
-        .map_observer(10836065465138027339, *current_widget)
-        .or_insert_with(move || {
-            commands
-                .spawn(
-                    Observer::new(
-                        move |trigger: Trigger<Pointer<Click>>,
-                              mut commands: Commands,
-                              layout_query: Query<&WidgetLayout>,
-                              mut state_query: Query<&mut SliderState>| {
-                            let Ok(mut state) = state_query.get_mut(state_entity) else {
-                                return;
-                            };
-                            let Ok(widget_layout) = layout_query.get(*current_widget) else {
-                                return;
-                            };
+    *children = WidgetChildren::default().with_observe(
+        current_widget,
+        move |trigger: Trigger<Pointer<Click>>,
+              mut commands: Commands,
+              layout_query: Query<&WidgetLayout>,
+              mut state_query: Query<&mut SliderState>| {
+            let Ok(mut state) = state_query.get_mut(state_entity) else {
+                return;
+            };
+            let Ok(widget_layout) = layout_query.get(*current_widget) else {
+                return;
+            };
 
-                            state.value = (trigger.pointer_location.position.x
-                                - widget_layout.location.x)
-                                / widget_layout.size.x;
-                            state.value = state.value.clamp(0.0, 1.0);
-                            commands.trigger_targets(
-                                Change {
-                                    target: *current_widget,
-                                    data: SliderChanged { value: state.value },
-                                },
-                                *current_widget,
-                            );
-                        },
-                    )
-                    .with_entity(*current_widget),
-                )
-                .id()
-        });
+            state.value = (trigger.pointer_location.position.x - widget_layout.location.x)
+                / widget_layout.size.x;
+            state.value = state.value.clamp(0.0, 1.0);
+            commands.trigger_targets(
+                Change {
+                    target: *current_widget,
+                    data: SliderChanged { value: state.value },
+                },
+                *current_widget,
+            );
+        },
+    );
 
     children.add::<Element>((
         ElementBundle {

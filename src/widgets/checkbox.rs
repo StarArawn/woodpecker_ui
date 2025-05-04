@@ -142,7 +142,6 @@ impl Default for CheckboxBundle {
 fn render(
     mut commands: Commands,
     current_widget: Res<CurrentWidget>,
-    mut widget_mapper: ResMut<WidgetMapper>,
     mut hooks: ResMut<HookHelper>,
     asset_server: Res<AssetServer>,
     mut query: Query<(
@@ -166,60 +165,47 @@ fn render(
 
     let state = state_query.get(state_entity).unwrap_or(&default_state);
 
-    // Insert event listeners
     let current_widget = *current_widget;
-    widget_mapper
-        // Slot 0 might be used so lets just use some random gen'd value
-        .map_observer(10836065465138027339, *current_widget)
-        .or_insert_with(move || {
-            commands
-                .spawn(
-                    Observer::new(
-                        move |_: Trigger<Pointer<Over>>,
-                              mut state_query: Query<&mut CheckboxState>| {
-                            let Ok(mut state) = state_query.get_mut(state_entity) else {
-                                return;
-                            };
-                            state.is_hovering = true;
-                        },
-                    )
-                    .with_entity(*current_widget),
-                )
-                .with_child(
-                    Observer::new(
-                        move |_: Trigger<Pointer<Out>>,
-                              mut state_query: Query<&mut CheckboxState>| {
-                            let Ok(mut state) = state_query.get_mut(state_entity) else {
-                                return;
-                            };
-                            state.is_hovering = false;
-                        },
-                    )
-                    .with_entity(*current_widget),
-                )
-                .with_child(
-                    Observer::new(
-                        move |_: Trigger<Pointer<Click>>,
-                              mut commands: Commands,
-                              mut state_query: Query<&mut CheckboxState>| {
-                            let Ok(mut state) = state_query.get_mut(state_entity) else {
-                                return;
-                            };
-                            state.is_checked = !state.is_checked;
-                            commands.trigger(Change {
-                                target: *current_widget,
-                                data: CheckboxChanged {
-                                    checked: state.is_checked,
-                                },
-                            });
-                        },
-                    )
-                    .with_entity(*current_widget),
-                )
-                .id()
-        });
 
     *children = WidgetChildren::default();
+    // Insert event listeners
+    children
+        .observe(
+            current_widget,
+            move |_: Trigger<Pointer<Over>>, mut state_query: Query<&mut CheckboxState>| {
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
+                state.is_hovering = true;
+            },
+        )
+        .observe(
+            current_widget,
+            move |_: Trigger<Pointer<Out>>, mut state_query: Query<&mut CheckboxState>| {
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
+                state.is_hovering = false;
+            },
+        )
+        .observe(
+            current_widget,
+            move |_: Trigger<Pointer<Click>>,
+                  mut commands: Commands,
+                  mut state_query: Query<&mut CheckboxState>| {
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
+                state.is_checked = !state.is_checked;
+                commands.trigger(Change {
+                    target: *current_widget,
+                    data: CheckboxChanged {
+                        checked: state.is_checked,
+                    },
+                });
+            },
+        );
+
     if state.is_checked {
         let check_styles = checkbox_styles.check.get_style(&default_state);
         children.add::<Element>((

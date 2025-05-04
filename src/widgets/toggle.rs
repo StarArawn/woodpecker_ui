@@ -214,7 +214,6 @@ impl Default for ToggleBundle {
 fn render(
     mut commands: Commands,
     current_widget: Res<CurrentWidget>,
-    mut widget_mapper: ResMut<WidgetMapper>,
     mut hooks: ResMut<HookHelper>,
     mut query: Query<(
         &ToggleWidgetStyles,
@@ -287,64 +286,49 @@ fn render(
 
     // Insert event listeners
     let current_widget = *current_widget;
-    widget_mapper
-        // Slot 0 might be used so lets just use some random gen'd value
-        .map_observer(10836065465138027339, *current_widget)
-        .or_insert_with(move || {
-            commands
-                .spawn(
-                    Observer::new(
-                        move |_: Trigger<Pointer<Click>>,
-                              mut commands: Commands,
-                              mut state_query: Query<&mut ToggleState>| {
-                            let Ok(mut state) = state_query.get_mut(state_entity) else {
-                                return;
-                            };
+    *children = WidgetChildren::default()
+        .with_observe(
+            current_widget,
+            move |_: Trigger<Pointer<Click>>,
+                  mut commands: Commands,
+                  mut state_query: Query<&mut ToggleState>| {
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
 
-                            state.is_checked = !state.is_checked;
+                state.is_checked = !state.is_checked;
 
-                            commands.trigger_targets(
-                                Change {
-                                    target: *current_widget,
-                                    data: ToggleChanged {
-                                        checked: state.is_checked,
-                                    },
-                                },
-                                *current_widget,
-                            );
+                commands.trigger_targets(
+                    Change {
+                        target: *current_widget,
+                        data: ToggleChanged {
+                            checked: state.is_checked,
                         },
-                    )
-                    .with_entity(*current_widget),
-                )
-                // You can add other observers as children.
-                .with_child(
-                    Observer::new(
-                        move |_: Trigger<Pointer<Over>>,
-                              mut state_query: Query<&mut ToggleState>| {
-                            let Ok(mut state) = state_query.get_mut(state_entity) else {
-                                return;
-                            };
+                    },
+                    *current_widget,
+                );
+            },
+        )
+        .with_observe(
+            current_widget,
+            move |_: Trigger<Pointer<Over>>, mut state_query: Query<&mut ToggleState>| {
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
 
-                            state.is_hovering = true;
-                        },
-                    )
-                    .with_entity(*current_widget),
-                )
-                .with_child(
-                    Observer::new(
-                        move |_: Trigger<Pointer<Out>>,
-                              mut state_query: Query<&mut ToggleState>| {
-                            let Ok(mut state) = state_query.get_mut(state_entity) else {
-                                return;
-                            };
+                state.is_hovering = true;
+            },
+        )
+        .with_observe(
+            current_widget,
+            move |_: Trigger<Pointer<Out>>, mut state_query: Query<&mut ToggleState>| {
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
 
-                            state.is_hovering = false;
-                        },
-                    )
-                    .with_entity(*current_widget),
-                )
-                .id()
-        });
+                state.is_hovering = false;
+            },
+        );
 
     children.add::<Element>((
         ElementBundle::default(),

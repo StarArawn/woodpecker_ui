@@ -61,6 +61,8 @@ pub struct WidgetChildren {
         >,
         ObserverList,
     )>,
+    /// A collection of observers attached to the parent widget not the children
+    self_observers: ObserverList,
     /// Stores a list of previous children.
     prev_children: Vec<String>,
     /// Lets the system know who the parent is.
@@ -172,15 +174,16 @@ impl WidgetChildren {
         self
     }
 
-    /// Add a bevy observer system to the last added entity.
+    /// Add a bevy observer system to the last added widget if no widget was added the observer
+    /// is added to the widget entity who has ownership of the `WidgetChildren` component.
     /// - spawn_location: Widget entity where the observer was created.
     pub fn observe<E: Event, B: Bundle, M>(
         &mut self,
         spawn_location: CurrentWidget,
         observer: impl IntoObserverSystem<E, B, M>,
     ) -> &mut Self {
+        let o = Arc::new(RwLock::new(Some(Observer::new(observer))));
         if let Some((_, _, observers)) = self.children_queue.last_mut() {
-            let o = Arc::new(RwLock::new(Some(Observer::new(observer))));
             observers.push((
                 spawn_location,
                 Arc::new(move |world, parent, target_entity| {
@@ -199,7 +202,24 @@ impl WidgetChildren {
                 }),
             ));
         } else {
-            warn!("Can't attach observer!");
+            // Treat like parent observer
+            self.self_observers.push((
+                spawn_location,
+                Arc::new(move |world, parent, target_entity| {
+                    // Last we attempt to spawn the observer.
+                    // We need to do this funkyness to get around observer not being cloneable.
+                    // Instead we can just reuse it!
+                    if let Some(ob) = o.write().unwrap().take() {
+                        trace!("Adding new observer for {}", target_entity);
+                        let observer_entity = world
+                            .spawn((ob.with_entity(target_entity), ChildOf(parent)))
+                            .id();
+                        return Some(observer_entity);
+                    } else {
+                        return None;
+                    }
+                }),
+            ));
         }
 
         self
@@ -228,6 +248,20 @@ impl WidgetChildren {
         if !self.children_queue.is_empty() {
             self.children = self.children_queue.drain(..).collect::<Vec<_>>();
         }
+
+        // Process self observers
+        world.resource_scope(
+            |world: &mut World, mut observer_cache: Mut<ObserverCache>| {
+            for (id, (spawn_entity, ob)) in self.self_observers.iter().enumerate() {
+                if !observer_cache.contains(spawn_entity.0, id, parent_widget.entity()) {
+                    if let Some(observer_entity) = (ob)(world, **spawn_entity, parent_widget.entity()) {
+                        observer_cache.add(spawn_entity.0, id, parent_widget.entity(), observer_entity);
+                    } else {
+                        panic!("Attempted to add an observer when its already been used. This is considered a bug please open a ticket.");
+                    }
+                }
+            }
+        });
 
         world.resource_scope(|world: &mut World, mut widget_mapper: Mut<WidgetMapper>| {
             world.resource_scope(

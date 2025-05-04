@@ -138,7 +138,6 @@ impl Default for DropdownBundle {
 fn render(
     mut commands: Commands,
     mut hooks: ResMut<HookHelper>,
-    mut widget_mapper: ResMut<WidgetMapper>,
     current_widget: Res<CurrentWidget>,
     asset_server: Res<AssetServer>,
     mut query: Query<(&Dropdown, &mut WoodpeckerStyle, &mut WidgetChildren)>,
@@ -161,31 +160,19 @@ fn render(
         return;
     };
 
-    let base_widget = **current_widget;
-    widget_mapper
-        // Slot 0 might be used so lets just use some random gen'd value
-        .map_observer(10836065465138027339, base_widget)
-        .or_insert_with(move || {
-            commands
-                .spawn(
-                    Observer::new(
-                        move |_trigger: Trigger<Pointer<Click>>,
-                              mut state_query: Query<&mut DropdownState>| {
-                            let Ok(mut state) = state_query.get_mut(state_entity) else {
-                                return;
-                            };
-
-                            state.is_open = !state.is_open;
-                        },
-                    )
-                    .with_entity(base_widget),
-                )
-                .id()
-        });
-
     *styles = dropdown.styles.background;
 
     *children = WidgetChildren::default()
+        .with_observe(
+            *current_widget,
+            move |_trigger: Trigger<Pointer<Click>>, mut state_query: Query<&mut DropdownState>| {
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
+
+                state.is_open = !state.is_open;
+            },
+        )
         // Text
         .with_child::<Element>((
             ElementBundle {
@@ -214,9 +201,10 @@ fn render(
             },
         ));
 
-    // List area
     let dropdown_entity = **current_widget;
     let mut list_children = WidgetChildren::default();
+
+    // List area
     for (i, item) in dropdown.list.iter().enumerate() {
         list_children
             .add::<WButton>((WButtonBundle {
