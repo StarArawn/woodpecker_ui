@@ -67,7 +67,6 @@ impl Default for TimeSinceLastPaste {
 pub(crate) fn read_paste_events(
     mut commands: Commands,
     mut query: Query<(Entity, &mut WidgetPasteEventWasm)>,
-    mut paste_event_writer: EventWriter<WidgetPasteEvent>,
     mut time_since_last_paste: Local<TimeSinceLastPaste>,
 ) {
     for (entity, mut event) in &mut query {
@@ -75,11 +74,14 @@ pub(crate) fn read_paste_events(
             continue;
         };
         *time_since_last_paste = TimeSinceLastPaste::default();
-        paste_event_writer.send(WidgetPasteEvent {
-            target: event.target,
-            paste: smol_str::SmolStr::new(text.to_string()),
-        });
-        commands.entity(entity).despawn_recursive();
+        commands.trigger_targets(
+            WidgetPasteEvent {
+                target: event.target,
+                paste: smol_str::SmolStr::new(text.to_string()),
+            },
+            event.target,
+        );
+        commands.entity(entity).despawn();
     }
 }
 
@@ -143,7 +145,7 @@ pub(crate) fn runner(
                 #[cfg(target_arch = "wasm32")]
                 {
                     let Some(clipboard) =
-                        web_sys::window().and_then(|window| window.navigator().clipboard())
+                        web_sys::window().and_then(|window| Some(window.navigator().clipboard()))
                     else {
                         warn!("no clipboard");
                         return;
@@ -164,13 +166,10 @@ pub(crate) fn runner(
                         let _ = sender.send(text);
                     });
 
-                    commands.trigger_targets(
-                        WidgetPasteEventWasm {
-                            target: current_focus.get(),
-                            receiver,
-                        },
-                        current_focus.get(),
-                    );
+                    commands.spawn(WidgetPasteEventWasm {
+                        target: current_focus.get(),
+                        receiver,
+                    });
 
                     return;
                 }

@@ -151,7 +151,7 @@ fn render(
                             #[cfg(target_arch = "wasm32")]
                             {
                                 let Some(clipboard) = web_sys::window()
-                                    .and_then(|window| window.navigator().clipboard())
+                                    .and_then(|window| Some(window.navigator().clipboard()))
                                 else {
                                     warn!("no clipboard");
                                     return;
