@@ -26,19 +26,17 @@ fn startup(
     ));
 
     let root = commands.spawn_empty().id();
-    commands.entity(root).insert(WoodpeckerAppBundle {
-        styles: WoodpeckerStyle {
+    commands.entity(root).insert((
+        WoodpeckerApp,
+        WoodpeckerStyle {
             padding: Edge::all(10.0),
             ..default()
         },
-        children: WidgetChildren::default()
-            .with_child::<Slider>(SliderBundle {
-                slider: Slider {
-                    start: 0.0,
-                    end: 1.0,
-                    value: 0.5,
-                },
-                ..default()
+        WidgetChildren::default()
+            .with_child::<Slider>(Slider {
+                start: 0.0,
+                end: 1.0,
+                value: 0.5,
             })
             .with_observe(
                 CurrentWidget(root),
@@ -54,7 +52,6 @@ fn startup(
                     }
                 },
             ),
-        ..default()
-    });
+    ));
     ui_context.set_root_widget(root);
 }

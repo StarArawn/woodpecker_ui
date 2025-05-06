@@ -16,7 +16,7 @@ metrics = []
 bevy_vello = { path = "../bevy_vello", features = ["text", "default_font"] } #{ version = "0.8", features = ["svg", "text", "default_font"] }
 bevy-trait-query = "0.16" #{ git = "https://github.com/RobWalt/bevy-trait-query", rev = "215b9068e8457d96ddcd4c8efa9605ba0f8feda5" }
 bytemuck = "1.23.0"
-cosmic-text = "0.12"
+cosmic-text = "0.14.2"
 image = "0.24"
 interpolation = "0.2"
 palette = "0.7.6"

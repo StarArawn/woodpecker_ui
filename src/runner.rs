@@ -264,6 +264,12 @@ fn run_render_system(
             // Only remove if the child was not added this frame.
             if !widget_mapper.added_this_frame(*child) {
                 trace!("Removing: {child}");
+                // Remove observers
+                world.resource_scope(
+                    |world: &mut World, mut observer_cache: Mut<ObserverCache>| {
+                    observer_cache.despawn_for_target(world, *child);
+                });
+
                 // Remove from the mapper.
                 widget_mapper.remove_by_entity_id(widget_entity, *child);
                 // Despawn and despawn recursive.

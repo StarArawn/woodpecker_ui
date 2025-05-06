@@ -217,6 +217,7 @@ impl WidgetRender {
                         Blob::new(Arc::new(vello_font.bytes.clone())),
                         0,
                     );
+
                     vello_scene
                         .draw_glyphs(&font)
                         .font_size(widget_style.font_size)

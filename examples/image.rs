@@ -18,7 +18,7 @@ fn startup(
 
     let root = commands
         .spawn((
-            WoodpeckerAppBundle::default(),
+            WoodpeckerApp,
             WidgetRender::Image {
                 handle: asset_server.load("woodpecker.jpg"),
             },

@@ -133,7 +133,7 @@ impl FontManager {
         buffer.set_text(
             &mut self.font_system,
             content,
-            attrs,
+            &attrs,
             cosmic_text::Shaping::Advanced,
         );
 
@@ -171,10 +171,17 @@ pub(crate) fn load_fonts(
 
             font_manager.vello_to_family.insert(
                 Handle::Weak(*id),
-                family
-                    .to_string()
-                    .expect("Couldn't get string from family name."),
+                if family.is_unicode() {
+                    family
+                        .to_string()
+                        .expect("Couldn't get string from family name.")
+                } else {
+                    String::from_utf8(family.name.into_iter().map(|b| *b).collect::<Vec<_>>())
+                        .expect("Couldn't get string from family name.")
+                },
             );
+
+            dbg!(&font_manager.vello_to_family);
 
             font_manager
                 .font_system

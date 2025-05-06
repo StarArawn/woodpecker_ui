@@ -18,6 +18,7 @@ pub struct WindowState {
 #[auto_update(render)]
 #[props(WoodpeckerWindow, PassedChildren)]
 #[state(WindowState)]
+#[require(WoodpeckerStyle, PassedChildren, WidgetRender = WidgetRender::Quad, WidgetChildren)]
 pub struct WoodpeckerWindow {
     /// The title of the window.
     pub title: String,
@@ -66,33 +67,6 @@ impl Default for WoodpeckerWindow {
     }
 }
 
-/// A convince bundle for spawning a [`Window``] widget.
-#[derive(Bundle, Clone)]
-pub struct WoodpeckerWindowBundle {
-    /// The window widget component
-    pub window: WoodpeckerWindow,
-    /// The internal styles
-    pub internal_styles: WoodpeckerStyle,
-    /// Passed in children
-    pub children: PassedChildren,
-    /// The internal rendering component
-    pub internal_render: WidgetRender,
-    /// the internal children.
-    pub internal_children: WidgetChildren,
-}
-
-impl Default for WoodpeckerWindowBundle {
-    fn default() -> Self {
-        Self {
-            window: Default::default(),
-            internal_styles: Default::default(),
-            internal_render: WidgetRender::Quad,
-            internal_children: Default::default(),
-            children: Default::default(),
-        }
-    }
-}
-
 fn render(
     mut commands: Commands,
     current_widget: Res<CurrentWidget>,
@@ -133,23 +107,19 @@ fn render(
     children
         // Title
         .add::<Element>((
-            ElementBundle {
-                styles: window.title_styles,
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: WoodpeckerStyle {
-                            font_size: 14.0,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    WidgetRender::Text {
-                        content: window.title.clone(),
-                        word_wrap: false,
-                    },
-                )),
-                ..Default::default()
-            },
+            Element,
+            window.title_styles,
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 14.0,
+                    ..Default::default()
+                },
+                WidgetRender::Text {
+                    content: window.title.clone(),
+                    word_wrap: false,
+                },
+            )),
             Pickable::default(),
         ))
         .observe(
@@ -168,11 +138,7 @@ fn render(
             },
         )
         // Children
-        .add::<Element>(ElementBundle {
-            styles: window.children_styles,
-            children: passed_children.0.clone(),
-            ..Default::default()
-        });
+        .add::<Element>((Element, window.children_styles, passed_children.0.clone()));
 
     children.apply(current_widget.as_parent());
 }

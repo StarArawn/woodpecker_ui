@@ -1,9 +1,5 @@
 use crate::prelude::*;
 use bevy::prelude::*;
-// use bevy_mod_picking::{
-//     events::{Click, Pointer},
-//     prelude::{ListenerMut, On, Pickable, PointerInteraction},
-// };
 
 /// A textbox change event.
 #[derive(Debug, Clone, Reflect)]
@@ -96,6 +92,7 @@ pub struct DropdownState {
 #[auto_update(render)]
 #[props(Dropdown)]
 #[state(DropdownState)]
+#[require(WoodpeckerStyle, WidgetRender = WidgetRender::Quad, WidgetChildren, Pickable, Focusable)]
 pub struct Dropdown {
     /// The current value
     pub current_value: String,
@@ -103,36 +100,6 @@ pub struct Dropdown {
     pub list: Vec<String>,
     /// Styles
     pub styles: DropdownStyles,
-}
-
-/// A bundle for convince when creating the widget.
-#[derive(Bundle, Clone)]
-pub struct DropdownBundle {
-    /// The dropdown component
-    pub dropdown: Dropdown,
-    /// The widget style component
-    pub styles: WoodpeckerStyle,
-    /// An internal widget render
-    pub widget_render: WidgetRender,
-    /// Internal children
-    pub children: WidgetChildren,
-    /// Picking
-    pub pickable: Pickable,
-    /// Can focus
-    pub focusable: Focusable,
-}
-
-impl Default for DropdownBundle {
-    fn default() -> Self {
-        Self {
-            dropdown: Default::default(),
-            styles: Default::default(),
-            widget_render: WidgetRender::Quad,
-            children: Default::default(),
-            pickable: Default::default(),
-            focusable: Focusable,
-        }
-    }
 }
 
 fn render(
@@ -175,10 +142,8 @@ fn render(
         )
         // Text
         .with_child::<Element>((
-            ElementBundle {
-                styles: dropdown.styles.text,
-                ..Default::default()
-            },
+            Element,
+            dropdown.styles.text,
             WidgetRender::Text {
                 content: state.current_value.clone(),
                 word_wrap: false,
@@ -186,10 +151,8 @@ fn render(
         ))
         // Icon
         .with_child::<Element>((
-            ElementBundle {
-                styles: dropdown.styles.icon,
-                ..Default::default()
-            },
+            Element,
+            dropdown.styles.icon,
             WidgetRender::Svg {
                 handle: if state.is_open {
                     asset_server.load("embedded://woodpecker_ui/embedded_assets/icons/arrow-up.svg")
@@ -207,20 +170,18 @@ fn render(
     // List area
     for (i, item) in dropdown.list.iter().enumerate() {
         list_children
-            .add::<WButton>((WButtonBundle {
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: dropdown.styles.text,
-                        ..Default::default()
-                    },
+            .add::<WButton>((
+                WButton,
+                WidgetChildren::default().with_child::<Element>((
+                    Element,
+                    dropdown.styles.text,
                     WidgetRender::Text {
                         content: item.clone(),
                         word_wrap: false,
                     },
                 )),
-                button_styles: dropdown.styles.list_item,
-                ..Default::default()
-            },))
+                dropdown.styles.list_item,
+            ))
             .observe(
                 *current_widget,
                 move |mut trigger: Trigger<Pointer<Click>>,
@@ -249,18 +210,16 @@ fn render(
             );
     }
     children.add::<Element>((
-        ElementBundle {
-            styles: WoodpeckerStyle {
-                display: if state.is_open {
-                    WidgetDisplay::Flex
-                } else {
-                    WidgetDisplay::None
-                },
-                ..dropdown.styles.list_area
+        Element,
+        WoodpeckerStyle {
+            display: if state.is_open {
+                WidgetDisplay::Flex
+            } else {
+                WidgetDisplay::None
             },
-            children: list_children,
-            ..Default::default()
+            ..dropdown.styles.list_area
         },
+        list_children,
         WidgetRender::Quad,
     ));
 

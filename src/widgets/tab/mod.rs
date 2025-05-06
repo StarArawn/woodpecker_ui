@@ -56,27 +56,25 @@ fn render(
     );
 
     children.add::<Element>((
-        ElementBundle {
-            styles: WoodpeckerStyle {
-                background_color: colors::BACKGROUND_LIGHT,
-                border_color: colors::BACKGROUND_LIGHT,
-                border: Edge::all(2.0),
-                border_radius: Corner::all(8.0),
-                ..Default::default()
-            },
-            children: WidgetChildren::default().with_child::<Clip>(ClipBundle {
-                styles: WoodpeckerStyle {
-                    border_radius: Corner::all(8.0),
-                    flex_direction: WidgetFlexDirection::Column,
-                    width: Units::Percentage(100.0),
-                    height: Units::Percentage(100.0),
-                    ..Default::default()
-                },
-                children: passed_children.0.clone(),
-                ..Default::default()
-            }),
+        Element,
+        WoodpeckerStyle {
+            background_color: colors::BACKGROUND_LIGHT,
+            border_color: colors::BACKGROUND_LIGHT,
+            border: Edge::all(2.0),
+            border_radius: Corner::all(8.0),
             ..Default::default()
         },
+        WidgetChildren::default().with_child::<Clip>((
+            Clip,
+            WoodpeckerStyle {
+                border_radius: Corner::all(8.0),
+                flex_direction: WidgetFlexDirection::Column,
+                width: Units::Percentage(100.0),
+                height: Units::Percentage(100.0),
+                ..Default::default()
+            },
+            passed_children.0.clone(),
+        )),
         WidgetRender::Quad,
     ));
 

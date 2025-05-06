@@ -26,6 +26,23 @@ impl ObserverCache {
         entities.contains_key(&(slot, target_entity))
     }
 
+    pub fn despawn_for_target(&mut self, world: &mut World, target: Entity) {
+        for entities in self.observer_entities.values_mut() {
+            let mut removed = vec![];
+            for ((slot, e_target), ob_entity) in entities.iter() {
+                if target == *e_target {
+                    removed.push((*slot, *e_target));
+
+                    world.despawn(*ob_entity);
+                }
+            }
+
+            for removed in removed {
+                entities.remove(&removed);
+            }
+        }
+    }
+
     pub fn despawn_for_widget(&mut self, world: &mut World, widget_entity: Entity) {
         let Some(entities) = self.observer_entities.get(&widget_entity) else {
             return;

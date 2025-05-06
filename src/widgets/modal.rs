@@ -19,6 +19,7 @@ pub struct ModalState {
 #[auto_update(render)]
 #[props(Modal)]
 #[state(ModalState)]
+#[require(WoodpeckerStyle = get_styles(), PassedChildren, WidgetChildren, Transition = get_transition(), WidgetRender = WidgetRender::Layer)]
 pub struct Modal {
     /// The text to display in the modal's title bar
     pub title: String,
@@ -36,6 +37,35 @@ pub struct Modal {
     pub min_size: Vec2,
 }
 
+fn get_styles() -> WoodpeckerStyle {
+    WoodpeckerStyle {
+        width: Units::Percentage(100.0),
+        height: Units::Percentage(100.0),
+        justify_content: Some(WidgetAlignContent::Center),
+        align_items: Some(WidgetAlignItems::Center),
+        position: WidgetPosition::Fixed,
+        ..Default::default()
+    }
+}
+
+fn get_transition() -> Transition {
+    let styles = get_styles();
+    Transition {
+        easing: TransitionEasing::Linear,
+        looping: false,
+        playing: false,
+        style_a: WoodpeckerStyle {
+            opacity: 0.0,
+            ..styles
+        },
+        style_b: WoodpeckerStyle {
+            opacity: 1.0,
+            ..styles
+        },
+        ..Default::default()
+    }
+}
+
 impl Default for Modal {
     fn default() -> Self {
         Self {
@@ -46,60 +76,6 @@ impl Default for Modal {
             overlay_color: Srgba::new(0.0, 0.0, 0.0, 0.95).into(),
             transition_play: false,
             min_size: Vec2::new(400.0, 250.0),
-        }
-    }
-}
-
-/// Default modal widget
-/// A simple widget that renders a modal.
-#[derive(Bundle, Clone)]
-pub struct ModalBundle {
-    /// The modal widget
-    pub modal: Modal,
-    /// The styles of the modal
-    pub styles: WoodpeckerStyle,
-    /// The children of the modal
-    pub children: PassedChildren,
-    /// The internal children of the modal
-    pub internal_children: WidgetChildren,
-    /// A transition used to fade in/out the modal.
-    pub transition: Transition,
-    /// Used to tell woodpecker that the modal should create its
-    /// own render layer context so our fade in/out works as a
-    /// group.
-    pub widget_render: WidgetRender,
-}
-
-impl Default for ModalBundle {
-    fn default() -> Self {
-        let styles = WoodpeckerStyle {
-            width: Units::Percentage(100.0),
-            height: Units::Percentage(100.0),
-            justify_content: Some(WidgetAlignContent::Center),
-            align_items: Some(WidgetAlignItems::Center),
-            position: WidgetPosition::Fixed,
-            ..Default::default()
-        };
-        Self {
-            modal: Default::default(),
-            styles,
-            children: Default::default(),
-            internal_children: Default::default(),
-            transition: Transition {
-                easing: TransitionEasing::Linear,
-                looping: false,
-                playing: false,
-                style_a: WoodpeckerStyle {
-                    opacity: 0.0,
-                    ..styles
-                },
-                style_b: WoodpeckerStyle {
-                    opacity: 1.0,
-                    ..styles
-                },
-                ..Default::default()
-            },
-            widget_render: WidgetRender::Layer,
         }
     }
 }
@@ -162,92 +138,93 @@ fn render(
     internal_children
         // Overlay
         .add::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
-                    background_color: modal.overlay_color,
-                    width: Units::Percentage(100.0),
-                    height: Units::Percentage(100.0),
-                    position: WidgetPosition::Absolute,
-                    ..Default::default()
-                },
+            Element,
+            WoodpeckerStyle {
+                background_color: modal.overlay_color,
+                width: Units::Percentage(100.0),
+                height: Units::Percentage(100.0),
+                position: WidgetPosition::Absolute,
                 ..Default::default()
             },
-            // PickableBundle::default(),
-            // On::<Pointer<Over>>::run(|mut event: ListenerMut<Pointer<Over>>| {
-            //     event.stop_propagation();
-            // }),
-            // On::<Pointer<Out>>::run(|mut event: ListenerMut<Pointer<Out>>| {
-            //     event.stop_propagation();
-            // }),
-            // On::<Pointer<Click>>::run(|mut event: ListenerMut<Pointer<Click>>| {
-            //     event.stop_propagation();
-            // }),
+            Pickable::default(),
             WidgetRender::Quad,
         ))
+        .observe(
+            *current_widget,
+            move |mut trigger: Trigger<Pointer<Over>>| {
+                trigger.propagate(false);
+            },
+        )
+        .observe(
+            *current_widget,
+            move |mut trigger: Trigger<Pointer<Out>>| {
+                trigger.propagate(false);
+            },
+        )
+        .observe(
+            *current_widget,
+            move |mut trigger: Trigger<Pointer<Click>>| {
+                trigger.propagate(false);
+            },
+        )
         // Window
         .add::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
-                    background_color: colors::BACKGROUND,
-                    border_color: colors::PRIMARY,
-                    border: Edge::all(2.0),
-                    border_radius: Corner::all(10.0),
-                    min_width: modal.min_size.x.into(),
-                    min_height: modal.min_size.y.into(),
-                    flex_direction: WidgetFlexDirection::Column,
-                    ..Default::default()
-                },
-                children: WidgetChildren::default()
-                    // Title Bar
-                    .with_child::<Element>(ElementBundle {
-                        styles: WoodpeckerStyle {
-                            height: Units::Pixels(24.0),
-                            width: Units::Percentage(100.0),
-                            padding: Edge::new(0.0, 0.0, 0.0, 5.0),
-                            ..Default::default()
-                        },
-                        // Title text
-                        children: WidgetChildren::default().with_child::<Element>((
-                            ElementBundle {
-                                styles: WoodpeckerStyle {
-                                    font_size: 14.0,
-                                    line_height: Some(18.0),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            WidgetRender::Text {
-                                content: modal.title.clone(),
-                                word_wrap: false,
-                            },
-                        )),
-                        ..Default::default()
-                    })
-                    // Border
-                    .with_child::<Element>((
-                        ElementBundle {
-                            styles: WoodpeckerStyle {
-                                background_color: Srgba::new(0.239, 0.258, 0.337, 1.0).into(),
-                                width: Units::Percentage(100.0),
-                                height: 2.0.into(),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        WidgetRender::Quad,
-                    ))
-                    // Content
-                    .with_child::<Element>(ElementBundle {
-                        styles: WoodpeckerStyle {
-                            width: Units::Percentage(100.0),
-                            height: Units::Percentage(100.0),
-                            ..Default::default()
-                        },
-                        children: passed_children.0.clone(),
-                        ..Default::default()
-                    }),
+            Element,
+            WoodpeckerStyle {
+                background_color: colors::BACKGROUND,
+                border_color: colors::PRIMARY,
+                border: Edge::all(2.0),
+                border_radius: Corner::all(10.0),
+                min_width: modal.min_size.x.into(),
+                min_height: modal.min_size.y.into(),
+                flex_direction: WidgetFlexDirection::Column,
                 ..Default::default()
             },
+            WidgetChildren::default()
+                // Title Bar
+                .with_child::<Element>((
+                    Element,
+                    WoodpeckerStyle {
+                        height: Units::Pixels(24.0),
+                        width: Units::Percentage(100.0),
+                        padding: Edge::new(0.0, 0.0, 0.0, 5.0),
+                        ..Default::default()
+                    },
+                    // Title text
+                    WidgetChildren::default().with_child::<Element>((
+                        Element,
+                        WoodpeckerStyle {
+                            font_size: 14.0,
+                            line_height: Some(18.0),
+                            ..Default::default()
+                        },
+                        WidgetRender::Text {
+                            content: modal.title.clone(),
+                            word_wrap: false,
+                        },
+                    )),
+                ))
+                // Border
+                .with_child::<Element>((
+                    Element,
+                    WoodpeckerStyle {
+                        background_color: Srgba::new(0.239, 0.258, 0.337, 1.0).into(),
+                        width: Units::Percentage(100.0),
+                        height: 2.0.into(),
+                        ..Default::default()
+                    },
+                    WidgetRender::Quad,
+                ))
+                // Content
+                .with_child::<Element>((
+                    Element,
+                    WoodpeckerStyle {
+                        width: Units::Percentage(100.0),
+                        height: Units::Percentage(100.0),
+                        ..Default::default()
+                    },
+                    passed_children.0.clone(),
+                )),
             WidgetRender::Quad,
         ));
 

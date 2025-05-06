@@ -61,12 +61,10 @@ fn startup(
                             ScrollBoxBundle {
                                 children: PassedChildren(
                                     WidgetChildren::default().with_child::<Element>((
-                                        ElementBundle {
-                                            styles: WoodpeckerStyle {
-                                                font_size: 14.0,
-                                                color: Srgba::WHITE.into(),
-                                                ..Default::default()
-                                            },
+                                        Element,
+                                        WoodpeckerStyle {
+                                            font_size: 14.0,
+                                            color: Srgba::WHITE.into(),
                                             ..Default::default()
                                         },
                                         WidgetRender::Text {
@@ -97,13 +95,11 @@ fn startup(
     tab_content.add::<TabContent>(TabContentBundle {
         tab_content: TabContent { index: 2 },
         children: PassedChildren(WidgetChildren::default().with_child::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
-                    margin: Edge::all(10.0),
-                    width: Units::Auto,
-                    height: Units::Pixels(200.0),
-                    ..Default::default()
-                },
+            Element,
+            WoodpeckerStyle {
+                margin: Edge::all(10.0),
+                width: Units::Auto,
+                height: Units::Pixels(200.0),
                 ..Default::default()
             },
             WidgetRender::Svg {
@@ -115,34 +111,31 @@ fn startup(
     });
 
     let root = commands
-        .spawn(WoodpeckerAppBundle {
-            styles: WoodpeckerStyle {
+        .spawn((
+            WoodpeckerApp,
+            WoodpeckerStyle {
                 align_items: Some(WidgetAlignItems::Center),
                 justify_content: Some(WidgetAlignContent::Center),
                 ..Default::default()
             },
-            children: WidgetChildren::default().with_child::<TabContextProvider>((
+            WidgetChildren::default().with_child::<TabContextProvider>((
                 TabContextProviderBundle {
                     children: PassedChildren(
                         WidgetChildren::default()
-                            .with_child::<Element>(ElementBundle {
-                                styles: WoodpeckerStyle {
+                            .with_child::<Element>((
+                                Element,
+                                WoodpeckerStyle {
                                     flex_direction: WidgetFlexDirection::Row,
                                     ..Default::default()
                                 },
-                                children: tab_buttons,
-                                ..Default::default()
-                            })
-                            .with_child::<Element>(ElementBundle {
-                                children: tab_content,
-                                ..Default::default()
-                            }),
+                                tab_buttons,
+                            ))
+                            .with_child::<Element>((Element, tab_content)),
                     ),
                     ..Default::default()
                 },
             )),
-            ..Default::default()
-        })
+        ))
         .id();
     ui_context.set_root_widget(root);
 }

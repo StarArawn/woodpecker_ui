@@ -21,30 +21,28 @@ mod toggle;
 mod transition;
 mod window;
 
-pub use app::{WoodpeckerApp, WoodpeckerAppBundle};
+pub use app::WoodpeckerApp;
 // use bevy_mod_picking::prelude::EventListenerPlugin;
-pub use button::{ButtonStyles, WButton, WButtonBundle};
+pub use button::{ButtonStyles, WButton};
 pub use checkbox::{
-    Checkbox, CheckboxBundle, CheckboxChanged, CheckboxState, CheckboxStyles, CheckboxWidgetStyles,
+    Checkbox, CheckboxChanged, CheckboxState, CheckboxStyles, CheckboxWidgetStyles,
 };
-pub use clip::{Clip, ClipBundle};
-pub use color_picker::{ColorPicker, ColorPickerBundle, ColorPickerChanged};
-pub use dropdown::{Dropdown, DropdownBundle, DropdownChanged, DropdownStyles};
-pub use element::{Element, ElementBundle};
-pub use icon_button::{IconButton, IconButtonBundle, IconButtonStyles};
-pub use modal::{Modal, ModalBundle};
+pub use clip::Clip;
+pub use color_picker::{ColorPicker, ColorPickerChanged};
+pub use dropdown::{Dropdown, DropdownChanged, DropdownStyles};
+pub use element::Element;
+pub use icon_button::{IconButton, IconButtonStyles};
+pub use modal::Modal;
 pub use scroll::content::{ScrollContent, ScrollContentBundle};
 pub use scroll::scroll_bar::{ScrollBar, ScrollBarBundle};
 pub use scroll::scroll_box::{ScrollBox, ScrollBoxBundle};
 pub use scroll::{ScrollContextProvider, ScrollContextProviderBundle};
-pub use slider::{Slider, SliderBundle, SliderChanged, SliderState, SliderStyles};
+pub use slider::{Slider, SliderChanged, SliderState, SliderStyles};
 pub use tab::*;
 pub use text_box::{TextBox, TextBoxBundle, TextBoxState, TextChanged, TextboxStyles};
-pub use toggle::{
-    Toggle, ToggleBundle, ToggleChanged, ToggleState, ToggleStyles, ToggleWidgetStyles,
-};
+pub use toggle::{Toggle, ToggleChanged, ToggleState, ToggleStyles, ToggleWidgetStyles};
 pub use transition::*;
-pub use window::{WindowState, WoodpeckerWindow, WoodpeckerWindowBundle};
+pub use window::{WindowState, WoodpeckerWindow};
 
 /// A core set of UI widgets that Woodpecker UI provides.
 // TODO: Make this optional? Expose publicly.

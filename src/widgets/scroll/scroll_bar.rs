@@ -175,15 +175,14 @@ pub fn render(
 
     let current_widget = *current_widget;
     children.add::<Element>((
-        ElementBundle {
-            styles: track_style,
-            children: WidgetChildren::default().with_child::<Clip>(ClipBundle {
-                children: WidgetChildren::default()
+        Element,
+            track_style,
+            WidgetChildren::default().with_child::<Clip>((
+                Clip,
+                WidgetChildren::default()
                     .with_child::<Element>((
-                        ElementBundle {
-                            styles: thumb_style,
-                            ..Default::default()
-                        },
+                        Element,
+                        thumb_style,
                         Pickable::default(),
                         WidgetRender::Quad,
                     ))
@@ -244,10 +243,7 @@ pub fn render(
                             }
                         },
                     ),
-                ..Default::default()
-            }),
-            ..Default::default()
-        },
+            )),
         Pickable::default(),
         WidgetRender::Quad,
     )).observe(

@@ -79,8 +79,9 @@ fn render(current_widget: Res<CurrentWidget>, mut query: Query<(&TodoInput, &mut
                 input.current_value = trigger.data.value.clone();
             },
         )
-        .add::<WButton>((WButtonBundle {
-            button_styles: ButtonStyles {
+        .add::<WButton>((
+            WButton,
+            ButtonStyles {
                 normal: WoodpeckerStyle {
                     margin: Edge::all(0.0).left(10.0),
                     width: 100.0.into(),
@@ -92,12 +93,10 @@ fn render(current_widget: Res<CurrentWidget>, mut query: Query<(&TodoInput, &mut
                     ..ButtonStyles::default().hovered
                 },
             },
-            children: WidgetChildren::default().with_child::<Element>((
-                ElementBundle {
-                    styles: WoodpeckerStyle {
-                        font_size: 14.0,
-                        ..Default::default()
-                    },
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 14.0,
                     ..Default::default()
                 },
                 WidgetRender::Text {
@@ -105,8 +104,7 @@ fn render(current_widget: Res<CurrentWidget>, mut query: Query<(&TodoInput, &mut
                     word_wrap: true,
                 },
             )),
-            ..Default::default()
-        },))
+        ))
         .observe(
             current_widget,
             move |_trigger: Trigger<Pointer<Click>>,

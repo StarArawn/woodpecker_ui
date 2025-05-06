@@ -18,7 +18,7 @@ fn startup(
 
     let root = commands
         .spawn((
-            WoodpeckerAppBundle::default(),
+            WoodpeckerApp,
             WidgetRender::Svg {
                 handle: asset_server.load("woodpecker_svg/woodpecker.svg"),
                 color: Some(Srgba::GREEN.into()),

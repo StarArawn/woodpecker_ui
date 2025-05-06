@@ -1,13 +1,6 @@
+use super::colors;
 use crate::prelude::*;
 use bevy::prelude::*;
-// use bevy_mod_picking::{
-//     events::{Out, Over, Pointer},
-//     focus::PickingInteraction,
-//     picking_core::Pickable,
-//     prelude::On,
-// };
-
-use super::colors;
 
 /// A set of styles used to style a button.
 #[derive(Component, Reflect, Clone, Copy, PartialEq)]
@@ -45,36 +38,6 @@ impl Default for ButtonStyles {
     }
 }
 
-/// A generic button widget used for easy buttons!
-#[derive(Bundle, Clone)]
-pub struct WButtonBundle {
-    /// The button component itself.
-    pub button: WButton,
-    /// The rendering of the button widget.
-    pub render: WidgetRender,
-    /// A widget children component
-    pub children: WidgetChildren,
-    /// The widget styles,
-    pub styles: WoodpeckerStyle,
-    /// The button styles
-    pub button_styles: ButtonStyles,
-    /// Provides overrides for picking behavior.
-    pub pickable: Pickable,
-}
-
-impl Default for WButtonBundle {
-    fn default() -> Self {
-        Self {
-            button: Default::default(),
-            render: WidgetRender::Quad,
-            children: Default::default(),
-            styles: ButtonStyles::default().normal,
-            pickable: Pickable::default(),
-            button_styles: ButtonStyles::default(),
-        }
-    }
-}
-
 #[derive(Component, Default, PartialEq, Clone)]
 pub struct WButtonState {
     pub hovering: bool,
@@ -85,6 +48,7 @@ pub struct WButtonState {
 #[auto_update(render)]
 #[props(WButton, ButtonStyles)]
 #[state(WButtonState)]
+#[require(WidgetRender = WidgetRender::Quad, WidgetChildren, WoodpeckerStyle = ButtonStyles::default().normal, Pickable, ButtonStyles)]
 pub struct WButton;
 
 pub fn render(

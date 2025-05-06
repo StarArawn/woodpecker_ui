@@ -74,6 +74,7 @@ impl Default for SliderStyles {
 #[auto_update(render)]
 #[props(Slider, SliderStyles)]
 #[state(SliderState)]
+#[require(SliderStyles, WidgetChildren, WoodpeckerStyle, WidgetRender = WidgetRender::Quad, Pickable)]
 pub struct Slider {
     /// Start value
     pub start: f32,
@@ -89,36 +90,6 @@ impl Default for Slider {
             start: 0.0,
             end: 1.0,
             value: 0.0,
-        }
-    }
-}
-
-/// A bundle for convince when creating the widget.
-#[derive(Bundle, Clone)]
-pub struct SliderBundle {
-    /// The slider
-    pub slider: Slider,
-    /// The collection of styles used by the slider
-    pub slider_styles: SliderStyles,
-    /// The internal children used by the slider
-    pub children: WidgetChildren,
-    /// The styles of the slider
-    pub styles: WoodpeckerStyle,
-    /// The render mode of the slider. Default: Quad
-    pub render: WidgetRender,
-    /// Provides overrides for picking behavior.
-    pub pickable: Pickable,
-}
-
-impl Default for SliderBundle {
-    fn default() -> Self {
-        Self {
-            slider: Default::default(),
-            slider_styles: Default::default(),
-            children: Default::default(),
-            styles: Default::default(),
-            render: WidgetRender::Quad,
-            pickable: Default::default(),
         }
     }
 }
@@ -181,19 +152,18 @@ fn render(
     );
 
     children.add::<Element>((
-        ElementBundle {
-            styles: WoodpeckerStyle {
-                width: (slider_left + 10.0).into(),
-                ..slider_styles.fill
-            },
-            ..Default::default()
+        Element,
+        WoodpeckerStyle {
+            width: (slider_left + 10.0).into(),
+            ..slider_styles.fill
         },
         WidgetRender::Quad,
     ));
 
     children
-        .add::<WButton>((WButtonBundle {
-            button_styles: ButtonStyles {
+        .add::<WButton>((
+            WButton,
+            ButtonStyles {
                 normal: WoodpeckerStyle {
                     left: slider_left.into(),
                     ..slider_styles.button.normal
@@ -203,8 +173,7 @@ fn render(
                     ..slider_styles.button.hovered
                 },
             },
-            ..default()
-        },))
+        ))
         .observe(
             current_widget,
             move |trigger: Trigger<Pointer<Drag>>,

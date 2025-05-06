@@ -42,13 +42,12 @@ fn render(
     };
 
     widget_children
-        .add::<WButton>(WButtonBundle {
-            children: WidgetChildren::default().with_child::<Element>((
-                ElementBundle {
-                    styles: WoodpeckerStyle {
-                        font_size: 20.0,
-                        ..Default::default()
-                    },
+        .add::<WButton>((
+            WButton,
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 20.0,
                     ..Default::default()
                 },
                 WidgetRender::Text {
@@ -56,8 +55,7 @@ fn render(
                     word_wrap: false,
                 },
             )),
-            ..Default::default()
-        })
+        ))
         .observe(
             *current_widget,
             move |_: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
@@ -67,30 +65,29 @@ fn render(
             },
         );
 
-    widget_children.add::<Modal>(ModalBundle {
-        modal: Modal {
+    widget_children.add::<Modal>((
+        Modal {
             visible: state.show_modal,
             title: "Image/SVG fits to content.".into(),
             ..Default::default()
         },
-        children: PassedChildren(
-            WidgetChildren::default().with_child::<Element>(ElementBundle {
-                styles: WoodpeckerStyle {
+        PassedChildren(
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
                     align_items: Some(WidgetAlignItems::Center),
                     flex_direction: WidgetFlexDirection::Column,
                     padding: Edge::all(10.0),
                     width: Units::Percentage(100.0),
                     ..Default::default()
                 },
-                children: WidgetChildren::default()
+                WidgetChildren::default()
                     .with_child::<Element>((
-                        ElementBundle {
-                            styles: WoodpeckerStyle {
-                                width: Units::Auto,
-                                height: Units::Pixels(200.0),
-                                margin: Edge::all(0.0).bottom(10.0),
-                                ..Default::default()
-                            },
+                        Element,
+                        WoodpeckerStyle {
+                            width: Units::Auto,
+                            height: Units::Pixels(200.0),
+                            margin: Edge::all(0.0).bottom(10.0),
                             ..Default::default()
                         },
                         WidgetRender::Image {
@@ -98,12 +95,10 @@ fn render(
                         },
                     ))
                     .with_child::<Element>((
-                        ElementBundle {
-                            styles: WoodpeckerStyle {
-                                width: Units::Auto,
-                                height: Units::Pixels(200.0),
-                                ..Default::default()
-                            },
+                        Element,
+                        WoodpeckerStyle {
+                            width: Units::Auto,
+                            height: Units::Pixels(200.0),
                             ..Default::default()
                         },
                         WidgetRender::Svg {
@@ -111,15 +106,14 @@ fn render(
                             color: Some(Srgba::RED.into()),
                         },
                     ))
-                    .with_child::<WButton>((WButtonBundle {
-                        children: WidgetChildren::default().with_child::<Element>((
-                            ElementBundle {
-                                styles: WoodpeckerStyle {
-                                    width: Units::Percentage(100.0),
-                                    font_size: 20.0,
-                                    text_alignment: Some(TextAlign::Center),
-                                    ..Default::default()
-                                },
+                    .with_child::<WButton>((
+                        WButton,
+                        WidgetChildren::default().with_child::<Element>((
+                            Element,
+                            WoodpeckerStyle {
+                                width: Units::Percentage(100.0),
+                                font_size: 20.0,
+                                text_alignment: Some(TextAlign::Center),
                                 ..Default::default()
                             },
                             WidgetRender::Text {
@@ -127,8 +121,7 @@ fn render(
                                 word_wrap: true,
                             },
                         )),
-                        ..Default::default()
-                    },))
+                    ))
                     .with_observe(
                         *current_widget,
                         move |_: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
@@ -137,11 +130,9 @@ fn render(
                             }
                         },
                     ),
-                ..Default::default()
-            }),
+            )),
         ),
-        ..Default::default()
-    });
+    ));
 
     widget_children.apply(current_widget.as_parent());
 }
@@ -159,17 +150,17 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     commands.spawn((Camera2d, WoodpeckerView));
 
     let root = commands
-        .spawn(WoodpeckerAppBundle {
-            children: WidgetChildren::default().with_child::<MyWidget>(MyWidgetBundle {
-                styles: WoodpeckerStyle {
+        .spawn((
+            WoodpeckerApp,
+            WidgetChildren::default().with_child::<MyWidget>((
+                MyWidget,
+                WoodpeckerStyle {
                     width: Units::Percentage(100.0),
                     justify_content: Some(WidgetAlignContent::Center),
                     ..Default::default()
                 },
-                ..Default::default()
-            }),
-            ..Default::default()
-        })
+            )),
+        ))
         .id();
     ui_context.set_root_widget(root);
 }

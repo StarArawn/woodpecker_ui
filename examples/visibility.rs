@@ -14,8 +14,9 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     commands.spawn((Camera2d, WoodpeckerView));
 
     let root = commands
-        .spawn(WoodpeckerAppBundle {
-            children: WidgetChildren::default().with_child::<MyWidget>(MyWidgetBundle {
+        .spawn((
+            WoodpeckerApp,
+            WidgetChildren::default().with_child::<MyWidget>(MyWidgetBundle {
                 styles: WoodpeckerStyle {
                     display: WidgetDisplay::Flex,
                     flex_direction: WidgetFlexDirection::Column,
@@ -24,8 +25,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                 my_widget: MyWidget,
                 ..default()
             }),
-            ..default()
-        })
+        ))
         .id();
     ui_context.set_root_widget(root);
 }
@@ -83,13 +83,12 @@ fn render(
     };
 
     let buttons = WidgetChildren::default()
-        .with_child::<WButton>(WButtonBundle {
-            children: WidgetChildren::default().with_child::<Element>((
-                ElementBundle {
-                    styles: WoodpeckerStyle {
-                        font_size: 20.0,
-                        ..default()
-                    },
+        .with_child::<WButton>((
+            WButton,
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 20.0,
                     ..default()
                 },
                 WidgetRender::Text {
@@ -97,8 +96,7 @@ fn render(
                     word_wrap: false,
                 },
             )),
-            ..default()
-        })
+        ))
         .with_observe(
             *current_widget,
             move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
@@ -111,13 +109,12 @@ fn render(
                 };
             },
         )
-        .with_child::<WButton>(WButtonBundle {
-            children: WidgetChildren::default().with_child::<Element>((
-                ElementBundle {
-                    styles: WoodpeckerStyle {
-                        font_size: 20.0,
-                        ..default()
-                    },
+        .with_child::<WButton>((
+            WButton,
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 20.0,
                     ..default()
                 },
                 WidgetRender::Text {
@@ -125,8 +122,7 @@ fn render(
                     word_wrap: false,
                 },
             )),
-            ..default()
-        })
+        ))
         .with_observe(
             *current_widget,
             move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
@@ -139,13 +135,12 @@ fn render(
                 };
             },
         )
-        .with_child::<WButton>(WButtonBundle {
-            children: WidgetChildren::default().with_child::<Element>((
-                ElementBundle {
-                    styles: WoodpeckerStyle {
-                        font_size: 20.0,
-                        ..default()
-                    },
+        .with_child::<WButton>((
+            WButton,
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 20.0,
                     ..default()
                 },
                 WidgetRender::Text {
@@ -153,8 +148,7 @@ fn render(
                     word_wrap: false,
                 },
             )),
-            ..default()
-        })
+        ))
         .with_observe(
             *current_widget,
             move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
@@ -167,13 +161,12 @@ fn render(
                 };
             },
         )
-        .with_child::<WButton>(WButtonBundle {
-            children: WidgetChildren::default().with_child::<Element>((
-                ElementBundle {
-                    styles: WoodpeckerStyle {
-                        font_size: 20.0,
-                        ..default()
-                    },
+        .with_child::<WButton>((
+            WButton,
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 20.0,
                     ..default()
                 },
                 WidgetRender::Text {
@@ -181,8 +174,7 @@ fn render(
                     word_wrap: false,
                 },
             )),
-            ..default()
-        })
+        ))
         .with_observe(
             *current_widget,
             move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
@@ -195,13 +187,12 @@ fn render(
                 };
             },
         )
-        .with_child::<WButton>(WButtonBundle {
-            children: WidgetChildren::default().with_child::<Element>((
-                ElementBundle {
-                    styles: WoodpeckerStyle {
-                        font_size: 20.0,
-                        ..default()
-                    },
+        .with_child::<WButton>((
+            WButton,
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 20.0,
                     ..default()
                 },
                 WidgetRender::Text {
@@ -209,8 +200,7 @@ fn render(
                     word_wrap: false,
                 },
             )),
-            ..default()
-        })
+        ))
         .with_observe(
             *current_widget,
             move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
@@ -223,13 +213,12 @@ fn render(
                 };
             },
         )
-        .with_child::<WButton>(WButtonBundle {
-            children: WidgetChildren::default().with_child::<Element>((
-                ElementBundle {
-                    styles: WoodpeckerStyle {
-                        font_size: 20.0,
-                        ..default()
-                    },
+        .with_child::<WButton>((
+            WButton,
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 20.0,
                     ..default()
                 },
                 WidgetRender::Text {
@@ -237,8 +226,7 @@ fn render(
                     word_wrap: false,
                 },
             )),
-            ..default()
-        })
+        ))
         .with_observe(
             *current_widget,
             move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
@@ -253,26 +241,24 @@ fn render(
         );
 
     widget_children
-        .add::<Element>((ElementBundle {
-            styles: WoodpeckerStyle {
+        .add::<Element>((
+            Element,
+            WoodpeckerStyle {
                 margin: Edge::all(10.0),
                 display: WidgetDisplay::Flex,
                 gap: (Units::Pixels(5.), Units::Pixels(5.)),
                 width: Units::Pixels(100.),
                 ..default()
             },
-            children: buttons,
-            ..default()
-        },))
+            buttons,
+        ))
         .add::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
-                    visibility: state.text,
-                    font_size: 50.0,
-                    color: Srgba::RED.into(),
-                    margin: Edge::all(10.0),
-                    ..default()
-                },
+            Element,
+            WoodpeckerStyle {
+                visibility: state.text,
+                font_size: 50.0,
+                color: Srgba::RED.into(),
+                margin: Edge::all(10.0),
                 ..default()
             },
             WidgetRender::Text {
@@ -285,12 +271,10 @@ fn render(
             info!("Clicked!");
         })
         .add::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
-                    visibility: state.image,
-                    height: Units::Pixels(100.),
-                    ..default()
-                },
+            Element,
+            WoodpeckerStyle {
+                visibility: state.image,
+                height: Units::Pixels(100.),
                 ..default()
             },
             WidgetRender::Image {
@@ -302,13 +286,11 @@ fn render(
             info!("Clicked!");
         })
         .add::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
-                    visibility: state.quad,
-                    height: Units::Pixels(100.),
-                    background_color: BLUE_400.into(),
-                    ..default()
-                },
+            Element,
+            WoodpeckerStyle {
+                visibility: state.quad,
+                height: Units::Pixels(100.),
+                background_color: BLUE_400.into(),
                 ..default()
             },
             WidgetRender::Quad,
@@ -318,12 +300,10 @@ fn render(
             info!("Clicked!");
         })
         .add::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
-                    visibility: state.svg,
-                    height: Units::Pixels(100.),
-                    ..default()
-                },
+            Element,
+            WoodpeckerStyle {
+                visibility: state.svg,
+                height: Units::Pixels(100.),
                 ..default()
             },
             WidgetRender::Svg {
@@ -336,13 +316,11 @@ fn render(
             info!("Clicked!");
         })
         .add::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
-                    visibility: state.nine_patch,
-                    width: 100.0.into(),
-                    height: 200.0.into(),
-                    ..default()
-                },
+            Element,
+            WoodpeckerStyle {
+                visibility: state.nine_patch,
+                width: 100.0.into(),
+                height: 200.0.into(),
                 ..default()
             },
             WidgetRender::NinePatch {
@@ -359,28 +337,24 @@ fn render(
             info!("Clicked!");
         })
         .add::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
-                    visibility: state.layer,
-                    width: 100.0.into(),
-                    height: 50.0.into(),
-                    ..default()
-                },
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: WoodpeckerStyle {
-                            height: Units::Pixels(100.),
-                            ..default()
-                        },
-                        ..default()
-                    },
-                    WidgetRender::Svg {
-                        handle: asset_server.load("woodpecker_svg/woodpecker.svg"),
-                        color: Some(Srgba::RED.into()),
-                    },
-                )),
+            Element,
+            WoodpeckerStyle {
+                visibility: state.layer,
+                width: 100.0.into(),
+                height: 50.0.into(),
                 ..default()
             },
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    height: Units::Pixels(100.),
+                    ..default()
+                },
+                WidgetRender::Svg {
+                    handle: asset_server.load("woodpecker_svg/woodpecker.svg"),
+                    color: Some(Srgba::RED.into()),
+                },
+            )),
             WidgetRender::Layer,
             Pickable::default(),
         ))

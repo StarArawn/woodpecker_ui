@@ -34,36 +34,6 @@ impl Default for IconButtonStyles {
     }
 }
 
-/// A generic button widget used for easy buttons!
-#[derive(Bundle, Clone)]
-pub struct IconButtonBundle {
-    /// The button component itself.
-    pub button: IconButton,
-    /// The rendering of the button widget.
-    pub render: WidgetRender,
-    /// A widget children component
-    pub children: WidgetChildren,
-    /// The widget styles,
-    pub styles: WoodpeckerStyle,
-    /// The button styles
-    pub button_styles: IconButtonStyles,
-    /// Provides overrides for picking behavior.
-    pub pickable: Pickable,
-}
-
-impl Default for IconButtonBundle {
-    fn default() -> Self {
-        Self {
-            button: Default::default(),
-            render: WidgetRender::Quad,
-            children: Default::default(),
-            styles: ButtonStyles::default().normal,
-            pickable: Default::default(),
-            button_styles: IconButtonStyles::default(),
-        }
-    }
-}
-
 #[derive(Component, Default, PartialEq, Clone)]
 pub struct IconButtonState {
     pub hovering: bool,
@@ -74,6 +44,7 @@ pub struct IconButtonState {
 #[auto_update(render)]
 #[props(IconButton, IconButtonStyles)]
 #[state(IconButtonState)]
+#[require(WidgetRender = WidgetRender::Quad, WidgetChildren, WoodpeckerStyle = ButtonStyles::default().normal, IconButtonStyles, Pickable)]
 pub struct IconButton;
 
 pub fn render(

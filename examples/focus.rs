@@ -135,12 +135,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
         WidgetChildren::default(),
     ));
 
-    let root = commands
-        .spawn((WoodpeckerAppBundle {
-            children: root_children,
-            ..Default::default()
-        },))
-        .id();
+    let root = commands.spawn((WoodpeckerApp, root_children)).id();
 
     ui_context.set_root_widget(root);
 }

@@ -1,10 +1,5 @@
 use crate::prelude::*;
 use bevy::prelude::*;
-// use bevy_mod_picking::{
-//     events::{Click, Out, Over, Pointer},
-//     focus::PickingInteraction,
-//     prelude::{On, Pickable},
-// };
 
 use super::colors;
 
@@ -107,37 +102,8 @@ impl Default for CheckboxWidgetStyles {
 #[auto_update(render)]
 #[props(Checkbox, CheckboxWidgetStyles)]
 #[state(CheckboxState)]
+#[require(CheckboxWidgetStyles, WidgetChildren, WoodpeckerStyle,  WidgetRender = WidgetRender::Quad, Pickable)]
 pub struct Checkbox;
-
-/// A convince bundle for the widget
-#[derive(Bundle, Clone)]
-pub struct CheckboxBundle {
-    /// The checkbox
-    pub checkbox: Checkbox,
-    /// The checkbox styles
-    pub checkbox_styles: CheckboxWidgetStyles,
-    /// The internal children
-    pub internal_children: WidgetChildren,
-    /// The internal styles
-    pub styles: WoodpeckerStyle,
-    /// The render mode of the checkbox. Default: Quad
-    pub render: WidgetRender,
-    /// Provides overrides for picking behavior.
-    pub pickable: Pickable,
-}
-
-impl Default for CheckboxBundle {
-    fn default() -> Self {
-        Self {
-            checkbox: Default::default(),
-            checkbox_styles: Default::default(),
-            internal_children: Default::default(),
-            styles: Default::default(),
-            render: WidgetRender::Quad,
-            pickable: Default::default(),
-        }
-    }
-}
 
 fn render(
     mut commands: Commands,
@@ -209,10 +175,8 @@ fn render(
     if state.is_checked {
         let check_styles = checkbox_styles.check.get_style(&default_state);
         children.add::<Element>((
-            ElementBundle {
-                styles: check_styles,
-                ..Default::default()
-            },
+            Element,
+            check_styles,
             WidgetRender::Svg {
                 handle: asset_server
                     .load("embedded://woodpecker_ui/embedded_assets/icons/checkmark.svg"),

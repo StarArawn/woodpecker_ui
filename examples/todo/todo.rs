@@ -35,15 +35,16 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     commands.spawn((Camera2d, WoodpeckerView));
 
     let root = commands
-        .spawn(WoodpeckerAppBundle {
-            children: WidgetChildren::default().with_child::<Modal>(ModalBundle {
-                modal: Modal {
+        .spawn((
+            WoodpeckerApp,
+            WidgetChildren::default().with_child::<Modal>((
+                Modal {
                     visible: true,
                     title: "Todo Example".into(),
                     min_size: Vec2::new(500.0, 350.0),
                     ..Default::default()
                 },
-                children: PassedChildren(
+                PassedChildren(
                     WidgetChildren::default().with_child::<ScrollContextProvider>((
                         ScrollContextProviderBundle {
                             styles: WoodpeckerStyle {
@@ -55,21 +56,17 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                                 ScrollBoxBundle {
                                     children: PassedChildren(
                                         WidgetChildren::default().with_child::<Element>((
-                                            ElementBundle {
-                                                styles: WoodpeckerStyle {
-                                                    padding: Edge::all(0.0).left(10.0).right(10.0),
-                                                    flex_direction: WidgetFlexDirection::Column,
-                                                    ..Default::default()
-                                                },
-                                                children: WidgetChildren::default()
-                                                    .with_child::<TodoInput>(TodoInputBundle {
-                                                        ..Default::default()
-                                                    })
-                                                    .with_child::<TodoList>(
-                                                        TodoListBundle::default(),
-                                                    ),
+                                            Element,
+                                            WoodpeckerStyle {
+                                                padding: Edge::all(0.0).left(10.0).right(10.0),
+                                                flex_direction: WidgetFlexDirection::Column,
                                                 ..Default::default()
                                             },
+                                            WidgetChildren::default()
+                                                .with_child::<TodoInput>(TodoInputBundle {
+                                                    ..Default::default()
+                                                })
+                                                .with_child::<TodoList>(TodoListBundle::default()),
                                         )),
                                     ),
                                     ..Default::default()
@@ -79,10 +76,8 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                         },
                     )),
                 ),
-                ..Default::default()
-            }),
-            ..Default::default()
-        })
+            )),
+        ))
         .id();
     ui_context.set_root_widget(root);
 }

@@ -41,20 +41,18 @@ fn startup(
     ));
 
     let root = commands.spawn_empty().id();
-    commands.entity(root).insert(WoodpeckerAppBundle {
-        styles: WoodpeckerStyle {
+    commands.entity(root).insert((
+        WoodpeckerApp,
+        WoodpeckerStyle {
             padding: Edge::all(10.0),
             ..default()
         },
-        children: WidgetChildren::default()
-            .with_child::<Dropdown>((DropdownBundle {
-                dropdown: Dropdown {
-                    current_value: "Red".into(),
-                    list: vec!["Red".into(), "Green".into(), "Blue".into()],
-                    ..Default::default()
-                },
-                ..default()
-            },))
+        WidgetChildren::default()
+            .with_child::<Dropdown>(Dropdown {
+                list: vec!["Red".into(), "Green".into(), "Blue".into()],
+                current_value: "Red".into(),
+                ..Default::default()
+            })
             .with_observe(
                 CurrentWidget(root),
                 |trigger: Trigger<Change<DropdownChanged>>,
@@ -70,7 +68,6 @@ fn startup(
                     }
                 },
             ),
-        ..default()
-    });
+    ));
     ui_context.set_root_widget(root);
 }

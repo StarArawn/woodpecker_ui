@@ -25,14 +25,15 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras sed tellus neque. 
     "#.to_string();
 
     let root = commands
-        .spawn(WoodpeckerAppBundle {
-            children: WidgetChildren::default().with_child::<Modal>(ModalBundle {
-                modal: Modal {
+        .spawn((
+            WoodpeckerApp,
+            WidgetChildren::default().with_child::<Modal>((
+                Modal {
                     visible: true,
                     title: "Scrolling example".into(),
                     ..Default::default()
                 },
-                children: PassedChildren(
+                PassedChildren(
                     WidgetChildren::default().with_child::<ScrollContextProvider>((
                         ScrollContextProviderBundle {
                             styles: WoodpeckerStyle {
@@ -45,12 +46,10 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras sed tellus neque. 
                                 ScrollBoxBundle {
                                     children: PassedChildren(
                                         WidgetChildren::default().with_child::<Element>((
-                                            ElementBundle {
-                                                styles: WoodpeckerStyle {
-                                                    font_size: 14.0,
-                                                    color: Srgba::WHITE.into(),
-                                                    ..Default::default()
-                                                },
+                                            Element,
+                                            WoodpeckerStyle {
+                                                font_size: 14.0,
+                                                color: Srgba::WHITE.into(),
                                                 ..Default::default()
                                             },
                                             WidgetRender::Text {
@@ -66,10 +65,8 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras sed tellus neque. 
                         },
                     )),
                 ),
-                ..Default::default()
-            }),
-            ..Default::default()
-        })
+            )),
+        ))
         .id();
     ui_context.set_root_widget(root);
 }

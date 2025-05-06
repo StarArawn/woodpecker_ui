@@ -144,10 +144,10 @@ pub fn render(
         ..Default::default()
     };
 
-    let mut vbox_children = WidgetChildren::default().with_child::<Clip>(ClipBundle {
-        children: WidgetChildren::default().with_child::<ScrollContent>(scroll_content_bundle),
-        ..Default::default()
-    });
+    let mut vbox_children = WidgetChildren::default().with_child::<Clip>((
+        Clip,
+        WidgetChildren::default().with_child::<ScrollContent>(scroll_content_bundle),
+    ));
 
     if !hide_horizontal {
         vbox_children.add::<ScrollBar>(ScrollBarBundle {
@@ -165,11 +165,7 @@ pub fn render(
     }
 
     let mut element_wrapper_children =
-        WidgetChildren::default().with_child::<Element>(ElementBundle {
-            styles: vbox_styles,
-            children: vbox_children,
-            ..Default::default()
-        });
+        WidgetChildren::default().with_child::<Element>((Element, vbox_styles, vbox_children));
 
     if !hide_vertical {
         element_wrapper_children.add::<ScrollBar>(ScrollBarBundle {
@@ -188,11 +184,9 @@ pub fn render(
 
     children
         .add::<Element>((
-            ElementBundle {
-                styles: hbox_styles,
-                children: element_wrapper_children,
-                ..Default::default()
-            },
+            Element,
+            hbox_styles,
+            element_wrapper_children,
             Pickable::default(),
         ))
         .observe(

@@ -186,14 +186,14 @@ impl WidgetChildren {
         if let Some((_, _, observers)) = self.children_queue.last_mut() {
             observers.push((
                 spawn_location,
-                Arc::new(move |world, parent, target_entity| {
+                Arc::new(move |world, _parent, target_entity| {
                     // Last we attempt to spawn the observer.
                     // We need to do this funkyness to get around observer not being cloneable.
                     // Instead we can just reuse it!
                     if let Some(ob) = o.write().unwrap().take() {
                         trace!("Adding new observer for {}", target_entity);
                         let observer_entity = world
-                            .spawn((ob.with_entity(target_entity), ChildOf(parent)))
+                            .spawn((ob.with_entity(target_entity), ChildOf(target_entity)))
                             .id();
                         Some(observer_entity)
                     } else {
@@ -205,14 +205,14 @@ impl WidgetChildren {
             // Treat like parent observer
             self.self_observers.push((
                 spawn_location,
-                Arc::new(move |world, parent, target_entity| {
+                Arc::new(move |world, _parent, target_entity| {
                     // Last we attempt to spawn the observer.
                     // We need to do this funkyness to get around observer not being cloneable.
                     // Instead we can just reuse it!
                     if let Some(ob) = o.write().unwrap().take() {
                         trace!("Adding new observer for {}", target_entity);
                         let observer_entity = world
-                            .spawn((ob.with_entity(target_entity), ChildOf(parent)))
+                            .spawn((ob.with_entity(target_entity), ChildOf(target_entity)))
                             .id();
                         Some(observer_entity)
                     } else {

@@ -50,16 +50,15 @@ fn startup(
     font_manager.add(&font);
 
     let root = commands
-        .spawn(WoodpeckerAppBundle {
-            children: WidgetChildren::default().with_child::<Element>((
-                ElementBundle {
-                    styles: WoodpeckerStyle {
-                        font_size: 50.0,
-                        color: Srgba::RED.into(),
-                        margin: Edge::all(10.0),
-                        font: Some(font.id()),
-                        ..Default::default()
-                    },
+        .spawn((
+            WoodpeckerApp,
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 50.0,
+                    color: Srgba::RED.into(),
+                    margin: Edge::all(10.0),
+                    font: Some(font.id()),
                     ..Default::default()
                 },
                 WidgetRender::Text {
@@ -67,8 +66,7 @@ fn startup(
                     word_wrap: true,
                 },
             )),
-            ..Default::default()
-        })
+        ))
         .id();
     ui_context.set_root_widget(root);
 }

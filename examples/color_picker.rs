@@ -26,19 +26,17 @@ fn startup(
         Transform::from_xyz(0.0, 0.0, 0.0),
     ));
     let root = commands.spawn_empty().id();
-    commands.entity(root).insert(WoodpeckerAppBundle {
-        styles: WoodpeckerStyle {
+    commands.entity(root).insert((
+        WoodpeckerApp,
+        WoodpeckerStyle {
             align_items: Some(WidgetAlignItems::Center),
             padding: Edge::all(0.0).left(50.0),
             ..Default::default()
         },
-        children: WidgetChildren::default()
-            .with_child::<ColorPicker>(ColorPickerBundle {
-                color_picker: ColorPicker {
-                    initial_color: color,
-                },
-                ..Default::default()
-            })
+        WidgetChildren::default()
+            .with_child::<ColorPicker>((ColorPicker {
+                initial_color: color,
+            },))
             .with_observe(
                 CurrentWidget(root),
                 |trigger: Trigger<Change<ColorPickerChanged>>,
@@ -49,7 +47,6 @@ fn startup(
                     }
                 },
             ),
-        ..Default::default()
-    });
+    ));
     ui_context.set_root_widget(root);
 }

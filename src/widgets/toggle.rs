@@ -3,11 +3,6 @@ use bevy::{
     ecs::{change_detection::MaybeLocation, component::Tick},
     prelude::*,
 };
-// use bevy_mod_picking::{
-//     events::{Click, Out, Over, Pointer},
-//     focus::PickingInteraction,
-//     prelude::{On, Pickable},
-// };
 
 use super::colors;
 
@@ -173,41 +168,13 @@ impl Default for ToggleWidgetStyles {
 #[auto_update(render)]
 #[props(Toggle, ToggleWidgetStyles)]
 #[state(ToggleState)]
+#[require(ToggleWidgetStyles, WidgetChildren, WoodpeckerStyle, WidgetRender = WidgetRender::Quad, Pickable, Transition = get_transition())]
 pub struct Toggle;
 
-/// A convince bundle for the widget
-#[derive(Bundle, Clone)]
-pub struct ToggleBundle {
-    /// The toggle
-    pub toggle: Toggle,
-    /// The toggle styles
-    pub toggle_styles: ToggleWidgetStyles,
-    /// The internal children
-    pub children: WidgetChildren,
-    /// The internal styles
-    pub styles: WoodpeckerStyle,
-    /// The render mode of the toggle. Default: Quad
-    pub render: WidgetRender,
-    /// Provides overrides for picking behavior.
-    pub pickable: Pickable,
-    /// Used to animate..
-    pub transition: Transition,
-}
-
-impl Default for ToggleBundle {
-    fn default() -> Self {
-        Self {
-            toggle: Default::default(),
-            toggle_styles: Default::default(),
-            children: Default::default(),
-            styles: Default::default(),
-            render: WidgetRender::Quad,
-            pickable: Default::default(),
-            transition: Transition {
-                playing: false,
-                ..default()
-            },
-        }
+fn get_transition() -> Transition {
+    Transition {
+        playing: false,
+        ..default()
     }
 }
 
@@ -330,11 +297,7 @@ fn render(
             },
         );
 
-    children.add::<Element>((
-        ElementBundle::default(),
-        WidgetRender::Quad,
-        state.circle_transition,
-    ));
+    children.add::<Element>((Element, WidgetRender::Quad, state.circle_transition));
 
     children.apply(current_widget.as_parent());
 }

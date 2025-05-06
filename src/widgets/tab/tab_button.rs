@@ -92,26 +92,25 @@ fn render(
     // Actual button.
     let index = tab_button.index;
     children
-        .add::<WButton>((WButtonBundle {
-            button_styles: if is_active {
+        .add::<WButton>((
+            WButton,
+            if is_active {
                 tab_button.active_styles
             } else {
                 tab_button.inactive_styles
             },
-            children: WidgetChildren::default().with_child::<Element>((
-                ElementBundle {
-                    styles: WoodpeckerStyle {
-                        font_size: if is_active {
-                            tab_button.active_styles.normal.font_size
-                        } else {
-                            tab_button.inactive_styles.normal.font_size
-                        },
-                        color: if is_active {
-                            tab_button.active_styles.normal.color
-                        } else {
-                            tab_button.inactive_styles.normal.color
-                        },
-                        ..Default::default()
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: if is_active {
+                        tab_button.active_styles.normal.font_size
+                    } else {
+                        tab_button.inactive_styles.normal.font_size
+                    },
+                    color: if is_active {
+                        tab_button.active_styles.normal.color
+                    } else {
+                        tab_button.inactive_styles.normal.color
                     },
                     ..Default::default()
                 },
@@ -120,8 +119,7 @@ fn render(
                     word_wrap: false,
                 },
             )),
-            ..Default::default()
-        },))
+        ))
         .observe(
             *current_widget,
             move |_trigger: Trigger<Pointer<Click>>, mut context_query: Query<&mut TabContext>| {

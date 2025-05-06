@@ -64,15 +64,13 @@ fn startup(
     let mut position = Vec2::ZERO;
     for (size, scale_mode) in cases {
         children.add::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
-                    width: size.x.into(),
-                    height: size.y.into(),
-                    left: position.x.into(),
-                    top: position.y.into(),
-                    position: WidgetPosition::Fixed,
-                    ..Default::default()
-                },
+            Element,
+            WoodpeckerStyle {
+                width: size.x.into(),
+                height: size.y.into(),
+                left: position.x.into(),
+                top: position.y.into(),
+                position: WidgetPosition::Fixed,
                 ..Default::default()
             },
             WidgetRender::NinePatch {
@@ -83,11 +81,6 @@ fn startup(
         position.x += size.x + 25.0;
     }
 
-    let root = commands
-        .spawn((WoodpeckerAppBundle {
-            children,
-            ..Default::default()
-        },))
-        .id();
+    let root = commands.spawn((WoodpeckerApp, children)).id();
     ui_context.set_root_widget(root);
 }

@@ -17,16 +17,16 @@ fn startup(
     commands.spawn((Camera2d, WoodpeckerView));
 
     let root = commands
-        .spawn((WoodpeckerAppBundle {
-            children: WidgetChildren::default().with_child::<IconButton>(IconButtonBundle {
-                render: WidgetRender::Svg {
+        .spawn((
+            WoodpeckerApp,
+            WidgetChildren::default().with_child::<IconButton>((
+                IconButton,
+                WidgetRender::Svg {
                     handle: asset_server.load("woodpecker_svg/woodpecker.svg"),
                     color: None, // Set by IconButton
                 },
-                ..Default::default()
-            }),
-            ..Default::default()
-        },))
+            )),
+        ))
         .id();
     ui_context.set_root_widget(root);
 }

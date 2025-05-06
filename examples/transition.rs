@@ -24,15 +24,16 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     };
 
     let root = commands
-        .spawn((WoodpeckerAppBundle {
-            styles: WoodpeckerStyle {
+        .spawn((
+            WoodpeckerApp,
+            WoodpeckerStyle {
                 font_size: 50.0,
                 color: Srgba::RED.into(),
                 ..Default::default()
             },
-            children: WidgetChildren::default()
+            WidgetChildren::default()
                 .with_child::<Element>((
-                    ElementBundle::default(),
+                    Element,
                     WidgetRender::Quad,
                     Transition {
                         easing: TransitionEasing::QuadraticInOut,
@@ -49,7 +50,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                     },
                 ))
                 .with_child::<Element>((
-                    ElementBundle::default(),
+                    Element,
                     WidgetRender::Quad,
                     Transition {
                         easing: TransitionEasing::CubicInOut,
@@ -68,7 +69,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                     },
                 ))
                 .with_child::<Element>((
-                    ElementBundle::default(),
+                    Element,
                     WidgetRender::Quad,
                     Transition {
                         easing: TransitionEasing::CircularInOut,
@@ -89,16 +90,14 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                 ))
                 // With clipping!
                 .with_child::<Clip>((
-                    ClipBundle {
-                        children: WidgetChildren::default().with_child::<Element>((
-                            ElementBundle::default(),
-                            WidgetRender::Text {
-                                content: "Hello, I am some random long text that gets clipped by a transition! :D".into(),
-                                word_wrap: false,
-                            },
-                        )),
-                        ..Default::default()
-                    },
+                    Clip,
+                    WidgetChildren::default().with_child::<Element>((
+                        Element,
+                        WidgetRender::Text {
+                            content: "Hello, I am some random long text that gets clipped by a transition! :D".into(),
+                            word_wrap: false,
+                        },
+                    )),
                     Transition {
                         easing: TransitionEasing::CubicInOut,
                         timeout: 500.0,
@@ -118,13 +117,11 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                 ))
                 // With no clipping!
                 .with_child::<Element>((
-                    ElementBundle {
-                        children: WidgetChildren::default().with_child::<Element>((
-                            ElementBundle {
-                                styles: WoodpeckerStyle {
-                                    width: Units::Percentage(100.0),
-                                    ..Default::default()
-                                },
+                    Element,
+                    WidgetChildren::default().with_child::<Element>((
+                            Element,
+                            WoodpeckerStyle {
+                                width: Units::Percentage(100.0),
                                 ..Default::default()
                             },
                             WidgetRender::Text {
@@ -132,8 +129,6 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                                 word_wrap: true,
                             },
                         )),
-                        ..Default::default()
-                    },
                     Transition {
                         easing: TransitionEasing::CubicInOut,
                         timeout: 2500.0,
@@ -151,8 +146,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                         ..Default::default()
                     },
                 )),
-            ..Default::default()
-        },))
+        ))
         .id();
     ui_context.set_root_widget(root);
 }

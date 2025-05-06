@@ -7,15 +7,9 @@ use crate::{
     DefaultFont,
 };
 use bevy::prelude::*;
-// use bevy_mod_picking::{
-//     events::{Out, Over, Pointer},
-//     focus::PickingInteraction,
-//     picking_core::Pickable,
-//     prelude::{ListenerInput, On},
-// };
 use unicode_segmentation::UnicodeSegmentation;
 
-use super::{colors, Clip, ClipBundle, Element, ElementBundle};
+use super::{colors, Clip, Element};
 
 /// A textbox change event.
 #[derive(Debug, Clone, Reflect)]
@@ -97,6 +91,7 @@ impl Default for TextBoxBundle {
 #[auto_update(render)]
 #[props(TextBox, TextboxStyles)]
 #[state(TextBoxState)]
+#[require(WidgetRender = WidgetRender::Quad, WidgetChildren, WoodpeckerStyle, TextboxStyles, Pickable, Focusable)]
 pub struct TextBox {
     /// An initial value
     pub initial_value: String,
@@ -478,11 +473,9 @@ pub fn render(
         );
 
     let mut clip_children = WidgetChildren::default().with_child::<Element>((
-        ElementBundle {
-            styles: WoodpeckerStyle {
-                font_size: style.font_size,
-                ..Default::default()
-            },
+        Element,
+        WoodpeckerStyle {
+            font_size: style.font_size,
             ..Default::default()
         },
         WidgetRender::Text {
@@ -492,25 +485,19 @@ pub fn render(
     ));
 
     if state.cursor_visible {
-        clip_children.add::<Element>((
-            ElementBundle {
-                styles: cursor_styles,
-                ..Default::default()
-            },
-            WidgetRender::Quad,
-        ));
+        clip_children.add::<Element>((Element, cursor_styles, WidgetRender::Quad));
     }
 
-    children.add::<Clip>(ClipBundle {
-        styles: WoodpeckerStyle {
+    children.add::<Clip>((
+        Clip,
+        WoodpeckerStyle {
             width: style.width,
             height: style.height,
             align_items: Some(WidgetAlignItems::Center),
-            ..ClipBundle::default().styles // Take styles from clip bundle too!
+            ..Default::default()
         },
-        children: clip_children,
-        ..Default::default()
-    });
+        clip_children,
+    ));
 
     children.apply(current_widget.as_parent());
 }
