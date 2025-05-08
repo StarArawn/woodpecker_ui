@@ -264,6 +264,11 @@ fn run_render_system(
             // Only remove if the child was not added this frame.
             if !widget_mapper.added_this_frame(*child) {
                 trace!("Removing: {child}");
+
+                if world.get_entity(*child).is_err() {
+                    panic!("Error: Attempted to despawn an entity already despawned. :( Widget entities should never manually be removed. This might be a bug with the widget runner backend, please file a ticket!");
+                }
+
                 // Remove observers
                 world.resource_scope(
                     |world: &mut World, mut observer_cache: Mut<ObserverCache>| {

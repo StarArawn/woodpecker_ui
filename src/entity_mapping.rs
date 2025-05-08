@@ -98,8 +98,6 @@ impl WidgetMapper {
                 if key == mapping.key {
                     self.new_this_tick.insert(mapping.entity);
                     return mapping.entity;
-                } else {
-                    world.entity_mut(mapping.entity).despawn();
                 }
             }
         }
