@@ -15,7 +15,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     let root = commands
         .spawn((
             WoodpeckerApp,
-            WidgetChildren::default().with_child::<TextBox>(TextBoxBundle::default()),
+            WidgetChildren::default().with_child::<TextBox>(TextBox::default()),
         ))
         .id();
     ui_context.set_root_widget(root);

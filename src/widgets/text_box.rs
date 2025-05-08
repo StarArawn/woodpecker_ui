@@ -27,6 +27,8 @@ pub struct TextboxStyles {
     pub hovered: WoodpeckerStyle,
     /// Focused styles
     pub focused: WoodpeckerStyle,
+    /// Cursor styles
+    pub cursor: WoodpeckerStyle,
 }
 
 impl Default for TextboxStyles {
@@ -49,39 +51,14 @@ impl Default for TextboxStyles {
                 border_color: colors::PRIMARY,
                 ..shared
             },
-        }
-    }
-}
-
-/// A generic textbox widget!
-#[derive(Bundle, Clone)]
-pub struct TextBoxBundle {
-    /// The textbox component itself.
-    pub text_box: TextBox,
-    /// The rendering of the button widget.
-    pub render: WidgetRender,
-    /// A widget children component
-    pub children: WidgetChildren,
-    /// The widget styles,
-    pub styles: WoodpeckerStyle,
-    /// The textbox styles
-    pub textbox_styles: TextboxStyles,
-    /// Provides overrides for picking behavior.
-    pub pickable: Pickable,
-    /// Tells woodpecker we want this widget to get focus events.
-    pub focuable: Focusable,
-}
-
-impl Default for TextBoxBundle {
-    fn default() -> Self {
-        Self {
-            text_box: Default::default(),
-            render: WidgetRender::Quad,
-            children: Default::default(),
-            styles: Default::default(),
-            pickable: Default::default(),
-            textbox_styles: TextboxStyles::default(),
-            focuable: Focusable,
+            cursor: WoodpeckerStyle {
+                background_color: colors::PRIMARY,
+                position: WidgetPosition::Absolute,
+                top: 5.0.into(),
+                width: 2.0.into(),
+                height: (shared.height.value_or(26.0) - 10.0).into(),
+                ..Default::default()
+            },
         }
     }
 }
@@ -195,13 +172,8 @@ pub fn render(
     }
 
     let cursor_styles = WoodpeckerStyle {
-        background_color: styles.focused.border_color,
-        position: WidgetPosition::Absolute,
-        top: 5.0.into(),
         left: state.cursor_x.into(),
-        width: 2.0.into(),
-        height: (style.height.value_or(26.0) - 10.0).into(),
-        ..Default::default()
+        ..styles.cursor
     };
 
     let current_widget = *current_widget;
@@ -476,6 +448,7 @@ pub fn render(
         Element,
         WoodpeckerStyle {
             font_size: style.font_size,
+            color: style.color,
             ..Default::default()
         },
         WidgetRender::Text {
@@ -535,6 +508,7 @@ fn set_new_cursor_position(
             font_handle,
             &string_to_cursor,
             false,
+            Vec2::new(1.0, 1.0),
         )
         .unwrap();
 

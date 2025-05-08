@@ -204,6 +204,7 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
         &svg_assets,
         &mut ui_layout,
         root_node,
+        Vec2::new(1.0, 1.0),
     );
 
     for (entity, children, _) in children_query.iter() {
@@ -348,6 +349,7 @@ fn traverse_upsert_node(
     svg_assets: &Assets<SvgAsset>,
     layout: &mut UiLayout,
     current_node: Entity,
+    camera_scale: Vec2,
 ) {
     let Ok((entity, _, styles, parent, children)) = query.get(current_node) else {
         return;
@@ -367,6 +369,7 @@ fn traverse_upsert_node(
                 widget_render,
                 styles,
                 parent_layout,
+                camera_scale,
             )
         } else {
             None
@@ -390,6 +393,7 @@ fn traverse_upsert_node(
             svg_assets,
             layout,
             child,
+            camera_scale,
         );
     }
 }
@@ -402,6 +406,7 @@ fn match_render_size(
     widget_render: &WidgetRender,
     styles: &WoodpeckerStyle,
     parent_layout: &Layout,
+    camera_scale: Vec2,
 ) -> Option<LayoutMeasure> {
     match widget_render {
         WidgetRender::Image { handle } => {
@@ -426,13 +431,14 @@ fn match_render_size(
                 .unwrap_or(default_font.0.clone());
             if let Some(buffer) = font_manager.layout(
                 Vec2::new(
-                    parent_layout.size.width,
+                    parent_layout.size.width * camera_scale.x,
                     parent_layout.size.height + 100000.0,
                 ),
                 styles,
                 &font_handle,
                 content,
                 *word_wrap,
+                camera_scale,
             ) {
                 let mut size = Vec2::new(0.0, 0.0);
                 buffer.layout_runs().for_each(|r| {

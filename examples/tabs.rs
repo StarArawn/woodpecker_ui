@@ -50,34 +50,28 @@ fn startup(
             tab_content: TabContent { index: i },
             children: PassedChildren(
                 WidgetChildren::default().with_child::<ScrollContextProvider>((
-                    ScrollContextProviderBundle {
-                        styles: WoodpeckerStyle {
-                            margin: Edge::all(10.0).left(10.0).right(0.0).bottom(10.0),
-                            width: Units::Percentage(100.0),
-                            height: 200.0.into(),
-                            ..Default::default()
-                        },
-                        children: WidgetChildren::default().with_child::<ScrollBox>(
-                            ScrollBoxBundle {
-                                children: PassedChildren(
-                                    WidgetChildren::default().with_child::<Element>((
-                                        Element,
-                                        WoodpeckerStyle {
-                                            font_size: 14.0,
-                                            color: Srgba::WHITE.into(),
-                                            ..Default::default()
-                                        },
-                                        WidgetRender::Text {
-                                            content: lorem_ipsum.clone(),
-                                            word_wrap: true,
-                                        },
-                                    )),
-                                ),
-                                ..Default::default()
-                            },
-                        ),
+                    ScrollContextProvider::default(),
+                    WoodpeckerStyle {
+                        margin: Edge::all(10.0).left(10.0).right(0.0).bottom(10.0),
+                        width: Units::Percentage(100.0),
+                        height: 200.0.into(),
                         ..Default::default()
                     },
+                    WidgetChildren::default().with_child::<ScrollBox>((
+                        ScrollBox::default(),
+                        PassedChildren(WidgetChildren::default().with_child::<Element>((
+                            Element,
+                            WoodpeckerStyle {
+                                font_size: 14.0,
+                                color: Srgba::WHITE.into(),
+                                ..Default::default()
+                            },
+                            WidgetRender::Text {
+                                content: lorem_ipsum.clone(),
+                                word_wrap: true,
+                            },
+                        ))),
+                    )),
                 )),
             ),
             ..Default::default()

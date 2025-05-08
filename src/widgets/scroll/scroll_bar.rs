@@ -13,6 +13,7 @@ use super::{map_range, ScrollContext};
 #[auto_update(render)]
 #[props(ScrollBar, WidgetLayout)]
 #[context(ScrollContext)]
+#[require(WoodpeckerStyle, WidgetChildren)]
 pub struct ScrollBar {
     /// If true, disables the ability to drag
     pub disabled: bool,
@@ -28,21 +29,6 @@ pub struct ScrollBar {
     pub track_color: Option<Color>,
     /// The styles of the scrollbar track
     pub track_styles: Option<WoodpeckerStyle>,
-}
-
-/// A bundle for convince when creating the widget.
-#[derive(Bundle, Clone, Default)]
-pub struct ScrollBarBundle {
-    /// The scrollbar itself.
-    pub scroll_bar: ScrollBar,
-    /// The styles of the scrollbar
-    ///
-    /// Hint: Don't set this directly use: (thumb_styles, track_styles)
-    /// in the [`ScrollBar`]
-    pub styles: WoodpeckerStyle,
-    /// The children of the scrollbar.
-    /// Used internally.
-    pub children: WidgetChildren,
 }
 
 pub fn render(

@@ -35,6 +35,7 @@ pub(crate) struct RenderSystemParam<'w, 's> {
     image_assets: Res<'w, Assets<Image>>,
     svg_assets: Res<'w, Assets<SvgAsset>>,
     metrics: ResMut<'w, WidgetMetrics>,
+    camera_query: Query<'w, 's, &'static Camera, With<WoodpeckerView>>,
 }
 
 // TODO: Document how renderer works
@@ -53,12 +54,23 @@ pub(crate) fn run(renderer_system_param: RenderSystemParam) {
         image_assets,
         svg_assets,
         mut metrics,
+        camera_query,
     } = renderer_system_param;
 
     let Ok(mut vello_scene) = vello_query.single_mut() else {
         error!("Woodpecker UI: No vello scene spawned!");
         return;
     };
+
+    let Ok(camera) = camera_query.single() else {
+        error!("Woodpecker UI: No camera found or multiple UI cameras found.");
+        return;
+    };
+
+    let camera_scale = Vec2::new(
+        camera.target_scaling_factor().unwrap_or(1.0),
+        camera.target_scaling_factor().unwrap_or(1.0),
+    );
 
     vello_scene.reset();
 
@@ -84,6 +96,7 @@ pub(crate) fn run(renderer_system_param: RenderSystemParam) {
         &layout_query,
         root_node,
         true,
+        camera_scale,
     );
 
     metrics.commit_quad_frame();
@@ -114,6 +127,7 @@ fn traverse_render_tree(
     layout_query: &Query<&WidgetLayout>,
     current_node: Entity,
     should_render: bool,
+    camera_scale: Vec2,
 ) {
     let Ok((entity, _, styles, parent, children)) = query.get_mut(current_node) else {
         return;
@@ -146,6 +160,7 @@ fn traverse_render_tree(
                 image_manager,
                 metrics,
                 styles,
+                camera_scale,
             );
         }
     }
@@ -174,6 +189,7 @@ fn traverse_render_tree(
             layout_query,
             *child,
             should_render,
+            camera_scale,
         );
     }
 

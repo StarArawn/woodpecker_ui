@@ -18,6 +18,7 @@ use super::ScrollContext;
 #[auto_update(render)]
 #[props(ScrollBox, PassedChildren, WidgetLayout)]
 #[context(ScrollContext)]
+#[require(WoodpeckerStyle, WidgetChildren, PassedChildren)]
 pub struct ScrollBox {
     /// If true, always shows scrollbars even when there's nothing to scroll
     ///
@@ -44,21 +45,6 @@ pub struct ScrollBox {
     pub track_color: Option<Color>,
     /// The styles of the scrollbar track
     pub track_styles: Option<WoodpeckerStyle>,
-}
-
-/// A bundle for convince when creating the widget.
-#[derive(Bundle, Default, Clone)]
-pub struct ScrollBoxBundle {
-    /// The scrollbox itself
-    pub scroll_box: ScrollBox,
-    /// Internal Styles
-    ///
-    /// Hint: To set the styles use fields in [`ScrollBox`]
-    pub styles: WoodpeckerStyle,
-    /// The internal children built by this widget.
-    pub internal_children: WidgetChildren,
-    /// The widgets you'd like to be scrollable.
-    pub children: PassedChildren,
 }
 
 pub fn render(
@@ -139,10 +125,7 @@ pub fn render(
         ..Default::default()
     };
 
-    let scroll_content_bundle = ScrollContentBundle {
-        children: passed_children.0.clone(),
-        ..Default::default()
-    };
+    let scroll_content_bundle = (ScrollContent, passed_children.0.clone());
 
     let mut vbox_children = WidgetChildren::default().with_child::<Clip>((
         Clip,
@@ -150,17 +133,14 @@ pub fn render(
     ));
 
     if !hide_horizontal {
-        vbox_children.add::<ScrollBar>(ScrollBarBundle {
-            scroll_bar: ScrollBar {
-                disabled: disable_horizontal,
-                horizontal: true,
-                thickness: hori_thickness,
-                thumb_color,
-                thumb_styles,
-                track_color,
-                track_styles,
-            },
-            ..Default::default()
+        vbox_children.add::<ScrollBar>(ScrollBar {
+            disabled: disable_horizontal,
+            horizontal: true,
+            thickness: hori_thickness,
+            thumb_color,
+            thumb_styles,
+            track_color,
+            track_styles,
         });
     }
 
@@ -168,16 +148,13 @@ pub fn render(
         WidgetChildren::default().with_child::<Element>((Element, vbox_styles, vbox_children));
 
     if !hide_vertical {
-        element_wrapper_children.add::<ScrollBar>(ScrollBarBundle {
-            scroll_bar: ScrollBar {
-                disabled: disable_vertical,
-                thickness: hori_thickness,
-                thumb_color,
-                thumb_styles,
-                track_color,
-                track_styles,
-                ..Default::default()
-            },
+        element_wrapper_children.add::<ScrollBar>(ScrollBar {
+            disabled: disable_vertical,
+            thickness: hori_thickness,
+            thumb_color,
+            thumb_styles,
+            track_color,
+            track_styles,
             ..Default::default()
         });
     }

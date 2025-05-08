@@ -49,12 +49,12 @@ fn render(current_widget: Res<CurrentWidget>, mut query: Query<(&TodoInput, &mut
     // Dereference so we can copy into the closure.
     let current_widget = *current_widget;
     children
-        .add::<TextBox>((TextBoxBundle {
-            text_box: TextBox {
+        .add::<TextBox>((
+            TextBox {
                 initial_value: input.current_value.clone(),
                 ..Default::default()
             },
-            textbox_styles: TextboxStyles {
+            TextboxStyles {
                 normal: WoodpeckerStyle {
                     width: Units::Pixels(400.0),
                     ..TextboxStyles::default().normal
@@ -67,9 +67,9 @@ fn render(current_widget: Res<CurrentWidget>, mut query: Query<(&TodoInput, &mut
                     width: Units::Pixels(400.0),
                     ..TextboxStyles::default().focused
                 },
+                ..Default::default()
             },
-            ..Default::default()
-        },))
+        ))
         .observe(
             current_widget,
             move |trigger: Trigger<Change<TextChanged>>, mut query: Query<&mut TodoInput>| {

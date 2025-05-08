@@ -133,19 +133,9 @@ impl ScrollContext {
 #[derive(Component, Widget, Reflect, Default, PartialEq, Clone)]
 #[auto_update(render)]
 #[props(ScrollContextProvider)]
+#[require(WidgetChildren, WoodpeckerStyle)]
 pub struct ScrollContextProvider {
     initial_value: ScrollContext,
-}
-
-/// A bundle for convince when creating the widget.
-#[derive(Bundle, Default, Clone)]
-pub struct ScrollContextProviderBundle {
-    /// The context provider
-    pub provider: ScrollContextProvider,
-    /// The children
-    pub children: WidgetChildren,
-    /// The styles
-    pub styles: WoodpeckerStyle,
 }
 
 pub fn render(

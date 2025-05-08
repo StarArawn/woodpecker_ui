@@ -111,12 +111,13 @@ impl WidgetRender {
         image_manager: &mut ImageManager,
         metrics: &mut WidgetMetrics,
         widget_style: &WoodpeckerStyle,
+        camera_scale: Vec2,
     ) -> bool {
         let mut did_layer = false;
-        let location_x = layout.location.x;
-        let location_y = layout.location.y;
-        let size_x = layout.size.x;
-        let size_y = layout.size.y;
+        let location_x = layout.location.x * camera_scale.x;
+        let location_y = layout.location.y * camera_scale.y;
+        let size_x = layout.size.x * camera_scale.x;
+        let size_y = layout.size.y * camera_scale.y;
 
         if matches!(widget_style.display, crate::styles::WidgetDisplay::None) {
             return false;
@@ -185,11 +186,12 @@ impl WidgetRender {
                 };
 
                 let Some(buffer) = font_manager.layout(
-                    Vec2::new(parent_layout.size.x, parent_layout.size.y),
+                    Vec2::new(parent_layout.size.x, parent_layout.size.y) * camera_scale,
                     widget_style,
                     &font_handle,
                     content,
                     *word_wrap,
+                    camera_scale,
                 ) else {
                     return false;
                 };
@@ -206,8 +208,8 @@ impl WidgetRender {
                     }
 
                     let transform = vello::kurbo::Affine::translate((
-                        layout.location.x as f64,
-                        layout.location.y as f64 + run.line_y as f64,
+                        location_x as f64,
+                        location_y as f64 + run.line_y as f64,
                     ));
 
                     let axes = font_ref.axes();
@@ -220,7 +222,7 @@ impl WidgetRender {
 
                     vello_scene
                         .draw_glyphs(&font)
-                        .font_size(widget_style.font_size)
+                        .font_size(widget_style.font_size * camera_scale.x)
                         .transform(transform)
                         .normalized_coords(bytemuck::cast_slice(var_loc.coords()))
                         .brush(&Brush::Solid(vello::peniko::Color::new([
@@ -266,16 +268,10 @@ impl WidgetRender {
                     return false;
                 };
 
-                let scale = fit_image(
-                    image.size().as_vec2(),
-                    Vec2::new(layout.size.x, layout.size.y),
-                ) as f64;
+                let scale = fit_image(image.size().as_vec2(), Vec2::new(size_x, size_y)) as f64;
 
                 let transform = vello::kurbo::Affine::scale(scale).with_translation(
-                    bevy_vello::prelude::kurbo::Vec2::new(
-                        layout.location.x as f64,
-                        layout.location.y as f64,
-                    ),
+                    bevy_vello::prelude::kurbo::Vec2::new(location_x as f64, location_y as f64),
                 );
 
                 let vello_image = image_manager
@@ -304,11 +300,11 @@ impl WidgetRender {
 
                 let transform = vello::kurbo::Affine::scale(fit_image(
                     Vec2::new(width, height),
-                    Vec2::new(layout.size.x, layout.size.y),
+                    Vec2::new(size_x, size_y),
                 ) as f64)
                 .with_translation(bevy_vello::prelude::kurbo::Vec2::new(
-                    layout.location.x as f64,
-                    layout.location.y as f64,
+                    location_x as f64,
+                    location_y as f64,
                 ));
 
                 let Some(svg_scene) = svg_manager.get_cached(handle, svg_assets, *path_color)
@@ -327,7 +323,7 @@ impl WidgetRender {
                     min: Vec2::ZERO,
                     max: Vec2::new(image.size().x as f32, image.size().y as f32),
                 };
-                let layout_size = Vec2::new(layout.size.x, layout.size.y);
+                let layout_size = Vec2::new(size_x, size_y);
                 let slices = match scale_mode {
                     SpriteImageMode::Auto => {
                         todo!("Not supported yet!");
@@ -398,16 +394,16 @@ impl WidgetRender {
                     let vello_image = image_manager.nine_patch_slices.get(&key).unwrap();
                     let scale = slice.draw_size / texture_rect_floor.size();
                     let pos = (
-                        slice.offset.x.round() + (layout.size.x / 2.0),
-                        -slice.offset.y.round() + (layout.size.y / 2.0),
+                        slice.offset.x.round() + (size_x / 2.0),
+                        -slice.offset.y.round() + (size_y / 2.0),
                     );
 
                     let transform =
                         vello::kurbo::Affine::scale_non_uniform(scale.x as f64, scale.y as f64)
                             .with_translation(bevy_vello::prelude::kurbo::Vec2::new(
-                                (layout.location.x as f64 + pos.0 as f64)
+                                (location_x as f64 + pos.0 as f64)
                                     - (slice.draw_size.x as f64 / 2.0),
-                                (layout.location.y as f64 + pos.1 as f64)
+                                (location_y as f64 + pos.1 as f64)
                                     - (slice.draw_size.y as f64 / 2.0),
                             ));
 

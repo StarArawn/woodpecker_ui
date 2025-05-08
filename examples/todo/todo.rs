@@ -46,34 +46,30 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                 },
                 PassedChildren(
                     WidgetChildren::default().with_child::<ScrollContextProvider>((
-                        ScrollContextProviderBundle {
-                            styles: WoodpeckerStyle {
-                                width: Units::Percentage(100.0),
-                                height: Units::Percentage(100.0),
-                                ..Default::default()
-                            },
-                            children: WidgetChildren::default().with_child::<ScrollBox>(
-                                ScrollBoxBundle {
-                                    children: PassedChildren(
-                                        WidgetChildren::default().with_child::<Element>((
-                                            Element,
-                                            WoodpeckerStyle {
-                                                padding: Edge::all(0.0).left(10.0).right(10.0),
-                                                flex_direction: WidgetFlexDirection::Column,
-                                                ..Default::default()
-                                            },
-                                            WidgetChildren::default()
-                                                .with_child::<TodoInput>(TodoInputBundle {
-                                                    ..Default::default()
-                                                })
-                                                .with_child::<TodoList>(TodoListBundle::default()),
-                                        )),
-                                    ),
-                                    ..Default::default()
-                                },
-                            ),
+                        ScrollContextProvider::default(),
+                        WoodpeckerStyle {
+                            width: Units::Percentage(100.0),
+                            height: Units::Percentage(100.0),
                             ..Default::default()
                         },
+                        WidgetChildren::default().with_child::<ScrollBox>((
+                            ScrollBox::default(),
+                            PassedChildren(
+                                WidgetChildren::default().with_child::<Element>((
+                                    Element,
+                                    WoodpeckerStyle {
+                                        padding: Edge::all(0.0).left(10.0).right(10.0),
+                                        flex_direction: WidgetFlexDirection::Column,
+                                        ..Default::default()
+                                    },
+                                    WidgetChildren::default()
+                                        .with_child::<TodoInput>(TodoInputBundle {
+                                            ..Default::default()
+                                        })
+                                        .with_child::<TodoList>(TodoListBundle::default()),
+                                )),
+                            ),
+                        )),
                     )),
                 ),
             )),

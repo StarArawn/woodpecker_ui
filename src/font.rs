@@ -85,16 +85,17 @@ impl FontManager {
         font_handle: &Handle<VelloFont>,
         content: &str,
         word_wrap: bool,
+        camera_scale: Vec2,
     ) -> Option<cosmic_text::Buffer> {
         // Per mozilla the default line height is roughly font_size * 1.2
-        let line_height = style.line_height.unwrap_or(style.font_size * 1.2);
+        let line_height = style.line_height.unwrap_or(style.font_size * 1.2) * camera_scale.y;
 
         let mut hasher = DefaultHasher::default();
         content.hash(&mut hasher);
         (avaliable_space.x as u32).hash(&mut hasher);
         (avaliable_space.y as u32).hash(&mut hasher);
         font_handle.hash(&mut hasher);
-        (style.font_size as u32).hash(&mut hasher);
+        ((style.font_size * camera_scale.y) as u32).hash(&mut hasher);
         (line_height as u32).hash(&mut hasher);
         let key = hasher.finish();
 
@@ -107,7 +108,7 @@ impl FontManager {
         }
 
         // Text metrics indicate the font size and line height of a buffer
-        let metrics = cosmic_text::Metrics::new(style.font_size, line_height);
+        let metrics = cosmic_text::Metrics::new(style.font_size * camera_scale.y, line_height);
 
         // A Buffer provides shaping and layout for a UTF-8 string, create one per text widget
         let mut buffer = cosmic_text::Buffer::new(&mut self.font_system, metrics);
@@ -158,7 +159,9 @@ pub(crate) fn load_fonts(
 ) {
     for event in event_reader.read() {
         if let AssetEvent::LoadedWithDependencies { id } = event {
-            let font_asset = assets.get(*id).unwrap();
+            let Some(font_asset) = assets.get(*id) else {
+                continue;
+            };
             let font_data: &[u8] = &font_asset.bytes;
             let font_data = font_data.to_vec();
 
@@ -169,19 +172,20 @@ pub(crate) fn load_fonts(
                 .find(|name| name.name_id == cosmic_text::ttf_parser::name_id::FAMILY)
                 .expect("Couldn't find font family.");
 
-            font_manager.vello_to_family.insert(
-                Handle::Weak(*id),
-                if family.is_unicode() {
-                    family
-                        .to_string()
-                        .expect("Couldn't get string from family name.")
-                } else {
-                    String::from_utf8(family.name.into_iter().map(|b| *b).collect::<Vec<_>>())
-                        .expect("Couldn't get string from family name.")
-                },
-            );
+            let font_family = if family.is_unicode() {
+                family
+                    .to_string()
+                    .expect("Couldn't get string from family name.")
+            } else {
+                String::from_utf8(family.name.into_iter().map(|b| *b).collect::<Vec<_>>())
+                    .expect("Couldn't get string from family name.")
+            };
 
-            dbg!(&font_manager.vello_to_family);
+            info!("Loaded font family: {}", font_family);
+
+            font_manager
+                .vello_to_family
+                .insert(Handle::Weak(*id), font_family);
 
             font_manager
                 .font_system

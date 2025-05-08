@@ -35,34 +35,28 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras sed tellus neque. 
                 },
                 PassedChildren(
                     WidgetChildren::default().with_child::<ScrollContextProvider>((
-                        ScrollContextProviderBundle {
-                            styles: WoodpeckerStyle {
-                                margin: Edge::all(0.0).left(10.0).right(10.0).bottom(10.0),
-                                width: Units::Percentage(100.0),
-                                height: Units::Percentage(100.0),
-                                ..Default::default()
-                            },
-                            children: WidgetChildren::default().with_child::<ScrollBox>(
-                                ScrollBoxBundle {
-                                    children: PassedChildren(
-                                        WidgetChildren::default().with_child::<Element>((
-                                            Element,
-                                            WoodpeckerStyle {
-                                                font_size: 14.0,
-                                                color: Srgba::WHITE.into(),
-                                                ..Default::default()
-                                            },
-                                            WidgetRender::Text {
-                                                content: lorem_ipsum,
-                                                word_wrap: true,
-                                            },
-                                        )),
-                                    ),
-                                    ..Default::default()
-                                },
-                            ),
+                        ScrollContextProvider::default(),
+                        WoodpeckerStyle {
+                            margin: Edge::all(0.0).left(10.0).right(10.0).bottom(10.0),
+                            width: Units::Percentage(100.0),
+                            height: Units::Percentage(100.0),
                             ..Default::default()
                         },
+                        WidgetChildren::default().with_child::<ScrollBox>((
+                            ScrollBox::default(),
+                            PassedChildren(WidgetChildren::default().with_child::<Element>((
+                                Element,
+                                WoodpeckerStyle {
+                                    font_size: 14.0,
+                                    color: Srgba::WHITE.into(),
+                                    ..Default::default()
+                                },
+                                WidgetRender::Text {
+                                    content: lorem_ipsum,
+                                    word_wrap: true,
+                                },
+                            ))),
+                        )),
                     )),
                 ),
             )),

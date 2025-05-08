@@ -110,7 +110,7 @@ pub mod prelude {
     pub use crate::focus::*;
     pub use crate::font::{FontManager, TextAlign};
     pub use crate::hook_helper::{HookHelper, PreviousWidget};
-    pub use crate::keyboard_input::WidgetKeyboardCharEvent;
+    pub use crate::keyboard_input::{WidgetKeyboardButtonEvent, WidgetKeyboardCharEvent};
     pub use crate::layout::system::{WidgetLayout, WidgetPreviousLayout};
     pub use crate::metrics::WidgetMetrics;
     pub use crate::on_change::Change;
