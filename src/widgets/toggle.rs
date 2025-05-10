@@ -14,7 +14,7 @@ pub struct ToggleChanged {
 }
 
 /// The state of the toggle button
-#[derive(Component, Reflect, PartialEq, Clone)]
+#[derive(Component, Debug, Reflect, PartialEq, Clone)]
 pub struct ToggleState {
     /// Is hovering
     pub is_hovering: bool,

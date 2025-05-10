@@ -7,7 +7,7 @@ use vello::{
     peniko,
 };
 
-#[derive(Component, Reflect, Clone, Copy, PartialEq, Default)]
+#[derive(Component, Debug, Reflect, Clone, Copy, PartialEq, Default)]
 struct ColorPickerState {
     is_dragging: bool,
     current_color: Hsva,

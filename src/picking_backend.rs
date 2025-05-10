@@ -143,6 +143,7 @@ fn process_entity(
             let rect = Rect::new(x, y, x + layout.size.x, y + layout.size.y);
             if rect.contains(cursor_pos_world) {
                 // Draw lines
+                let _ = screen_half_size;
                 #[cfg(feature = "debug-render")]
                 {
                     let half_size = rect.size() / 2.;

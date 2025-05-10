@@ -126,19 +126,16 @@ pub fn to_brush(
             let stops: Vec<bevy_vello::vello::peniko::ColorStop> = gr
                 .stops()
                 .iter()
-                .map(|stop| {
-                    let cstop = bevy_vello::vello::peniko::ColorStop {
-                        offset: stop.offset().get(),
-                        color: DynamicColor::from_alpha_color(
-                            bevy_vello::vello::peniko::Color::from_rgba8(
-                                stop.color().red,
-                                stop.color().green,
-                                stop.color().blue,
-                                (stop.opacity() * opacity).to_u8(),
-                            ),
+                .map(|stop| bevy_vello::vello::peniko::ColorStop {
+                    offset: stop.offset().get(),
+                    color: DynamicColor::from_alpha_color(
+                        bevy_vello::vello::peniko::Color::from_rgba8(
+                            stop.color().red,
+                            stop.color().green,
+                            stop.color().blue,
+                            (stop.opacity() * opacity).to_u8(),
                         ),
-                    };
-                    cstop
+                    ),
                 })
                 .collect();
             let start = Point::new(gr.x1() as f64, gr.y1() as f64);
@@ -161,19 +158,16 @@ pub fn to_brush(
             let stops: Vec<bevy_vello::vello::peniko::ColorStop> = gr
                 .stops()
                 .iter()
-                .map(|stop| {
-                    let cstop = bevy_vello::vello::peniko::ColorStop {
-                        offset: stop.offset().get(),
-                        color: DynamicColor::from_alpha_color(
-                            bevy_vello::vello::peniko::Color::from_rgba8(
-                                stop.color().red,
-                                stop.color().green,
-                                stop.color().blue,
-                                (stop.opacity() * opacity).to_u8(),
-                            ),
+                .map(|stop| bevy_vello::vello::peniko::ColorStop {
+                    offset: stop.offset().get(),
+                    color: DynamicColor::from_alpha_color(
+                        bevy_vello::vello::peniko::Color::from_rgba8(
+                            stop.color().red,
+                            stop.color().green,
+                            stop.color().blue,
+                            (stop.opacity() * opacity).to_u8(),
                         ),
-                    };
-                    cstop
+                    ),
                 })
                 .collect();
 

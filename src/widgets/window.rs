@@ -7,7 +7,7 @@ use bevy::prelude::*;
 // };
 
 /// State to keep track of window data.
-#[derive(Default, Component, Reflect, PartialEq, Clone)]
+#[derive(Default, Debug, Component, Reflect, PartialEq, Clone)]
 pub struct WindowState {
     /// The position of the window.
     position: Vec2,
@@ -75,11 +75,13 @@ fn render(
         &WoodpeckerWindow,
         &mut WoodpeckerStyle,
         &mut WidgetChildren,
+        &WidgetLayout,
         &PassedChildren,
     )>,
     state_query: Query<&mut WindowState>,
 ) {
-    let Ok((window, mut styles, mut children, passed_children)) = query.get_mut(**current_widget)
+    let Ok((window, mut styles, mut children, layout, passed_children)) =
+        query.get_mut(**current_widget)
     else {
         return;
     };
@@ -108,7 +110,10 @@ fn render(
         // Title
         .add::<Element>((
             Element,
-            window.title_styles,
+            WoodpeckerStyle {
+                width: layout.width().into(),
+                ..window.title_styles
+            },
             WidgetChildren::default().with_child::<Element>((
                 Element,
                 WoodpeckerStyle {
@@ -120,6 +125,7 @@ fn render(
                     word_wrap: false,
                 },
             )),
+            WidgetRender::Quad,
             Pickable::default(),
         ))
         .observe(

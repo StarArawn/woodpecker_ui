@@ -34,7 +34,7 @@ impl Default for IconButtonStyles {
     }
 }
 
-#[derive(Component, Default, PartialEq, Clone)]
+#[derive(Component, Debug, Default, PartialEq, Clone)]
 pub struct IconButtonState {
     pub hovering: bool,
 }

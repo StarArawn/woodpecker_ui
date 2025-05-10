@@ -38,7 +38,7 @@ impl Default for ButtonStyles {
     }
 }
 
-#[derive(Component, Default, PartialEq, Clone)]
+#[derive(Component, Debug, Default, PartialEq, Clone)]
 pub struct WButtonState {
     pub hovering: bool,
 }

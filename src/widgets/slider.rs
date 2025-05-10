@@ -10,7 +10,7 @@ pub struct SliderChanged {
 }
 
 /// Slider state
-#[derive(Component, Reflect, Clone, Copy, PartialEq, Default)]
+#[derive(Component, Debug, Reflect, Clone, Copy, PartialEq, Default)]
 pub struct SliderState {
     /// The value of the slider
     pub value: f32,

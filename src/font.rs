@@ -177,7 +177,7 @@ pub(crate) fn load_fonts(
                     .to_string()
                     .expect("Couldn't get string from family name.")
             } else {
-                String::from_utf8(family.name.into_iter().map(|b| *b).collect::<Vec<_>>())
+                String::from_utf8(family.name.to_vec())
                     .expect("Couldn't get string from family name.")
             };
 

@@ -75,7 +75,7 @@ pub struct TextBox {
 }
 
 /// The textbox state
-#[derive(Component, PartialEq, Clone)]
+#[derive(Component, Debug, PartialEq, Clone)]
 pub struct TextBoxState {
     // Mouse state
     /// Is hovering?
@@ -521,8 +521,12 @@ fn set_new_cursor_position(
     state.cursor_x = max_x;
 }
 
+// IMPORTANT: When modifying widget entities we need to verify we aren't modifying previous widget values.
 pub fn cursor_animation_system(
-    mut state_query: ParamSet<(Query<(Entity, &TextBoxState)>, Query<&mut TextBoxState>)>,
+    mut state_query: ParamSet<(
+        Query<(Entity, &TextBoxState), Without<PreviousWidget>>,
+        Query<&mut TextBoxState, Without<PreviousWidget>>,
+    )>,
 ) {
     let mut should_update = Vec::new();
 

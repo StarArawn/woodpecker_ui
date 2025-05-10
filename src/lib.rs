@@ -61,6 +61,7 @@
 //! }
 //!
 //! ```
+use bevy::render::extract_resource::ExtractResourcePlugin;
 use bevy::{
     asset::embedded_asset, prelude::*, reflect::GetTypeRegistration, render::view::RenderLayers,
 };
@@ -70,6 +71,7 @@ use bevy_vello::prelude::VelloFont;
 use bevy_vello::render::VelloView;
 use bevy_vello::{vello::AaConfig, VelloPlugin, VelloSceneBundle};
 use context::{Widget, WoodpeckerContext};
+use convert_render_target::ConvertRenderTargetPlugin;
 use entity_mapping::WidgetMapper;
 use font::FontManager;
 use hook_helper::HookHelper;
@@ -83,6 +85,7 @@ use widgets::WoodpeckerUIWidgetPlugin;
 
 mod children;
 mod context;
+mod convert_render_target;
 mod entity_mapping;
 mod focus;
 mod font;
@@ -220,6 +223,8 @@ impl Plugin for WoodpeckerUIPlugin {
                 antialiasing: self.render_settings.antialiasing,
             })
             .add_plugins(WoodpeckerUIWidgetPlugin)
+            .add_plugins(ExtractResourcePlugin::<ImageManager>::default())
+            .add_plugins(ConvertRenderTargetPlugin)
             .add_event::<focus::WidgetFocus>()
             .add_event::<focus::WidgetBlur>()
             .insert_resource(focus::CurrentFocus::new(Entity::PLACEHOLDER))

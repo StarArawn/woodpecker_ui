@@ -3,13 +3,14 @@ use std::{
     sync::Arc,
 };
 
-use bevy::prelude::*;
+use bevy::{asset::RenderAssetUsages, prelude::*};
 use bevy_vello::{
     prelude::VelloFont,
     vello::{
         self,
         kurbo::{self, Affine, RoundedRectRadii},
         peniko::{self, Blob, Brush},
+        wgpu::{TextureFormat, TextureUsages},
         Glyph,
     },
     VelloScene,
@@ -18,6 +19,7 @@ use image::GenericImage;
 use skrifa::MetadataProvider;
 
 use crate::{
+    convert_render_target::RenderTargetImages,
     font::FontManager,
     image::ImageManager,
     metrics::WidgetMetrics,
@@ -63,6 +65,12 @@ pub enum WidgetRender {
         /// A handle to a bevy image.
         handle: Handle<Image>,
     },
+    /// A bevy render target
+    /// Only some texture formats are supported as we convert to rgba8unorm
+    RenderTarget {
+        /// A bevy render taret.
+        handle: Handle<Image>,
+    },
     /// A nine patch image
     NinePatch {
         /// An asset handle to a nine patch image.
@@ -89,6 +97,7 @@ impl WidgetRender {
             WidgetRender::Layer => {}
             WidgetRender::Image { .. } => {}
             WidgetRender::NinePatch { .. } => {}
+            WidgetRender::RenderTarget { .. } => {}
             WidgetRender::Svg {
                 color: path_color, ..
             } => {
@@ -104,11 +113,12 @@ impl WidgetRender {
         parent_layout: &WidgetLayout,
         default_font: &DefaultFont,
         font_assets: &Assets<VelloFont>,
-        image_assets: &Assets<Image>,
+        image_assets: &mut Assets<Image>,
         svg_assets: &Assets<SvgAsset>,
         font_manager: &mut FontManager,
         svg_manager: &mut SvgManager,
         image_manager: &mut ImageManager,
+        render_targets: &mut RenderTargetImages,
         metrics: &mut WidgetMetrics,
         widget_style: &WoodpeckerStyle,
         camera_scale: Vec2,
@@ -409,6 +419,59 @@ impl WidgetRender {
 
                     vello_scene.draw_image(vello_image, transform);
                 }
+            }
+            WidgetRender::RenderTarget { handle } => {
+                let Some(image) = image_assets.get(handle) else {
+                    return false;
+                };
+                let image_texture_descriptor = image.texture_descriptor.clone();
+
+                let scale = fit_image(
+                    Vec2::new(
+                        image_texture_descriptor.size.width as f32,
+                        image_texture_descriptor.size.height as f32,
+                    ),
+                    Vec2::new(size_x, size_y),
+                ) as f64;
+
+                let transform = vello::kurbo::Affine::scale(scale).with_translation(
+                    bevy_vello::prelude::kurbo::Vec2::new(location_x as f64, location_y as f64),
+                );
+
+                if !render_targets.images.contains_key(handle) {
+                    let mut conv_image = Image::new_uninit(
+                        image_texture_descriptor.size,
+                        image_texture_descriptor.dimension,
+                        TextureFormat::Rgba8Unorm,
+                        RenderAssetUsages::RENDER_WORLD,
+                    );
+                    conv_image.texture_descriptor.usage =
+                        TextureUsages::COPY_SRC | TextureUsages::RENDER_ATTACHMENT;
+                    let conv_image_handle = image_assets.add(conv_image);
+
+                    render_targets
+                        .images
+                        .insert(handle.clone(), conv_image_handle);
+                    let data: Vec<u8> = vec![];
+                    //     [255, 0, 0, 255];
+                    //     (image_texture_descriptor.size.width * image_texture_descriptor.size.height)
+                    //         as usize
+                    // ]
+                    // .into_iter()
+                    // .flatten()
+                    // .collect::<Vec<_>>();
+                    render_targets.vello_images.insert(
+                        handle.clone(),
+                        peniko::Image::new(
+                            data.into(),
+                            peniko::ImageFormat::Rgba8,
+                            image_texture_descriptor.size.width,
+                            image_texture_descriptor.size.height,
+                        ),
+                    );
+                }
+                let vello_image = render_targets.vello_images.get(handle).unwrap();
+                vello_scene.draw_image(vello_image, transform);
             }
         }
         did_layer
