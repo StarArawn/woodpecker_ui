@@ -140,7 +140,6 @@ impl WidgetRender {
             || location_x > camera_size.x
             || location_y > camera_size.y
         {
-            dbg!("Not rendering");
             return false;
         }
 
