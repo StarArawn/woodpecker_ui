@@ -171,6 +171,7 @@ pub(crate) struct LayoutSystemParam<'w, 's> {
     context: Res<'w, WoodpeckerContext>,
     image_assets: Res<'w, Assets<Image>>,
     svg_assets: Res<'w, Assets<SvgAsset>>,
+    removed_widgets: RemovedComponents<'w, 's, WidgetLayout>,
 }
 
 // TODO: Document how layouting works..
@@ -189,10 +190,16 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
         context,
         image_assets,
         svg_assets,
+        mut removed_widgets,
     } = layout_system_param;
 
     let root_node = context.get_root_widget();
     ui_layout.root_entity = root_node;
+
+    for entity in removed_widgets.read() {
+        ui_layout.remove_child(entity);
+    }
+
     // This needs to be in the correct order
     traverse_upsert_node(
         root_node,

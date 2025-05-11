@@ -75,6 +75,11 @@ pub(crate) fn run(renderer_system_param: RenderSystemParam) {
         camera.target_scaling_factor().unwrap_or(1.0),
     );
 
+    let camera_size = camera
+        .physical_target_size()
+        .unwrap_or(UVec2::ZERO)
+        .as_vec2();
+
     vello_scene.reset();
 
     metrics.clear_quad_last_frame();
@@ -101,6 +106,7 @@ pub(crate) fn run(renderer_system_param: RenderSystemParam) {
         root_node,
         true,
         camera_scale,
+        camera_size,
     );
 
     metrics.commit_quad_frame();
@@ -133,6 +139,7 @@ fn traverse_render_tree(
     current_node: Entity,
     should_render: bool,
     camera_scale: Vec2,
+    camera_size: Vec2,
 ) {
     let Ok((entity, _, styles, parent, children)) = query.get_mut(current_node) else {
         return;
@@ -167,6 +174,7 @@ fn traverse_render_tree(
                 metrics,
                 styles,
                 camera_scale,
+                camera_size,
             );
         }
     }
@@ -197,6 +205,7 @@ fn traverse_render_tree(
             *child,
             should_render,
             camera_scale,
+            camera_size,
         );
     }
 

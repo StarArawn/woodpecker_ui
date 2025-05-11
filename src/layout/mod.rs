@@ -81,6 +81,12 @@ impl UiLayout {
             .unwrap();
     }
 
+    pub fn remove_child(&mut self, entity: Entity) {
+        if let Some(node_id) = self.entity_to_taffy.remove(&entity) {
+            let _ = self.taffy.remove(node_id);
+        }
+    }
+
     pub fn add_children(&mut self, entity: Entity, children: &[Entity]) {
         if !self.entity_to_taffy.contains_key(&entity) {
             return;

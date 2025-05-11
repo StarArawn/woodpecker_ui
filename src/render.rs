@@ -122,6 +122,7 @@ impl WidgetRender {
         metrics: &mut WidgetMetrics,
         widget_style: &WoodpeckerStyle,
         camera_scale: Vec2,
+        camera_size: Vec2,
     ) -> bool {
         let mut did_layer = false;
         let location_x = layout.location.x * camera_scale.x;
@@ -130,6 +131,16 @@ impl WidgetRender {
         let size_y = layout.size.y * camera_scale.y;
 
         if matches!(widget_style.display, crate::styles::WidgetDisplay::None) {
+            return false;
+        }
+
+        // Screen clipping
+        if location_y + size_y < 0.0
+            || location_x + size_x < 0.0
+            || location_x > camera_size.x
+            || location_y > camera_size.y
+        {
+            dbg!("Not rendering");
             return false;
         }
 
