@@ -206,7 +206,7 @@ impl WidgetRender {
                 };
 
                 let Some(buffer) = font_manager.layout(
-                    Vec2::new(parent_layout.size.x, parent_layout.size.y) * camera_scale,
+                    Vec2::new(layout.size.x, layout.size.y) * camera_scale,
                     widget_style,
                     &font_handle,
                     content,
@@ -255,7 +255,7 @@ impl WidgetRender {
                 }
             }
             WidgetRender::Custom { render } => {
-                render.render(vello_scene, layout, widget_style);
+                render.render(vello_scene, layout, widget_style, camera_scale.x);
             }
             WidgetRender::Layer => {
                 let mask_blend = vello::peniko::BlendMode::new(
@@ -502,12 +502,12 @@ pub(crate) fn fit_image(size_to_fit: Vec2, container_size: Vec2) -> f32 {
 /// A custom widget vello renderer.
 #[derive(Clone)]
 pub struct WidgetRenderCustom {
-    inner: Arc<dyn Fn(&mut VelloScene, &WidgetLayout, &WoodpeckerStyle) + Send + Sync>,
+    inner: Arc<dyn Fn(&mut VelloScene, &WidgetLayout, &WoodpeckerStyle, f32) + Send + Sync>,
 }
 
 impl Default for WidgetRenderCustom {
     fn default() -> Self {
-        Self::new(|_, _, _| {})
+        Self::new(|_, _, _, _| {})
     }
 }
 
@@ -515,7 +515,7 @@ impl WidgetRenderCustom {
     /// Create a new custom widget render.
     pub fn new<F>(render: F) -> Self
     where
-        F: Fn(&mut VelloScene, &WidgetLayout, &WoodpeckerStyle) + Send + Sync + 'static,
+        F: Fn(&mut VelloScene, &WidgetLayout, &WoodpeckerStyle, f32) + Send + Sync + 'static,
     {
         Self {
             inner: Arc::new(render),
@@ -527,7 +527,8 @@ impl WidgetRenderCustom {
         vello_scene: &mut VelloScene,
         layout: &WidgetLayout,
         styles: &WoodpeckerStyle,
+        dpi: f32,
     ) {
-        self.inner.clone()(vello_scene, layout, styles);
+        self.inner.clone()(vello_scene, layout, styles, dpi);
     }
 }

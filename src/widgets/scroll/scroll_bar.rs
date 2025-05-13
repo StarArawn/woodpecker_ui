@@ -19,8 +19,10 @@ pub struct ScrollBar {
     pub disabled: bool,
     /// If true, displays a horizontal scrollbar instead of a vertical one
     pub horizontal: bool,
-    /// The thickness of the scrollbar in pixels
+    /// The thickness of the entire scrollbar in pixels
     pub thickness: f32,
+    /// The thickness of the bar in pixels
+    pub thumb_thickness: Option<f32>,
     /// The color of the scrollbar thumb
     pub thumb_color: Option<Color>,
     /// The styles of the scrollbar thumb
@@ -65,6 +67,7 @@ pub fn render(
         .thumb_color
         .unwrap_or_else(|| Color::srgba(0.239, 0.258, 0.337, 1.0));
     let thumb_styles = scrollbar.thumb_styles;
+    let thumb_thickness = scrollbar.thumb_thickness;
     let track_color = scrollbar
         .track_color
         .unwrap_or_else(|| Color::srgba(0.1581, 0.1758, 0.191, 0.15));
@@ -73,11 +76,24 @@ pub fn render(
         border_radius: Corner::all(thickness / 2.0),
         ..Default::default()
     });
+
+    let mut border_color = thumb_color;
+    let mut thumb_style = WoodpeckerStyle {
+        position: WidgetPosition::Absolute,
+        ..thumb_styles.unwrap_or(WoodpeckerStyle {
+            background_color: thumb_color,
+            border_radius: Corner::all(thickness / 2.0),
+            border: Edge::all(1.0),
+            border_color,
+            ..Default::default()
+        })
+    };
+
     // The size of the thumb as a percentage
     let thumb_size_percent = (if scrollbar.horizontal {
         layout.width() / (content_width - thickness).max(1.0)
     } else {
-        layout.height() / (content_height - thickness).max(1.0)
+        layout.height() / (content_height - thumb_thickness.unwrap_or(thickness)).max(1.0)
     })
     .clamp(0.1, 1.0);
     let percent_scrolled = if scrollbar.horizontal {
@@ -89,7 +105,7 @@ pub fn render(
     let thumb_offset = map_range(
         percent_scrolled * 100.0,
         (0.0, 100.0),
-        (0.0, 100.0 - thumb_size_percent * 100.0),
+        (0.0, 99.5 - thumb_size_percent * 100.0),
     );
 
     *styles = WoodpeckerStyle {
@@ -106,7 +122,6 @@ pub fn render(
         ..*styles
     };
 
-    let mut border_color = thumb_color;
     if let Color::Srgba(srgba) = &mut border_color {
         srgba.alpha = (srgba.alpha - 0.2).max(0.0);
         srgba.red = (srgba.red + 0.1).min(1.0);
@@ -114,22 +129,7 @@ pub fn render(
         srgba.blue = (srgba.blue + 0.1).min(1.0);
     }
 
-    let mut thumb_style = WoodpeckerStyle {
-        position: WidgetPosition::Absolute,
-        ..thumb_styles.unwrap_or(WoodpeckerStyle {
-            background_color: thumb_color,
-            border_radius: Corner::all(thickness / 2.0),
-            border: Edge::all(1.0),
-            border_color,
-            ..Default::default()
-        })
-    };
-
-    let mut track_style = WoodpeckerStyle {
-        background_color: track_color,
-        border_radius: Corner::all(thickness / 2.0),
-        ..track_styles
-    };
+    let mut track_style = WoodpeckerStyle { ..track_styles };
 
     if scrollbar.horizontal {
         track_style = WoodpeckerStyle {
@@ -138,7 +138,7 @@ pub fn render(
             ..track_style
         };
         thumb_style = WoodpeckerStyle {
-            height: Units::Pixels(thickness),
+            height: Units::Pixels(thumb_thickness.unwrap_or(thickness)),
             width: Units::Percentage(thumb_size_percent * 100.0),
             top: Units::Pixels(0.0),
             left: Units::Percentage(-thumb_offset),
@@ -151,7 +151,7 @@ pub fn render(
             ..track_style
         };
         thumb_style = WoodpeckerStyle {
-            width: Units::Pixels(thickness),
+            width: Units::Pixels(thumb_thickness.unwrap_or(thickness)),
             height: Units::Percentage(thumb_size_percent * 100.0),
             left: Units::Pixels(0.0),
             top: Units::Percentage(-thumb_offset),

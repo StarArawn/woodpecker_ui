@@ -516,7 +516,7 @@ fn render(
 /// Renders a color picker color gradient.
 fn get_hue_gradient(color: Hsva) -> WidgetRender {
     WidgetRender::Custom {
-        render: WidgetRenderCustom::new(move |vello_scene, layout, _styles| {
+        render: WidgetRenderCustom::new(move |vello_scene, layout, _styles, _dpi| {
             let location_x = layout.location.x as f64;
             let location_y = layout.location.y as f64;
             let size_x = layout.size.x as f64;
@@ -576,7 +576,7 @@ fn get_hue_gradient(color: Hsva) -> WidgetRender {
 /// Renders a color picker color gradient.
 fn get_saturation_gradient(color: Hsva) -> WidgetRender {
     WidgetRender::Custom {
-        render: WidgetRenderCustom::new(move |vello_scene, layout, _styles| {
+        render: WidgetRenderCustom::new(move |vello_scene, layout, _styles, _dpi| {
             let location_x = layout.location.x as f64;
             let location_y = layout.location.y as f64;
             let size_x = layout.size.x as f64;
@@ -636,7 +636,7 @@ fn get_saturation_gradient(color: Hsva) -> WidgetRender {
 /// Renders a color picker color gradient.
 fn get_value_gradient(color: Hsva) -> WidgetRender {
     WidgetRender::Custom {
-        render: WidgetRenderCustom::new(move |vello_scene, layout, _styles| {
+        render: WidgetRenderCustom::new(move |vello_scene, layout, _styles, _dpi| {
             let location_x = layout.location.x as f64;
             let location_y = layout.location.y as f64;
             let size_x = layout.size.x as f64;

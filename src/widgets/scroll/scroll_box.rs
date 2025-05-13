@@ -33,8 +33,10 @@ pub struct ScrollBox {
     pub hide_horizontal: bool,
     /// If true, hides the vertical scrollbar
     pub hide_vertical: bool,
-    /// The thickness of the scrollbar
+    /// The thickness of the entire scrollbar in pixels
     pub scrollbar_thickness: Option<f32>,
+    /// The thickness of the thumb in pixels
+    pub thumb_thickness: Option<f32>,
     /// The step to scroll by when `ScrollUnit::Line`
     pub scroll_line: Option<f32>,
     /// The color of the scrollbar thumb
@@ -137,6 +139,7 @@ pub fn render(
             disabled: disable_horizontal,
             horizontal: true,
             thickness: hori_thickness,
+            thumb_thickness: scroll_box.thumb_thickness,
             thumb_color,
             thumb_styles,
             track_color,
@@ -151,6 +154,7 @@ pub fn render(
         element_wrapper_children.add::<ScrollBar>(ScrollBar {
             disabled: disable_vertical,
             thickness: hori_thickness,
+            thumb_thickness: scroll_box.thumb_thickness,
             thumb_color,
             thumb_styles,
             track_color,

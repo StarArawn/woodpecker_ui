@@ -441,6 +441,44 @@ pub fn render(
                         );
                     }
                 }
+                if trigger.code == KeyCode::Delete {
+                    let Ok(styles) = style_query.get(trigger.target) else {
+                        return;
+                    };
+                    let Ok(mut state) = state_query.get_mut(state_entity) else {
+                        return;
+                    };
+                    let cursor_pos = state.cursor_position;
+
+                    if !state.current_value.is_empty() && cursor_pos != 0 {
+                        let char_pos: usize =
+                            state.graphemes[0..cursor_pos].iter().map(|g| g.len()).sum();
+                        state.current_value.remove(char_pos);
+
+                        commands.trigger_targets(
+                            Change {
+                                target: *current_widget,
+                                data: TextChanged {
+                                    value: state.current_value.clone(),
+                                },
+                            },
+                            *current_widget,
+                        );
+
+                        // Update graphemes
+                        set_graphemes(&mut state);
+
+                        set_new_cursor_position(
+                            &mut state,
+                            &mut font_manager,
+                            &styles
+                                .font
+                                .map(Handle::Weak)
+                                .unwrap_or(default_font.0.clone_weak()),
+                            styles.font_size,
+                        );
+                    }
+                }
             },
         );
 
