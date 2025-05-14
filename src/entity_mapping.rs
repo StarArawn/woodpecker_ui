@@ -3,9 +3,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::{
-    context::Widget, observer_cache, runner::get_all_children, ObserverCache, ParentWidget,
-};
+use crate::{context::Widget, runner::get_all_children, ObserverCache, ParentWidget};
 
 /// Maps parent widgets to child widgets.
 /// Will overwrite old widgets with new entities if the type and or key has changed.
@@ -111,7 +109,7 @@ impl WidgetMapper {
 
                     // Remove children of this child
                     for child in get_all_children(world, entity_to_remove) {
-                        if !world.get_entity(child).is_ok() {
+                        if world.get_entity(child).is_err() {
                             continue;
                         }
                         let parent = world.entity(child).get::<ChildOf>().expect("Unknown dangling child! This is an error with woodpecker UI source please file a bug report.").parent();
