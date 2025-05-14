@@ -1489,6 +1489,7 @@ dependencies = [
 [[package]]
 name = "bevy_vello"
 version = "0.8.0"
+source = "git+https://github.com/StarArawn/bevy_vello?rev=845e45d5c85bef6bd6c0432fdb1a668fc43c0b94#845e45d5c85bef6bd6c0432fdb1a668fc43c0b94"
 dependencies = [
  "bevy",
  "parley",

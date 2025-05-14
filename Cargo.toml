@@ -13,7 +13,7 @@ debug-render = []
 metrics = []
 
 [dependencies]
-bevy_vello = { path = "../bevy_vello", features = ["text", "default_font"] } #{ version = "0.8", features = ["svg", "text", "default_font"] }
+bevy_vello = { git = "https://github.com/StarArawn/bevy_vello", rev = "845e45d5c85bef6bd6c0432fdb1a668fc43c0b94", features = ["text", "default_font"] } #{ version = "0.8", features = ["svg", "text", "default_font"] }
 bevy-trait-query = "0.16" #{ git = "https://github.com/RobWalt/bevy-trait-query", rev = "215b9068e8457d96ddcd4c8efa9605ba0f8feda5" }
 bytemuck = "1.23.0"
 cosmic-text = "0.14.2"
