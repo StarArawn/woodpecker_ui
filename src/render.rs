@@ -110,7 +110,7 @@ impl WidgetRender {
         &self,
         vello_scene: &mut VelloScene,
         layout: &WidgetLayout,
-        parent_layout: &WidgetLayout,
+        _parent_layout: &WidgetLayout,
         default_font: &DefaultFont,
         font_assets: &Assets<VelloFont>,
         image_assets: &mut Assets<Image>,

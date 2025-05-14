@@ -127,7 +127,7 @@ fn update_widgets(
 }
 
 // Recursively gets all widget children down the tree for a given entity.
-fn get_all_children(world: &mut World, parent_entity: Entity) -> Vec<Entity> {
+pub fn get_all_children(world: &mut World, parent_entity: Entity) -> Vec<Entity> {
     let mut children = vec![];
     let Some(bevy_children) = world
         .entity(parent_entity)
@@ -137,6 +137,9 @@ fn get_all_children(world: &mut World, parent_entity: Entity) -> Vec<Entity> {
         return vec![];
     };
     for child in bevy_children.into_iter() {
+        if world.get_entity(child).is_err() {
+            continue;
+        }
         // Only widget entities should be traversed here
         if !world.entity(child).contains::<StateMarker>()
             && !world.entity(child).contains::<PreviousWidget>()
@@ -156,7 +159,7 @@ fn run_update_system(
     widget_query_state: &mut QueryState<One<&dyn Widget>, Without<PreviousWidget>>,
 ) -> bool {
     let Ok(widget) = widget_query_state.get(world, widget_entity) else {
-        error!("Woodpecker UI: Missing widget data!");
+        debug!("Woodpecker UI: Missing widget data, this can be safely ignored in most cases.");
         return false;
     };
 
@@ -286,7 +289,9 @@ fn run_render_system(
                     removed_list.insert(child);
                 }
                 // Do this last so the parent query still works.
-                world.entity_mut(*child).despawn();
+                if world.get_entity(*child).is_ok() {
+                    world.entity_mut(*child).despawn();
+                }
             }
         }
     });

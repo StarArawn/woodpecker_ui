@@ -141,6 +141,7 @@ impl WidgetChildren {
                         widget_type.clone().split("::").last().unwrap().to_string();
                     let child_widget = widget_mapper.get_or_insert_entity_world(
                         world,
+                        observer_cache,
                         widget_type,
                         parent,
                         None,

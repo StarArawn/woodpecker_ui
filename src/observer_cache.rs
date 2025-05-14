@@ -32,8 +32,9 @@ impl ObserverCache {
             for ((slot, e_target), ob_entity) in entities.iter() {
                 if target == *e_target {
                     removed.push((*slot, *e_target));
-
-                    world.despawn(*ob_entity);
+                    if world.get_entity(*ob_entity).is_ok() {
+                        world.despawn(*ob_entity);
+                    }
                 }
             }
 
