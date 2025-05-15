@@ -440,10 +440,7 @@ pub fn hot(_attr: TokenStream, func: TokenStream) -> TokenStream {
     let wrapped_input = input_function.sig.inputs;
     let block = input_function.block;
 
-    let func_name_wrapped = Ident::new(
-        &format!("{}_wrapped", func_name.to_string()),
-        func_name.span(),
-    );
+    let func_name_wrapped = Ident::new(&format!("{}_wrapped", func_name), func_name.span());
 
     let input_names = wrapped_input
         .iter()
@@ -467,11 +464,8 @@ pub fn hot(_attr: TokenStream, func: TokenStream) -> TokenStream {
                 syn::FnArg::Receiver(_receiver) => {}
                 syn::FnArg::Typed(pat_type) => {
                     let mut pat = *pat_type.pat.clone();
-                    match &mut pat {
-                        syn::Pat::Ident(pat_ident) => {
-                            pat_ident.mutability = None;
-                        }
-                        _ => {}
+                    if let syn::Pat::Ident(pat_ident) = &mut pat {
+                        pat_ident.mutability = None;
                     }
                     pat_type.pat = Box::new(pat);
                 }
