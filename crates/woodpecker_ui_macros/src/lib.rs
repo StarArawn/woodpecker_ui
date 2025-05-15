@@ -1,8 +1,8 @@
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use proc_macro_error::proc_macro_error;
-use quote::quote;
-use syn::{spanned::Spanned, Ident};
+use quote::{quote, ToTokens};
+use syn::{parse, spanned::Spanned, Ident, ItemFn};
 
 #[proc_macro_error]
 #[proc_macro_derive(Widget, attributes(widget_systems, auto_update, props, state, context))]
@@ -114,6 +114,12 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
             context_span = Some(attr.path().get_ident().span());
         }
     }
+
+    let render = if let Some(render) = systems.1 {
+        Ident::new(&render, Span::call_site())
+    } else {
+        panic!("{}", ATTR_ERROR_MESSAGE);
+    };
 
     if is_auto_update {
         if !is_diff_props {
@@ -249,6 +255,7 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
 
         let struct_ident_string = struct_identifier.clone().to_string();
 
+        let render = render.clone();
         systems.0 = Some(quote! {
             |
                 mut commands: Commands,
@@ -261,7 +268,18 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
                 #state_query_statements
                 #context_query_statements
                 transition_query: Query<&Transition>,
+                #[cfg(feature = "hotreload")]
+                mut old_pointer: Local<u64>
             | {
+                #[cfg(feature = "hotreload")] {
+                    let hot_fn = dioxus_devtools::subsecond::HotFn::current(#render);
+                    let new_ptr = hot_fn.ptr_address();
+                    if new_ptr != *old_pointer {
+                        *old_pointer = new_ptr;
+                        return true;
+                    }
+                }
+
                 // Ignore no children
                 if let Ok(children) = child_query.get(**current_widget) {
                     if children.children_changed() {
@@ -309,29 +327,26 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
         });
     }
 
-    let systems = if let Some(update) = systems.0 {
-        if let Some(render) = systems.1 {
-            let render: Ident = Ident::new(&render, Span::call_site());
-            quote! {
-                fn update() -> impl bevy::prelude::System<In = (), Out = bool>
-                where
-                    Self: Sized,
-                {
-                    bevy::prelude::IntoSystem::into_system(#update)
-                }
-
-                fn render() -> impl bevy::prelude::System<In = (), Out = ()>
-                where
-                    Self: Sized,
-                {
-                    bevy::prelude::IntoSystem::into_system(#render)
-                }
-            }
-        } else {
-            panic!("{}", ATTR_ERROR_MESSAGE);
-        }
+    let update = if let Some(update) = systems.0 {
+        update
     } else {
         quote! {}
+    };
+
+    let systems = quote! {
+        fn update() -> impl bevy::prelude::System<In = (), Out = bool>
+        where
+            Self: Sized,
+        {
+            bevy::prelude::IntoSystem::into_system(#update)
+        }
+
+        fn render() -> impl bevy::prelude::System<In = (), Out = ()>
+        where
+            Self: Sized,
+        {
+            bevy::prelude::IntoSystem::into_system(#render)
+        }
     };
 
     quote! {
@@ -411,4 +426,66 @@ fn get_diff(
         prop_names_b,
         diff_props,
     )
+}
+
+#[proc_macro_error]
+#[proc_macro_attribute]
+#[cfg(feature = "hotreload")]
+pub fn hot(_attr: TokenStream, func: TokenStream) -> TokenStream {
+    let input_function: ItemFn = parse(func).unwrap();
+    let func_name = input_function.sig.ident;
+    let wrapped_input = input_function.sig.inputs;
+    let block = input_function.block;
+
+    let func_name_wrapped = Ident::new(
+        &format!("{}_wrapped", func_name.to_string()),
+        func_name.span(),
+    );
+
+    let input_names = wrapped_input
+        .iter()
+        .filter_map(|fa| match fa {
+            syn::FnArg::Receiver(_receiver) => None,
+            syn::FnArg::Typed(pat_type) => {
+                if let syn::Pat::Ident(pat_ident) = *pat_type.pat.clone() {
+                    Some(pat_ident.ident.to_token_stream())
+                } else {
+                    None
+                }
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let input = wrapped_input
+        .clone()
+        .into_iter()
+        .map(|mut fn_arg| {
+            match &mut fn_arg {
+                syn::FnArg::Receiver(_receiver) => {}
+                syn::FnArg::Typed(pat_type) => {
+                    let mut pat = *pat_type.pat.clone();
+                    match &mut pat {
+                        syn::Pat::Ident(pat_ident) => {
+                            pat_ident.mutability = None;
+                        }
+                        _ => {}
+                    }
+                    pat_type.pat = Box::new(pat);
+                }
+            }
+
+            fn_arg
+        })
+        .collect::<Vec<_>>();
+
+    quote! {
+        fn #func_name(#(#input,)*) {
+            dioxus_devtools::subsecond::HotFn::current(#func_name_wrapped).call((#(#input_names,)*))
+        }
+
+        fn #func_name_wrapped(#wrapped_input)
+            #block
+
+    }
+    .into()
 }

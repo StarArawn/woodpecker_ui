@@ -28,6 +28,12 @@ Woodpecker UI is a Bevy ECS driven user interface crate. Its designed to be easy
 2. `RUSTFLAGS="--cfg=web_sys_unstable_apis" cargo run --example todo --target wasm32-unknown-unknown --release`
 3. `wasm-server-runner target/wasm32-unknown-unknown/release/todo.wasm`
 
+### Experimental hot reloading support
+1. `cargo install dioxus-cli --version 0.7.0-alpha.0`
+2. `dx serve --example counter --hotpatch --platform INSERT_PLATFORM_HERE --features="hotreload"`
+
+Hot reloading is very lightweight and wont hinder your performance in release mode at all! Currently only the todo example is wired up for hot reloading but any widget render system can be hot reloaded with the hot macro!
+
 ### Found a bug? Please open an issue!
 
 ### Basic Example [examples/text.rs](examples/text.rs):

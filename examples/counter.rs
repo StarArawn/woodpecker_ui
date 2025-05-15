@@ -15,6 +15,7 @@ pub struct CounterWidget {
     initial_count: u32,
 }
 
+#[cfg_attr(feature = "hotreload", woodpecker_ui::prelude::hot)]
 fn render(
     current_widget: Res<CurrentWidget>,
     mut commands: Commands,
@@ -58,7 +59,7 @@ fn render(
                     ..Default::default()
                 },
                 WidgetRender::Text {
-                    content: format!("Current Count: {}", state.count),
+                    content: format!("Current Apples: {}", state.count),
                     word_wrap: false,
                 },
             ))
@@ -72,7 +73,7 @@ fn render(
                         ..Default::default()
                     },
                     WidgetRender::Text {
-                        content: "Increase Count".into(),
+                        content: "Increase Apples".into(),
                         word_wrap: false,
                     },
                 )),
@@ -83,7 +84,7 @@ fn render(
                     let Ok(mut state) = query.get_mut(state_entity) else {
                         return;
                     };
-                    state.count += 1;
+                    state.count += 5;
                 },
             ),
     ));
@@ -92,6 +93,8 @@ fn render(
 }
 
 fn main() {
+    #[cfg(feature = "hotreload")]
+    dioxus_devtools::connect_subsecond();
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
