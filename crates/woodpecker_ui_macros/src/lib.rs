@@ -1,8 +1,8 @@
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use proc_macro_error::proc_macro_error;
-use quote::{quote, ToTokens};
-use syn::{parse, spanned::Spanned, Ident, ItemFn};
+use quote::quote;
+use syn::{spanned::Spanned, Ident};
 
 #[proc_macro_error]
 #[proc_macro_derive(Widget, attributes(widget_systems, auto_update, props, state, context))]
@@ -432,6 +432,9 @@ fn get_diff(
 #[proc_macro_attribute]
 #[cfg(feature = "hotreload")]
 pub fn hot(_attr: TokenStream, func: TokenStream) -> TokenStream {
+    use quote::ToTokens;
+    use syn::{parse, ItemFn};
+
     let input_function: ItemFn = parse(func).unwrap();
     let func_name = input_function.sig.ident;
     let wrapped_input = input_function.sig.inputs;
