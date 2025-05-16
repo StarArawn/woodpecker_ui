@@ -227,10 +227,19 @@ impl WidgetRender {
                         });
                     }
 
-                    let transform = vello::kurbo::Affine::translate((
-                        location_x as f64,
-                        location_y as f64 + run.line_y as f64,
-                    ));
+                    let posx = location_x;
+                    let posy = location_y + run.line_y;
+
+                    // Culling
+                    if posx + run.line_w < 0.0
+                        || posy + run.line_height < 0.0
+                        || posx > camera_size.x
+                        || posy > camera_size.y
+                    {
+                        continue;
+                    }
+
+                    let transform = vello::kurbo::Affine::translate((posx as f64, posy as f64));
 
                     let axes = font_ref.axes();
                     let var_loc = axes.location(VARIATIONS);
@@ -463,13 +472,6 @@ impl WidgetRender {
                         .images
                         .insert(handle.clone(), conv_image_handle);
                     let data: Vec<u8> = vec![];
-                    //     [255, 0, 0, 255];
-                    //     (image_texture_descriptor.size.width * image_texture_descriptor.size.height)
-                    //         as usize
-                    // ]
-                    // .into_iter()
-                    // .flatten()
-                    // .collect::<Vec<_>>();
                     render_targets.vello_images.insert(
                         handle.clone(),
                         peniko::Image::new(

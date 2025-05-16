@@ -119,6 +119,7 @@ pub mod prelude {
     pub use crate::on_change::Change;
     pub use crate::render::{WidgetRender, WidgetRenderCustom};
     pub use crate::styles::*;
+    pub use crate::svg::SvgAsset;
     pub use crate::widgets::*;
     pub use crate::WoodpeckerView;
     pub use crate::{

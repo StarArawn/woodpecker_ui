@@ -255,7 +255,26 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
 
         let struct_ident_string = struct_identifier.clone().to_string();
 
-        let render = render.clone();
+        let hot_reaload_param = quote! {};
+        #[cfg(feature = "hotreload")]
+        let hot_reaload_param = quote! {
+            mut old_pointer: Local<u64>,
+        };
+
+        let hot_reload_diff = quote! {};
+        #[cfg(feature = "hotreload")]
+        let hot_reload_diff = {
+            let render = render.clone();
+            quote! {
+                let hot_fn = dioxus_devtools::subsecond::HotFn::current(#render);
+                let new_ptr = hot_fn.ptr_address();
+                if new_ptr != *old_pointer {
+                    *old_pointer = new_ptr;
+                    return true;
+                }
+            }
+        };
+
         systems.0 = Some(quote! {
             |
                 mut commands: Commands,
@@ -268,17 +287,10 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
                 #state_query_statements
                 #context_query_statements
                 transition_query: Query<&Transition>,
-                #[cfg(feature = "hotreload")]
-                mut old_pointer: Local<u64>
+                #hot_reaload_param
             | {
-                #[cfg(feature = "hotreload")] {
-                    let hot_fn = dioxus_devtools::subsecond::HotFn::current(#render);
-                    let new_ptr = hot_fn.ptr_address();
-                    if new_ptr != *old_pointer {
-                        *old_pointer = new_ptr;
-                        return true;
-                    }
-                }
+
+                #hot_reload_diff
 
                 // Ignore no children
                 if let Ok(children) = child_query.get(**current_widget) {
