@@ -14,10 +14,14 @@ use bevy_vello::integrations::VectorLoaderError;
 #[derive(Default)]
 pub struct SvgLoader;
 
+/// An SVG asset which can be rendered in the UI.
 #[derive(Asset, TypePath, Clone)]
 pub struct SvgAsset {
+    /// A usvg svg asset.
     pub tree: usvg::Tree,
+    /// The width of the svg
     pub width: f32,
+    /// The height of the svg
     pub height: f32,
 }
 

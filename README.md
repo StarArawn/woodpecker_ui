@@ -30,9 +30,9 @@ Woodpecker UI is a Bevy ECS driven user interface crate. Its designed to be easy
 
 ### Experimental hot reloading support
 1. `cargo install dioxus-cli --version 0.7.0-alpha.0`
-2. `dx serve --example counter --hotpatch --platform INSERT_PLATFORM_HERE --features="hotreload"`
+2. `dx serve --example counter --hotpatch --features="hotreload"`
 
-Hot reloading is very lightweight and wont hinder your performance in release mode at all! Currently only the todo example is wired up for hot reloading but any widget render system can be hot reloaded with the hot macro!
+Hot reloading is very lightweight and wont hinder your performance in release mode at all! Currently only the todo example is wired up for hot reloading but any widget render system can be hot reloaded with the #[hot] macro!
 
 ### Found a bug? Please open an issue!
 

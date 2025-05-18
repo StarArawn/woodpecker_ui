@@ -15,7 +15,8 @@ metrics = []
 
 [dependencies]
 bevy_vello = { git = "https://github.com/StarArawn/bevy_vello", rev = "845e45d5c85bef6bd6c0432fdb1a668fc43c0b94", features = ["text", "default_font"] } #{ version = "0.8", features = ["svg", "text", "default_font"] }
-bevy-trait-query = "0.16" #{ git = "https://github.com/RobWalt/bevy-trait-query", rev = "215b9068e8457d96ddcd4c8efa9605ba0f8feda5" }
+bevy-trait-query = "0.16"
+dioxus-devtools = { version = "0.7.0-alpha.0", optional = true }
 bytemuck = "1.23.0"
 cosmic-text = "0.14.2"
 image = "0.24"
@@ -35,7 +36,6 @@ woodpecker_ui_macros.path = "crates/woodpecker_ui_macros" # TODO: Make this crat
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 arboard = "3.4"
 bevy = { version = "0.16" }
-dioxus-devtools = { version = "0.7.0-alpha.0", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 bevy = { version = "0.16", default-features = false, features = ["webgpu"] }

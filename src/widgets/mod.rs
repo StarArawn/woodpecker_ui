@@ -36,7 +36,7 @@ pub use modal::Modal;
 pub use scroll::content::ScrollContent;
 pub use scroll::scroll_bar::ScrollBar;
 pub use scroll::scroll_box::ScrollBox;
-pub use scroll::{ScrollContext, ScrollContextProvider};
+pub use scroll::{ScrollContext, ScrollContextProvider, TaggedContext};
 pub use slider::{Slider, SliderChanged, SliderState, SliderStyles};
 pub use tab::*;
 pub use text_box::{TextBox, TextBoxState, TextChanged, TextboxStyles};
