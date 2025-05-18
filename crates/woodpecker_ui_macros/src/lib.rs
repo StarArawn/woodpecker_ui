@@ -255,12 +255,14 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
 
         let struct_ident_string = struct_identifier.clone().to_string();
 
+        #[cfg(not(feature = "hotreload"))]
         let hot_reaload_param = quote! {};
         #[cfg(feature = "hotreload")]
         let hot_reaload_param = quote! {
             mut old_pointer: Local<u64>,
         };
 
+        #[cfg(not(feature = "hotreload"))]
         let hot_reload_diff = quote! {};
         #[cfg(feature = "hotreload")]
         let hot_reload_diff = {
