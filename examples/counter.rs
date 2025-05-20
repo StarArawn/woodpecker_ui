@@ -60,7 +60,6 @@ fn render(
                 },
                 WidgetRender::Text {
                     content: format!("Current Apples: {}", state.count),
-                    word_wrap: false,
                 },
             ))
             .with_child::<WButton>((
@@ -74,7 +73,6 @@ fn render(
                     },
                     WidgetRender::Text {
                         content: "Increase Apples".into(),
-                        word_wrap: false,
                     },
                 )),
             ))

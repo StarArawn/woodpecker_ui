@@ -63,11 +63,11 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                 WoodpeckerStyle {
                     font_size: FONT_SIZE,
                     color: Color::WHITE,
+                    text_wrap: TextWrap::None,
                     ..Default::default()
                 },
                 WidgetRender::Text {
                     content: "C".into(),
-                    word_wrap: false,
                 },
             )),
         ))
@@ -102,12 +102,10 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                     margin: Edge::new(0.0, 0.0, 0.0, 15.0),
                     font_size: FONT_SIZE,
                     color: Color::WHITE,
+                    text_wrap: TextWrap::None,
                     ..Default::default()
                 },
-                WidgetRender::Text {
-                    content: "".into(),
-                    word_wrap: false,
-                },
+                WidgetRender::Text { content: "".into() },
             )),
         )),
         WidgetRender::Quad,
@@ -126,11 +124,11 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                     WoodpeckerStyle {
                         font_size: FONT_SIZE,
                         color: Color::WHITE,
+                        text_wrap: TextWrap::None,
                         ..Default::default()
                     },
                     WidgetRender::Text {
                         content: button.into(),
-                        word_wrap: true,
                     },
                 )),
             ))

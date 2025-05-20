@@ -52,7 +52,6 @@ fn render(
                 },
                 WidgetRender::Text {
                     content: format!("Open Modal {}", my_widget.total - my_widget.depth),
-                    word_wrap: false,
                 },
             )),
         ))
@@ -92,7 +91,6 @@ fn render(
                             content:
                                 "Hello World! I am Woodpecker UI! This is an example of a modal window!"
                                     .into(),
-                            word_wrap: true,
                         },
                     ))
                     .with_child::<WButton>((
@@ -107,7 +105,6 @@ fn render(
                             },
                             WidgetRender::Text {
                                 content: format!("Close Modal {}", my_widget.total - my_widget.depth),
-                                word_wrap: true,
                             },
                         )),
                     ))

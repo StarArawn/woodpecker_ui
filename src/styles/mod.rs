@@ -17,6 +17,20 @@ mod units;
 #[reflect(Component)]
 pub struct WoodpeckerStyleProp(pub WoodpeckerStyle);
 
+/// Text wrapping mode
+#[derive(Debug, Eq, Default, PartialEq, Reflect, Clone, Copy)]
+pub enum TextWrap {
+    /// No wrapping
+    None,
+    /// Wraps at a glyph level
+    Glyph,
+    /// Wraps at the word level
+    Word,
+    #[default]
+    /// Wraps at the word level, or fallback to glyph level if a word can't fit on a line by itself
+    WordOrGlyph,
+}
+
 // A struct used to define the look of a widget
 ///
 /// All fields are `pub`, so you can simply define your styles.
@@ -181,6 +195,8 @@ pub struct WoodpeckerStyle {
     ///
     /// Only applies to [`crate::prelude::WidgetRender::Text`]
     pub font_size: f32,
+    /// The text wrap mode used.
+    pub text_wrap: TextWrap,
     /// The layout method for children of this widget
     /// The line height for this widget, in pixels
     pub line_height: Option<f32>,
@@ -268,6 +284,7 @@ impl WoodpeckerStyle {
         line_height: None,
         opacity: 1.0,
         font: None,
+        text_wrap: TextWrap::WordOrGlyph,
         text_alignment: None,
     };
 

@@ -118,11 +118,11 @@ fn render(
                 Element,
                 WoodpeckerStyle {
                     font_size: 14.0,
+                    text_wrap: TextWrap::None,
                     ..Default::default()
                 },
                 WidgetRender::Text {
                     content: window.title.clone(),
-                    word_wrap: false,
                 },
             )),
             WidgetRender::Quad,

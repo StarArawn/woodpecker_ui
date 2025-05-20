@@ -63,7 +63,6 @@ fn startup(
                 },
                 WidgetRender::Text {
                     content: "Space to change Camera RenderLayer. WoodPecker is on layer 1".into(),
-                    word_wrap: true,
                 },
             )),
         ))

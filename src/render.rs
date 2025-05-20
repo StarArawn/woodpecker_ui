@@ -41,9 +41,6 @@ pub enum WidgetRender {
     Text {
         /// The text to render
         content: String,
-        /// Should the text word wrap
-        // TODO: Move to styles..
-        word_wrap: bool,
     },
     /// A custom vello renderer.
     /// TODO: Untested, write an example?
@@ -194,7 +191,7 @@ impl WidgetRender {
                 );
                 metrics.increase_quad_counts();
             }
-            WidgetRender::Text { content, word_wrap } => {
+            WidgetRender::Text { content } => {
                 let font_handle = widget_style
                     .font
                     .as_ref()
@@ -210,7 +207,6 @@ impl WidgetRender {
                     widget_style,
                     &font_handle,
                     content,
-                    *word_wrap,
                     camera_scale,
                 ) else {
                     return false;
@@ -232,7 +228,7 @@ impl WidgetRender {
 
                     // Culling
                     if posx + run.line_w < 0.0
-                        || posy + run.line_height < 0.0
+                        || posy + widget_style.font_size < 0.0
                         || posx > camera_size.x
                         || posy > camera_size.y
                     {

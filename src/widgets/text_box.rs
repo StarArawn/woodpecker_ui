@@ -487,11 +487,11 @@ pub fn render(
         WoodpeckerStyle {
             font_size: style.font_size,
             color: style.color,
+            text_wrap: TextWrap::None,
             ..Default::default()
         },
         WidgetRender::Text {
             content: state.current_value.clone(),
-            word_wrap: false,
         },
     ));
 
@@ -541,11 +541,11 @@ fn set_new_cursor_position(
             Vec2::new(1000000.0, font_size * 1.2),
             &WoodpeckerStyle {
                 font_size,
+                text_wrap: TextWrap::None,
                 ..Default::default()
             },
             font_handle,
             &string_to_cursor,
-            false,
             Vec2::new(1.0, 1.0),
         )
         .unwrap();

@@ -70,7 +70,6 @@ fn render(
                     },
                     WidgetRender::Text {
                         content: todo.clone(),
-                        word_wrap: true,
                     },
                 ))
                 .with_child::<WButton>((
@@ -95,7 +94,6 @@ fn render(
                         },
                         WidgetRender::Text {
                             content: "Done".into(),
-                            word_wrap: true,
                         },
                     )),
                 ))

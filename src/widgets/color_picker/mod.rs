@@ -100,11 +100,11 @@ fn render(
                             font_size: 22.0,
                             color: Color::WHITE,
                             flex_grow: 1.0,
+                            text_wrap: TextWrap::None,
                             ..Default::default()
                         },
                         WidgetRender::Text {
                             content: srgba_color.to_srgba().to_hex(),
-                            word_wrap: false,
                         },
                     ))
                     .with_child::<IconButton>((

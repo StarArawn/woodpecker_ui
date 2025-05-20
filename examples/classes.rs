@@ -60,7 +60,6 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                     classes::red_text,
                     WidgetRender::Text {
                         content: "Hello, I am red text!".into(),
-                        word_wrap: false,
                     },
                 ))
                 .with_child::<Element>((
@@ -68,7 +67,6 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                     classes::blue_text,
                     WidgetRender::Text {
                         content: "Hello, I am blue text!".into(),
-                        word_wrap: false,
                     },
                 ))
                 .with_child::<Element>((
@@ -76,7 +74,6 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                     classes::green_text,
                     WidgetRender::Text {
                         content: "Hello, I am green text!".into(),
-                        word_wrap: false,
                     },
                 )),
         ))

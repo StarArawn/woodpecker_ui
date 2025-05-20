@@ -49,7 +49,6 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                                 },
                             WidgetRender::Text {
                                 content: "Hello World! I am Woodpecker UI! This text is way too long and thus it clips out of the bottom of our quad.".into(),
-                                word_wrap: true,
                             },
                         )),
                     WidgetRender::Quad

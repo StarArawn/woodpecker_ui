@@ -52,7 +52,6 @@ fn render(
                 },
                 WidgetRender::Text {
                     content: "Open Modal".into(),
-                    word_wrap: false,
                 },
             )),
         ))
@@ -118,7 +117,6 @@ fn render(
                             },
                             WidgetRender::Text {
                                 content: "Close Modal".into(),
-                                word_wrap: true,
                             },
                         )),
                     ))

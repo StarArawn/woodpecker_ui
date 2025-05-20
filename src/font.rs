@@ -84,7 +84,6 @@ impl FontManager {
         style: &WoodpeckerStyle,
         font_handle: &Handle<VelloFont>,
         content: &str,
-        word_wrap: bool,
         camera_scale: Vec2,
     ) -> Option<cosmic_text::Buffer> {
         // Per mozilla the default line height is roughly font_size * 1.2
@@ -119,10 +118,19 @@ impl FontManager {
             Some(avaliable_space.y),
         );
 
-        if word_wrap {
-            buffer.set_wrap(&mut self.font_system, cosmic_text::Wrap::Word);
-        } else {
-            buffer.set_wrap(&mut self.font_system, cosmic_text::Wrap::None);
+        match style.text_wrap {
+            crate::styles::TextWrap::None => {
+                buffer.set_wrap(&mut self.font_system, cosmic_text::Wrap::None);
+            }
+            crate::styles::TextWrap::Glyph => {
+                buffer.set_wrap(&mut self.font_system, cosmic_text::Wrap::Glyph);
+            }
+            crate::styles::TextWrap::Word => {
+                buffer.set_wrap(&mut self.font_system, cosmic_text::Wrap::Word);
+            }
+            crate::styles::TextWrap::WordOrGlyph => {
+                buffer.set_wrap(&mut self.font_system, cosmic_text::Wrap::WordOrGlyph);
+            }
         }
 
         let attrs = cosmic_text::Attrs {

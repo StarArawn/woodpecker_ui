@@ -196,11 +196,11 @@ fn render(
                         WoodpeckerStyle {
                             font_size: 14.0,
                             line_height: Some(18.0),
+                            text_wrap: TextWrap::None,
                             ..Default::default()
                         },
                         WidgetRender::Text {
                             content: modal.title.clone(),
-                            word_wrap: false,
                         },
                     )),
                 ))

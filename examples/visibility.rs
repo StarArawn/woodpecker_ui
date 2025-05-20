@@ -93,7 +93,6 @@ fn render(
                 },
                 WidgetRender::Text {
                     content: "Text".into(),
-                    word_wrap: false,
                 },
             )),
         ))
@@ -119,7 +118,6 @@ fn render(
                 },
                 WidgetRender::Text {
                     content: "Image".into(),
-                    word_wrap: false,
                 },
             )),
         ))
@@ -145,7 +143,6 @@ fn render(
                 },
                 WidgetRender::Text {
                     content: "Quad".into(),
-                    word_wrap: false,
                 },
             )),
         ))
@@ -171,7 +168,6 @@ fn render(
                 },
                 WidgetRender::Text {
                     content: "SVG".into(),
-                    word_wrap: false,
                 },
             )),
         ))
@@ -197,7 +193,6 @@ fn render(
                 },
                 WidgetRender::Text {
                     content: "nine_patch".into(),
-                    word_wrap: false,
                 },
             )),
         ))
@@ -223,7 +218,6 @@ fn render(
                 },
                 WidgetRender::Text {
                     content: "layer".into(),
-                    word_wrap: false,
                 },
             )),
         ))
@@ -263,7 +257,6 @@ fn render(
             },
             WidgetRender::Text {
                 content: "Hello World! I am Woodpecker UI!".into(),
-                word_wrap: false,
             },
             Pickable::default(),
         ))

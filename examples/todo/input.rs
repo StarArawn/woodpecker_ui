@@ -101,7 +101,6 @@ fn render(current_widget: Res<CurrentWidget>, mut query: Query<(&TodoInput, &mut
                 },
                 WidgetRender::Text {
                     content: "Add".into(),
-                    word_wrap: true,
                 },
             )),
         ))

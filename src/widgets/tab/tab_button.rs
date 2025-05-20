@@ -1,10 +1,6 @@
 use super::TabContext;
 use crate::prelude::*;
 use bevy::prelude::*;
-// use bevy_mod_picking::{
-//     events::{Click, Pointer},
-//     prelude::On,
-// };
 
 /// Tab button
 #[derive(Widget, Component, Clone, PartialEq, Reflect)]
@@ -112,11 +108,11 @@ fn render(
                     } else {
                         tab_button.inactive_styles.normal.color
                     },
+                    text_wrap: TextWrap::None,
                     ..Default::default()
                 },
                 WidgetRender::Text {
                     content: tab_button.title.clone(),
-                    word_wrap: false,
                 },
             )),
         ))

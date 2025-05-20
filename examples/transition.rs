@@ -95,7 +95,6 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                         Element,
                         WidgetRender::Text {
                             content: "Hello, I am some random long text that gets clipped by a transition! :D".into(),
-                            word_wrap: false,
                         },
                     )),
                     Transition {
@@ -126,7 +125,6 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                             },
                             WidgetRender::Text {
                                 content: "Hello, I am some random long text that gets wrapped by a transition! :D".into(),
-                                word_wrap: true,
                             },
                         )),
                     Transition {

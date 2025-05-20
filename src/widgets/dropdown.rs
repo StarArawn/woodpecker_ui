@@ -38,6 +38,7 @@ impl Default for DropdownStyles {
                 color: Color::WHITE,
                 font_size: 32.0,
                 flex_grow: 1.0,
+                text_wrap: TextWrap::None,
                 ..Default::default()
             },
             icon: WoodpeckerStyle {
@@ -146,7 +147,6 @@ fn render(
             dropdown.styles.text,
             WidgetRender::Text {
                 content: state.current_value.clone(),
-                word_wrap: false,
             },
         ))
         // Icon
@@ -177,7 +177,6 @@ fn render(
                     dropdown.styles.text,
                     WidgetRender::Text {
                         content: item.clone(),
-                        word_wrap: false,
                     },
                 )),
                 dropdown.styles.list_item,

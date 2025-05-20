@@ -53,7 +53,6 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras sed tellus neque. 
                                 },
                                 WidgetRender::Text {
                                     content: lorem_ipsum,
-                                    word_wrap: true,
                                 },
                             ))),
                         )),

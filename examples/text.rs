@@ -34,7 +34,6 @@ fn startup(
                 },
                 WidgetRender::Text {
                     content: "Hello World! I am Woodpecker UI!".into(),
-                    word_wrap: false,
                 },
             )),
         ))

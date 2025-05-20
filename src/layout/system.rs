@@ -413,7 +413,7 @@ fn match_render_size(
             let size = Vec2::new(svg_asset.width, svg_asset.height);
             Some(LayoutMeasure::Image(super::measure::ImageMeasure { size }))
         }
-        WidgetRender::Text { content, word_wrap } => {
+        WidgetRender::Text { content } => {
             // Measure text
             let font_handle = styles
                 .font
@@ -428,7 +428,6 @@ fn match_render_size(
                 styles,
                 &font_handle,
                 content,
-                *word_wrap,
                 camera_scale,
             ) {
                 let mut size = Vec2::new(0.0, 0.0);
