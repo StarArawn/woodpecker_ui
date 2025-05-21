@@ -1,4 +1,7 @@
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::{
+    hash::{DefaultHasher, Hash, Hasher},
+    sync::Arc,
+};
 
 use bevy::{
     platform::collections::{HashMap, HashSet},
@@ -47,6 +50,7 @@ pub struct FontManager {
     vello_to_family: HashMap<Handle<VelloFont>, String>,
     buffer_cache: HashMap<u64, Buffer>,
     fonts: HashSet<Handle<VelloFont>>,
+    font_cx: parley::FontContext,
 }
 
 impl Default for FontManager {
@@ -57,16 +61,30 @@ impl Default for FontManager {
             font_data: Default::default(),
             buffer_cache: Default::default(),
             fonts: HashSet::default(),
+            font_cx: parley::FontContext::new(),
         }
     }
 }
 
 impl FontManager {
+    /// The font context for parley shaping/etc..
+    pub fn get_ctx_mut(&mut self) -> &mut parley::FontContext {
+        &mut self.font_cx
+    }
+
     /// Used for vello rendering.
-    pub(crate) fn get_vello_font(&mut self, vello_font: &Handle<VelloFont>) -> FontRef {
-        let font_data = self.font_data.get(vello_font).unwrap();
+    pub(crate) fn get_vello_font(&mut self, vello_font: &AssetId<VelloFont>) -> FontRef {
+        let font_data = self.font_data.get(&Handle::Weak(*vello_font)).unwrap();
         let font_ref = FontRef::from_index(font_data, 0).unwrap();
         font_ref
+    }
+
+    /// Retrieves the font family name.
+    pub fn get_family(&self, vello_font: &AssetId<VelloFont>) -> String {
+        self.vello_to_family
+            .get(&Handle::Weak(*vello_font))
+            .unwrap()
+            .clone()
     }
 
     /// Adds a font handle to the font manager to keep it alive.
@@ -190,6 +208,11 @@ pub(crate) fn load_fonts(
             };
 
             info!("Loaded font family: {}", font_family);
+
+            font_manager.font_cx.collection.register_fonts(
+                parley::fontique::Blob::new(Arc::new(font_data.clone())),
+                None,
+            );
 
             font_manager
                 .vello_to_family

@@ -16,6 +16,7 @@ mod modal;
 mod scroll;
 mod slider;
 mod tab;
+// mod text_box;
 mod text_box;
 mod toggle;
 mod transition;

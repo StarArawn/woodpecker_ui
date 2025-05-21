@@ -212,7 +212,7 @@ impl WidgetRender {
                     return false;
                 };
 
-                let font_ref = font_manager.get_vello_font(&font_handle);
+                let font_ref = font_manager.get_vello_font(&font_handle.id());
                 for run in buffer.layout_runs() {
                     let mut glyphs = vec![];
                     for glyph in run.glyphs.iter() {

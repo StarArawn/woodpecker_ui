@@ -14,7 +14,9 @@ debug-render = []
 metrics = []
 
 [dependencies]
-bevy_vello = { git = "https://github.com/StarArawn/bevy_vello", rev = "845e45d5c85bef6bd6c0432fdb1a668fc43c0b94", features = ["text", "default_font"] } #{ version = "0.8", features = ["svg", "text", "default_font"] }
+parley = { git = "https://github.com/linebender/parley", rev = "74a3499920675a63450727e44a75a57f76389e7a" }
+# bevy_vello = { path = "../bevy_vello", features = ["text", "default_font"] }
+bevy_vello = { git = "https://github.com/StarArawn/bevy_vello", rev = "845e45d5c85bef6bd6c0432fdb1a668fc43c0b94", features = ["text", "default_font"] }
 bevy-trait-query = "0.16"
 dioxus-devtools = { version = "0.7.0-alpha.0", optional = true }
 bytemuck = "1.23.0"
@@ -48,7 +50,7 @@ calc = { version = "0.4.0", default-features = false }
 bevy = { version = "0.16", features = ["jpeg", "bevy_dev_tools"] }
 bevy-inspector-egui = "0.31"
 
-# [patch.crates-io]
+[patch.crates-io]
 # bevy_vello = { git = "https://github.com/linebender/bevy_vello", rev = "7fe648ccb9766ecf2ef469f08c9f21093c3544e6" }
 
 [[example]]
