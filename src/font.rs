@@ -7,7 +7,7 @@ use bevy::{
     platform::collections::{HashMap, HashSet},
     prelude::*,
 };
-use bevy_vello::prelude::VelloFont;
+use bevy_vello::{prelude::VelloFont, vello::peniko::Brush};
 use cosmic_text::{Buffer, Family};
 use skrifa::FontRef;
 
@@ -50,7 +50,10 @@ pub struct FontManager {
     vello_to_family: HashMap<Handle<VelloFont>, String>,
     buffer_cache: HashMap<u64, Buffer>,
     fonts: HashSet<Handle<VelloFont>>,
-    font_cx: parley::FontContext,
+    /// The parley font context for parley shaping/etc..
+    pub font_cx: parley::FontContext,
+    /// The parley layout context for parley shaping/etc..
+    pub layout_cx: parley::LayoutContext<Brush>,
 }
 
 impl Default for FontManager {
@@ -62,14 +65,18 @@ impl Default for FontManager {
             buffer_cache: Default::default(),
             fonts: HashSet::default(),
             font_cx: parley::FontContext::new(),
+            layout_cx: parley::LayoutContext::new(),
         }
     }
 }
 
 impl FontManager {
-    /// The font context for parley shaping/etc..
-    pub fn get_ctx_mut(&mut self) -> &mut parley::FontContext {
-        &mut self.font_cx
+    /// Returns a parley driver for the given engine.
+    pub fn driver<'a>(
+        &'a mut self,
+        engine: &'a mut parley::PlainEditor<Brush>,
+    ) -> parley::PlainEditorDriver<'a, Brush> {
+        engine.driver(&mut self.font_cx, &mut self.layout_cx)
     }
 
     /// Used for vello rendering.

@@ -1,5 +1,5 @@
 use bevy_vello::vello::peniko::Brush;
-use parley::{FontContext, FontFamily, StyleProperty};
+use parley::{FontFamily, StyleProperty};
 use web_time::Instant;
 
 use crate::{
@@ -95,17 +95,6 @@ pub struct TextBoxState {
     pub current_value: String,
     /// Parley text editing engine.
     pub engine: parley::PlainEditor<Brush>,
-    /// Parley layout context. TODO: Move to the font manager..
-    pub layout_cx: parley::LayoutContext<Brush>,
-}
-
-impl TextBoxState {
-    fn driver<'a>(
-        &'a mut self,
-        font_context: &'a mut FontContext,
-    ) -> parley::PlainEditorDriver<'a, Brush> {
-        self.engine.driver(font_context, &mut self.layout_cx)
-    }
 }
 
 impl PartialEq for TextBoxState {
@@ -130,7 +119,6 @@ impl Default for TextBoxState {
             cursor_last_update: Instant::now(),
             current_value: String::new(),
             engine: parley::PlainEditor::new(0.0),
-            layout_cx: parley::LayoutContext::new(),
         }
     }
 }
@@ -187,7 +175,7 @@ pub fn render(
 
     if text_box.is_changed() {
         state.current_value.clone_from(&text_box.initial_value);
-        let mut driver = state.driver(font_manager.get_ctx_mut());
+        let mut driver = font_manager.driver(&mut state.engine);
         driver.move_to_line_end();
     }
 
@@ -228,7 +216,7 @@ pub fn render(
                     return;
                 }
 
-                let mut driver = state.driver(font_manager.get_ctx_mut());
+                let mut driver = font_manager.driver(&mut state.engine);
                 driver.insert_or_replace_selection(&trigger.c);
 
                 state.cursor = state
@@ -275,7 +263,7 @@ pub fn render(
                     return;
                 }
 
-                let mut driver = state.driver(font_manager.get_ctx_mut());
+                let mut driver = font_manager.driver(&mut state.engine);
                 driver.move_to_point(
                     trigger.pointer_location.position.x
                         - widget_layout.location.x
@@ -310,8 +298,7 @@ pub fn render(
                 if !state.focused {
                     return;
                 }
-                let mut driver = state.driver(font_manager.get_ctx_mut());
-
+                let mut driver = font_manager.driver(&mut state.engine);
                 driver.extend_selection_to_point(
                     trigger.pointer_location.position.x
                         - widget_layout.location.x
@@ -380,7 +367,7 @@ pub fn render(
                     return;
                 };
 
-                let mut driver = state.driver(font_manager.get_ctx_mut());
+                let mut driver = font_manager.driver(&mut state.engine);
                 driver.insert_or_replace_selection(&trigger.paste.to_string());
 
                 state.cursor = state
@@ -416,7 +403,7 @@ pub fn render(
                     let Ok(mut state) = state_query.get_mut(state_entity) else {
                         return;
                     };
-                    let mut driver = state.driver(font_manager.get_ctx_mut());
+                    let mut driver = font_manager.driver(&mut state.engine);
                     let shift = keyboard_input.pressed(KeyCode::ShiftLeft);
 
                     if keyboard_input.pressed(KeyCode::ControlLeft) {
@@ -446,7 +433,7 @@ pub fn render(
 
                     let shift = keyboard_input.pressed(KeyCode::ShiftLeft);
 
-                    let mut driver = state.driver(font_manager.get_ctx_mut());
+                    let mut driver = font_manager.driver(&mut state.engine);
                     if keyboard_input.pressed(KeyCode::ControlLeft) {
                         if shift {
                             driver.select_word_left();
@@ -471,7 +458,7 @@ pub fn render(
                     let Ok(mut state) = state_query.get_mut(state_entity) else {
                         return;
                     };
-                    let mut driver = state.driver(font_manager.get_ctx_mut());
+                    let mut driver = font_manager.driver(&mut state.engine);
                     driver.backdelete();
                     state.cursor = state
                         .engine
@@ -540,7 +527,7 @@ pub fn render(
                     };
 
                     if !state.current_value.is_empty() {
-                        let mut driver = state.driver(font_manager.get_ctx_mut());
+                        let mut driver = font_manager.driver(&mut state.engine);
                         driver.delete();
                         state.cursor = state
                             .engine
