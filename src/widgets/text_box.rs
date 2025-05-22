@@ -242,7 +242,7 @@ pub fn render(
             height: if text_box.multi_line {
                 Units::Percentage(100.0)
             } else {
-                style.height
+                styles.focused.height
             },
             ..styles.focused
         };
@@ -252,7 +252,7 @@ pub fn render(
             height: if text_box.multi_line {
                 Units::Percentage(100.0)
             } else {
-                style.height
+                styles.hovered.height
             },
             ..styles.hovered
         };
@@ -262,14 +262,21 @@ pub fn render(
             height: if text_box.multi_line {
                 Units::Percentage(100.0)
             } else {
-                style.height
+                styles.normal.height
             },
             ..styles.normal
         };
     }
 
     let cursor_styles = WoodpeckerStyle {
-        top: ((state.cursor.min_y() + 2.0) as f32).into(),
+        top: (state.cursor.min_y() as f32
+            + if text_box.multi_line {
+                2.0
+            } else {
+                (styles.normal.height.value_or(styles.normal.font_size) - styles.normal.font_size)
+                    / 2.0
+            })
+        .into(),
         left: (state.cursor.min_x() as f32).into(),
         ..styles.cursor
     };
@@ -338,7 +345,7 @@ pub fn render(
                     return;
                 };
 
-                if !state.focused {
+                if !state.focused && !state.multi_line {
                     return;
                 }
 
@@ -393,7 +400,7 @@ pub fn render(
                     return;
                 };
 
-                if !state.focused {
+                if !state.focused && !state.multi_line {
                     return;
                 }
                 let mut driver = font_manager.driver(&mut state.engine);
@@ -415,7 +422,7 @@ pub fn render(
         .with_observe(
             current_widget,
             move |trigger: Trigger<Pointer<Drag>>,
-                  _style_query: Query<&WoodpeckerStyle>,
+                  style_query: Query<&WoodpeckerStyle>,
                   mut font_manager: ResMut<FontManager>,
                   widget_layout: Query<&WidgetLayout>,
                   mut state_query: Query<&mut TextBoxState>| {
@@ -425,8 +432,11 @@ pub fn render(
                 let Ok(widget_layout) = widget_layout.get(trigger.target) else {
                     return;
                 };
+                let Ok(styles) = style_query.get(trigger.target) else {
+                    return;
+                };
 
-                if !state.focused {
+                if !state.focused && !state.multi_line {
                     return;
                 }
                 let mut driver = font_manager.driver(&mut state.engine);
@@ -438,7 +448,10 @@ pub fn render(
                         - widget_layout.location.y
                         - widget_layout.padding.top.value_or(0.0),
                 );
-
+                state.cursor = state
+                    .engine
+                    .cursor_geometry(styles.font_size)
+                    .unwrap_or_default();
                 state.selections = state.engine.selection_geometry();
             },
         )
@@ -490,12 +503,27 @@ pub fn render(
         )
         .with_observe(
             current_widget,
-            move |_trigger: Trigger<WidgetBlur>, mut state_query: Query<&mut TextBoxState>| {
+            move |trigger: Trigger<WidgetBlur>,
+                  style_query: Query<&WoodpeckerStyle>,
+                  mut font_manager: ResMut<FontManager>,
+                  mut state_query: Query<&mut TextBoxState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
+                let Ok(styles) = style_query.get(trigger.target) else {
+                    return;
+                };
+
                 state.hovering = false;
                 state.focused = false;
+
+                let mut driver = font_manager.driver(&mut state.engine);
+                driver.move_to_text_start();
+                state.cursor = state
+                    .engine
+                    .cursor_geometry(styles.font_size)
+                    .unwrap_or_default();
+                state.selections = state.engine.selection_geometry();
             },
         )
         .with_observe(
@@ -557,6 +585,7 @@ pub fn render(
 
     if !state.selections.is_empty() {
         let selections = state.selections.clone();
+        let multi_line = state.multi_line;
         clip_children.add::<Element>((
             Element,
             styles.cursor,
@@ -564,7 +593,8 @@ pub fn render(
                 render: WidgetRenderCustom::new(move |scene, widget_layout, styles, scale| {
                     let transform = Affine::default().with_translation(Vec2::new(
                         (widget_layout.location.x * scale) as f64,
-                        ((widget_layout.location.y - 5.0) * scale) as f64,
+                        ((widget_layout.location.y - if multi_line { 5.0 } else { 0.0 }) * scale)
+                            as f64,
                     ));
                     let color = styles.background_color.to_srgba();
                     for selection in selections.iter() {
@@ -609,18 +639,20 @@ pub fn render(
         },
     ));
 
-    if state.cursor_visible {
+    if state.cursor_visible && state.focused {
         clip_children.add::<Element>((Element, cursor_styles, WidgetRender::Quad));
     }
 
-    children.add::<Clip>((
-        Clip,
-        WoodpeckerStyle {
-            width: Units::Percentage(100.0),
-            ..Default::default()
-        },
-        clip_children,
-    ));
+    let mut clip_styles = WoodpeckerStyle {
+        width: Units::Percentage(100.0),
+        ..Default::default()
+    };
+
+    if !text_box.multi_line {
+        clip_styles.align_items = Some(WidgetAlignItems::Center);
+    }
+
+    children.add::<Clip>((Clip, clip_styles, clip_children));
 
     children.apply(current_widget.as_parent());
 }
@@ -665,6 +697,9 @@ pub fn textbox_handle_keyboard_events(
         let Ok(mut state) = state_query.get_mut(state_entity) else {
             return;
         };
+        if !state.multi_line {
+            return;
+        }
         let mut driver = font_manager.driver(&mut state.engine);
         driver.insert_or_replace_selection("\n");
         state.selections = state.engine.selection_geometry();
