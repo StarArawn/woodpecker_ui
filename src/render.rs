@@ -15,13 +15,14 @@ use bevy_vello::{
     VelloScene,
 };
 use image::GenericImage;
+use parley::StyleSet;
 
 use crate::{
     convert_render_target::RenderTargetImages,
     font::FontManager,
     image::ImageManager,
     metrics::WidgetMetrics,
-    prelude::{WidgetLayout, WoodpeckerStyle},
+    prelude::{RichText, WidgetLayout, WoodpeckerStyle},
     svg::{SvgAsset, SvgManager},
     DefaultFont,
 };
@@ -37,6 +38,11 @@ pub enum WidgetRender {
     Text {
         /// The text to render
         content: String,
+    },
+    /// A rich text shape renderer
+    RichText {
+        /// The rich text to render
+        content: RichText,
     },
     /// A custom vello renderer.
     /// TODO: Untested, write an example?
@@ -86,6 +92,7 @@ impl WidgetRender {
         match self {
             WidgetRender::Quad => {}
             WidgetRender::Text { .. } => {}
+            WidgetRender::RichText { .. } => {}
             WidgetRender::Custom { .. } => {}
             WidgetRender::Layer => {}
             WidgetRender::Image { .. } => {}
@@ -187,10 +194,132 @@ impl WidgetRender {
                 );
                 metrics.increase_quad_counts();
             }
+            WidgetRender::RichText { content } => {
+                let font_name = font_manager
+                    .get_family(widget_style.font.as_ref().unwrap_or(&default_font.0.id()))
+                    .into();
+                let mut builder = font_manager.layout_cx.ranged_builder(
+                    &mut font_manager.font_cx,
+                    &content.text,
+                    1.0,
+                    true,
+                );
+
+                let mut styles = StyleSet::new(widget_style.font_size);
+                let color = widget_style.color.to_srgba();
+                styles.insert(parley::StyleProperty::Brush(Brush::Solid(
+                    peniko::color::AlphaColor::new([
+                        color.red,
+                        color.green,
+                        color.blue,
+                        color.alpha,
+                    ]),
+                )));
+                styles.insert(parley::StyleProperty::LineHeight(
+                    widget_style
+                        .line_height
+                        .map(|lh| widget_style.font_size / lh)
+                        .unwrap_or(1.2),
+                ));
+                styles.insert(parley::StyleProperty::FontStack(parley::FontStack::Single(
+                    parley::FontFamily::Named(font_name),
+                )));
+                styles.insert(parley::StyleProperty::OverflowWrap(
+                    match widget_style.text_wrap {
+                        crate::styles::TextWrap::None => parley::OverflowWrap::Normal,
+                        crate::styles::TextWrap::Glyph => parley::OverflowWrap::Anywhere,
+                        crate::styles::TextWrap::Word => parley::OverflowWrap::BreakWord,
+                        crate::styles::TextWrap::WordOrGlyph => parley::OverflowWrap::Anywhere,
+                    },
+                ));
+                for prop in styles.inner().values() {
+                    builder.push_default(prop.to_owned());
+                }
+
+                let alignment = match widget_style
+                    .text_alignment
+                    .unwrap_or(crate::font::TextAlign::Left)
+                {
+                    crate::font::TextAlign::Left => parley::Alignment::Left,
+                    crate::font::TextAlign::Right => parley::Alignment::Right,
+                    crate::font::TextAlign::Center => parley::Alignment::Middle,
+                    crate::font::TextAlign::Justified => parley::Alignment::Justified,
+                    crate::font::TextAlign::End => parley::Alignment::End,
+                };
+
+                for color_text in content.highlighted.color_text.iter() {
+                    let color = color_text.color.to_srgba();
+                    builder.push(
+                        parley::StyleProperty::Brush(Brush::Solid(peniko::color::AlphaColor::new(
+                            [color.red, color.green, color.blue, color.alpha],
+                        ))),
+                        color_text.range.clone(),
+                    );
+                }
+
+                let mut layout = builder.build(&content.text);
+                layout.break_all_lines(Some(parent_layout.size.x * camera_scale.x));
+                layout.align(
+                    Some(parent_layout.size.x * camera_scale.x),
+                    alignment,
+                    parley::AlignmentOptions::default(),
+                );
+
+                for line in layout.lines() {
+                    for item in line.items() {
+                        let parley::PositionedLayoutItem::GlyphRun(glyph_run) = item else {
+                            continue;
+                        };
+
+                        let mut x = glyph_run.offset();
+                        let y = glyph_run.baseline();
+                        let run = glyph_run.run();
+                        let font = run.font();
+                        let font_size = run.font_size();
+                        let synthesis = run.synthesis();
+                        let style = glyph_run.style();
+
+                        let posx = location_x;
+                        let posy = location_y;
+
+                        // Culling
+                        let mut glyph_xform = synthesis
+                            .skew()
+                            .map(|angle| Affine::skew(angle.to_radians().tan() as f64, 0.0))
+                            .unwrap_or_else(vello::kurbo::Affine::default);
+
+                        let trans = glyph_xform.translation();
+                        glyph_xform = glyph_xform.with_translation(
+                            trans + bevy_vello::vello::kurbo::Vec2::new(posx as f64, posy as f64),
+                        );
+
+                        vello_scene
+                            .draw_glyphs(font)
+                            .hint(true)
+                            .font_size(font_size * camera_scale.x)
+                            .transform(glyph_xform)
+                            .normalized_coords(run.normalized_coords())
+                            .brush(&style.brush)
+                            .draw(
+                                vello::peniko::Fill::NonZero,
+                                glyph_run.glyphs().map(|glyph| {
+                                    let gx = x + glyph.x;
+                                    let gy = y - glyph.y;
+                                    x += glyph.advance;
+                                    vello::Glyph {
+                                        id: glyph.id as _,
+                                        x: gx,
+                                        y: gy,
+                                    }
+                                }),
+                            );
+                    }
+                }
+            }
             WidgetRender::Text { content } => {
                 // TODO: Cache this.
                 let mut layout_editor = parley::PlainEditor::new(widget_style.font_size);
-                layout_editor.set_text(&content);
+                layout_editor.set_text(content);
                 let styles = layout_editor.edit_styles();
                 styles.insert(parley::StyleProperty::LineHeight(
                     widget_style
@@ -249,7 +378,7 @@ impl WidgetRender {
                         let mut glyph_xform = synthesis
                             .skew()
                             .map(|angle| Affine::skew(angle.to_radians().tan() as f64, 0.0))
-                            .unwrap_or_else(|| vello::kurbo::Affine::default());
+                            .unwrap_or_else(vello::kurbo::Affine::default);
 
                         let trans = glyph_xform.translation();
                         glyph_xform = glyph_xform.with_translation(
@@ -259,7 +388,7 @@ impl WidgetRender {
                         let color = widget_style.color.to_srgba();
 
                         vello_scene
-                            .draw_glyphs(&font)
+                            .draw_glyphs(font)
                             .hint(true)
                             .font_size(font_size * camera_scale.x)
                             .transform(glyph_xform)

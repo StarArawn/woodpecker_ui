@@ -22,6 +22,9 @@ mod toggle;
 mod transition;
 mod window;
 
+mod syntax_highlighting;
+pub use syntax_highlighting::highlight;
+
 pub use app::WoodpeckerApp;
 // use bevy_mod_picking::prelude::EventListenerPlugin;
 pub use button::{ButtonStyles, WButton};
@@ -40,7 +43,7 @@ pub use scroll::scroll_box::ScrollBox;
 pub use scroll::{ScrollContext, ScrollContextProvider, TaggedContext};
 pub use slider::{Slider, SliderChanged, SliderState, SliderStyles};
 pub use tab::*;
-pub use text_box::{TextBox, TextBoxState, TextChanged, TextboxStyles};
+pub use text_box::{ApplyHighlighting, TextBox, TextBoxState, TextChanged, TextboxStyles};
 pub use toggle::{Toggle, ToggleChanged, ToggleState, ToggleStyles, ToggleWidgetStyles};
 pub use transition::*;
 pub use window::{WindowState, WoodpeckerWindow};

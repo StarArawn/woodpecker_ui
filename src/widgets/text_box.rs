@@ -1,4 +1,9 @@
-use bevy_vello::vello::peniko::Brush;
+use std::sync::Arc;
+
+use bevy_vello::vello::{
+    kurbo::{Affine, Vec2},
+    peniko::Brush,
+};
 use parley::{FontFamily, StyleProperty};
 use web_time::Instant;
 
@@ -7,7 +12,11 @@ use crate::{
     prelude::*,
     DefaultFont,
 };
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    window::{PrimaryWindow, SystemCursorIcon},
+    winit::cursor::CursorIcon,
+};
 
 use super::{colors, Clip, Element};
 
@@ -72,6 +81,39 @@ impl Default for TextboxStyles {
 pub struct TextBox {
     /// An initial value
     pub initial_value: String,
+    /// Indicates this is a multi-line text editor.
+    pub multi_line: bool,
+    /// Optional text highlighting used for syntax highlighting or other
+    /// text coloring.
+    #[reflect(ignore)]
+    pub text_highlighting: ApplyHighlighting,
+}
+
+/// Applies color highlighting to the text.
+#[derive(Clone)]
+pub struct ApplyHighlighting {
+    inner: Arc<dyn Fn(&str) -> Option<Highlighted> + Send + Sync + 'static>,
+}
+
+impl ApplyHighlighting {
+    /// Creates a new color highlighting applier.
+    pub fn new(f: impl Fn(&str) -> Option<Highlighted> + Send + Sync + 'static) -> Self {
+        Self { inner: Arc::new(f) }
+    }
+}
+
+impl PartialEq for ApplyHighlighting {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Default for ApplyHighlighting {
+    fn default() -> Self {
+        Self {
+            inner: Arc::new(|_| None),
+        }
+    }
 }
 
 /// The textbox state
@@ -93,8 +135,12 @@ pub struct TextBoxState {
     pub cursor_last_update: Instant,
     /// The current text value of the textbox.
     pub current_value: String,
+    /// The initial text value of the textbox.
+    pub initial_value: String,
     /// Parley text editing engine.
     pub engine: parley::PlainEditor<Brush>,
+    /// Indicates this is a multi-line text editor.
+    pub multi_line: bool,
 }
 
 impl PartialEq for TextBoxState {
@@ -118,7 +164,9 @@ impl Default for TextBoxState {
             cursor_visible: Default::default(),
             cursor_last_update: Instant::now(),
             current_value: String::new(),
+            initial_value: String::new(),
             engine: parley::PlainEditor::new(0.0),
+            multi_line: false,
         }
     }
 }
@@ -163,8 +211,10 @@ pub fn render(
         &mut commands,
         *current_widget,
         TextBoxState {
+            initial_value: text_box.initial_value.clone(),
             current_value: text_box.initial_value.clone(),
             engine: default_engine,
+            multi_line: text_box.multi_line,
             ..Default::default()
         },
     );
@@ -173,7 +223,8 @@ pub fn render(
         return;
     };
 
-    if text_box.is_changed() {
+    if text_box.initial_value != state.initial_value {
+        state.initial_value = text_box.initial_value.clone();
         state.current_value.clone_from(&text_box.initial_value);
         state.engine.set_text(&text_box.initial_value);
         let mut driver = font_manager.driver(&mut state.engine);
@@ -186,14 +237,39 @@ pub fn render(
     }
 
     if state.focused {
-        *style = styles.focused
+        *style = WoodpeckerStyle {
+            width: Units::Percentage(100.0),
+            height: if text_box.multi_line {
+                Units::Percentage(100.0)
+            } else {
+                style.height
+            },
+            ..styles.focused
+        };
     } else if state.hovering {
-        *style = styles.hovered
+        *style = WoodpeckerStyle {
+            width: Units::Percentage(100.0),
+            height: if text_box.multi_line {
+                Units::Percentage(100.0)
+            } else {
+                style.height
+            },
+            ..styles.hovered
+        };
     } else {
-        *style = styles.normal
+        *style = WoodpeckerStyle {
+            width: Units::Percentage(100.0),
+            height: if text_box.multi_line {
+                Units::Percentage(100.0)
+            } else {
+                style.height
+            },
+            ..styles.normal
+        };
     }
 
     let cursor_styles = WoodpeckerStyle {
+        top: ((state.cursor.min_y() + 2.0) as f32).into(),
         left: (state.cursor.min_x() as f32).into(),
         ..styles.cursor
     };
@@ -229,7 +305,7 @@ pub fn render(
                     .engine
                     .cursor_geometry(styles.font_size)
                     .unwrap_or_default();
-
+                state.selections = state.engine.selection_geometry();
                 state.current_value = state.engine.text().to_string();
 
                 commands.trigger_targets(
@@ -247,6 +323,7 @@ pub fn render(
             current_widget,
             move |trigger: Trigger<Pointer<Pressed>>,
                   mouse_input: Res<ButtonInput<MouseButton>>,
+                  keyboard_input: Res<ButtonInput<KeyCode>>,
                   style_query: Query<&WoodpeckerStyle>,
                   mut font_manager: ResMut<FontManager>,
                   widget_layout: Query<&WidgetLayout>,
@@ -270,6 +347,56 @@ pub fn render(
                 }
 
                 let mut driver = font_manager.driver(&mut state.engine);
+
+                if keyboard_input.pressed(KeyCode::ShiftLeft) {
+                    driver.extend_selection_to_point(
+                        trigger.pointer_location.position.x
+                            - widget_layout.location.x
+                            - widget_layout.padding.left.value_or(0.0),
+                        trigger.pointer_location.position.y
+                            - widget_layout.location.y
+                            - widget_layout.padding.top.value_or(0.0),
+                    );
+                } else {
+                    driver.move_to_point(
+                        trigger.pointer_location.position.x
+                            - widget_layout.location.x
+                            - widget_layout.padding.left.value_or(0.0),
+                        trigger.pointer_location.position.y
+                            - widget_layout.location.y
+                            - widget_layout.padding.top.value_or(0.0),
+                    );
+                }
+
+                state.selections = state.engine.selection_geometry();
+
+                state.cursor = state
+                    .engine
+                    .cursor_geometry(styles.font_size)
+                    .unwrap_or_default();
+            },
+        )
+        .with_observe(
+            current_widget,
+            move |trigger: Trigger<Pointer<DragStart>>,
+                  style_query: Query<&WoodpeckerStyle>,
+                  mut font_manager: ResMut<FontManager>,
+                  widget_layout: Query<&WidgetLayout>,
+                  mut state_query: Query<&mut TextBoxState>| {
+                let Ok(styles) = style_query.get(trigger.target) else {
+                    return;
+                };
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
+                let Ok(widget_layout) = widget_layout.get(trigger.target) else {
+                    return;
+                };
+
+                if !state.focused {
+                    return;
+                }
+                let mut driver = font_manager.driver(&mut state.engine);
                 driver.move_to_point(
                     trigger.pointer_location.position.x
                         - widget_layout.location.x
@@ -278,13 +405,11 @@ pub fn render(
                         - widget_layout.location.y
                         - widget_layout.padding.top.value_or(0.0),
                 );
-
-                state.selections = state.engine.selection_geometry();
-
                 state.cursor = state
                     .engine
                     .cursor_geometry(styles.font_size)
                     .unwrap_or_default();
+                state.selections = state.engine.selection_geometry();
             },
         )
         .with_observe(
@@ -319,24 +444,38 @@ pub fn render(
         )
         .with_observe(
             current_widget,
-            move |_trigger: Trigger<Pointer<Over>>, mut state_query: Query<&mut TextBoxState>| {
+            move |_trigger: Trigger<Pointer<Over>>,
+                  mut commands: Commands,
+                  mut state_query: Query<&mut TextBoxState>,
+                  camera_query: Query<Entity, With<PrimaryWindow>>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
                 if !state.focused {
                     state.hovering = true;
                 }
+
+                commands
+                    .entity(camera_query.single().unwrap())
+                    .insert(CursorIcon::from(SystemCursorIcon::Text));
             },
         )
         .with_observe(
             current_widget,
-            move |_trigger: Trigger<Pointer<Out>>, mut state_query: Query<&mut TextBoxState>| {
+            move |_trigger: Trigger<Pointer<Out>>,
+                  mut commands: Commands,
+                  mut state_query: Query<&mut TextBoxState>,
+                  camera_query: Query<Entity, With<PrimaryWindow>>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
                 if !state.focused {
                     state.hovering = false;
                 }
+
+                commands
+                    .entity(camera_query.single().unwrap())
+                    .insert(CursorIcon::from(SystemCursorIcon::Default));
             },
         )
         .with_observe(
@@ -397,175 +536,54 @@ pub fn render(
         .with_observe(
             current_widget,
             move |trigger: Trigger<WidgetKeyboardButtonEvent>,
-                  mut commands: Commands,
+                  commands: Commands,
                   style_query: Query<&WoodpeckerStyle>,
-                  mut state_query: Query<&mut TextBoxState>,
-                  mut font_manager: ResMut<FontManager>,
+                  state_query: Query<&mut TextBoxState>,
+                  font_manager: ResMut<FontManager>,
                   keyboard_input: Res<ButtonInput<KeyCode>>| {
-                if trigger.code == KeyCode::ArrowRight {
-                    let Ok(styles) = style_query.get(trigger.target) else {
-                        return;
-                    };
-                    let Ok(mut state) = state_query.get_mut(state_entity) else {
-                        return;
-                    };
-                    let mut driver = font_manager.driver(&mut state.engine);
-                    let shift = keyboard_input.pressed(KeyCode::ShiftLeft);
-
-                    if keyboard_input.pressed(KeyCode::ControlLeft) {
-                        if shift {
-                            driver.select_word_right();
-                        } else {
-                            driver.move_word_right();
-                        }
-                    } else if shift {
-                        driver.select_left();
-                    } else {
-                        driver.move_right();
-                    }
-                    state.selections = state.engine.selection_geometry();
-                    state.cursor = state
-                        .engine
-                        .cursor_geometry(styles.font_size)
-                        .unwrap_or_default();
-                }
-                if trigger.code == KeyCode::ArrowLeft {
-                    let Ok(styles) = style_query.get(trigger.target) else {
-                        return;
-                    };
-                    let Ok(mut state) = state_query.get_mut(state_entity) else {
-                        return;
-                    };
-
-                    let shift = keyboard_input.pressed(KeyCode::ShiftLeft);
-
-                    let mut driver = font_manager.driver(&mut state.engine);
-                    if keyboard_input.pressed(KeyCode::ControlLeft) {
-                        if shift {
-                            driver.select_word_left();
-                        } else {
-                            driver.move_word_left();
-                        }
-                    } else if shift {
-                        driver.select_left();
-                    } else {
-                        driver.move_left();
-                    }
-                    state.selections = state.engine.selection_geometry();
-                    state.cursor = state
-                        .engine
-                        .cursor_geometry(styles.font_size)
-                        .unwrap_or_default();
-                }
-                if trigger.code == KeyCode::Backspace {
-                    let Ok(styles) = style_query.get(trigger.target) else {
-                        return;
-                    };
-                    let Ok(mut state) = state_query.get_mut(state_entity) else {
-                        return;
-                    };
-                    let mut driver = font_manager.driver(&mut state.engine);
-                    driver.backdelete();
-                    state.cursor = state
-                        .engine
-                        .cursor_geometry(styles.font_size)
-                        .unwrap_or_default();
-                    state.selections = state.engine.selection_geometry();
-
-                    state.current_value = state.engine.text().to_string();
-                    commands.trigger_targets(
-                        Change {
-                            target: *current_widget,
-                            data: TextChanged {
-                                value: state.current_value.clone(),
-                            },
-                        },
-                        *current_widget,
-                    );
-                }
-                if (keyboard_input.pressed(KeyCode::SuperLeft)
-                    || keyboard_input.pressed(KeyCode::ControlLeft))
-                    && keyboard_input.just_pressed(KeyCode::KeyC)
-                {
-                    let Ok(state) = state_query.get_mut(state_entity) else {
-                        return;
-                    };
-                    if let Some(text) = state.engine.selected_text() {
-                        #[cfg(not(target_arch = "wasm32"))]
-                        if let Ok(mut clipboard) = arboard::Clipboard::new() {
-                            match clipboard.set_text(text) {
-                                Ok(_) => {}
-                                Err(err) => error!("{err}"),
-                            }
-                        }
-                        #[cfg(target_arch = "wasm32")]
-                        {
-                            let Some(clipboard) = web_sys::window()
-                                .and_then(|window| Some(window.navigator().clipboard()))
-                            else {
-                                warn!("no clipboard");
-                                return;
-                            };
-                            let promise = clipboard.write_text(text);
-                            let future = wasm_bindgen_futures::JsFuture::from(promise);
-
-                            let (sender, receiver) = futures_channel::oneshot::channel::<String>();
-
-                            let pool = bevy::tasks::TaskPool::new();
-                            pool.spawn(async move {
-                                let Ok(text) = future.await else {
-                                    return;
-                                };
-                                let Some(text) = text.as_string() else {
-                                    return;
-                                };
-                                let _ = sender.send(text);
-                            });
-                        }
-                    }
-                }
-                if trigger.code == KeyCode::Delete {
-                    let Ok(styles) = style_query.get(trigger.target) else {
-                        return;
-                    };
-                    let Ok(mut state) = state_query.get_mut(state_entity) else {
-                        return;
-                    };
-
-                    if !state.current_value.is_empty() {
-                        let mut driver = font_manager.driver(&mut state.engine);
-                        driver.delete();
-                        state.cursor = state
-                            .engine
-                            .cursor_geometry(styles.font_size)
-                            .unwrap_or_default();
-                        state.selections = state.engine.selection_geometry();
-
-                        commands.trigger_targets(
-                            Change {
-                                target: *current_widget,
-                                data: TextChanged {
-                                    value: state.current_value.clone(),
-                                },
-                            },
-                            *current_widget,
-                        );
-                    }
-                }
+                textbox_handle_keyboard_events(
+                    trigger,
+                    commands,
+                    style_query,
+                    state_query,
+                    font_manager,
+                    keyboard_input,
+                    state_entity,
+                );
             },
         );
 
     let mut clip_children = WidgetChildren::default();
 
-    for (selection, _) in state.selections.iter() {
-        let selection_styles = WoodpeckerStyle {
-            left: (selection.min_x() as f32).into(),
-            // top: (selection.min_y() as f32 + widget_layout.padding.top.value_or(0.0)).into(),
-            width: (selection.size().width as f32).into(),
-            opacity: 0.5,
-            ..styles.cursor
-        };
-        clip_children.add::<Element>((Element, selection_styles, WidgetRender::Quad));
+    if !state.selections.is_empty() {
+        let selections = state.selections.clone();
+        clip_children.add::<Element>((
+            Element,
+            styles.cursor,
+            WidgetRender::Custom {
+                render: WidgetRenderCustom::new(move |scene, widget_layout, styles, scale| {
+                    let transform = Affine::default().with_translation(Vec2::new(
+                        (widget_layout.location.x * scale) as f64,
+                        ((widget_layout.location.y - 5.0) * scale) as f64,
+                    ));
+                    let color = styles.background_color.to_srgba();
+                    for selection in selections.iter() {
+                        scene.fill(
+                            vello::peniko::Fill::NonZero,
+                            transform,
+                            &Brush::Solid(vello::peniko::Color::new([
+                                color.red,
+                                color.green,
+                                color.blue,
+                                color.alpha,
+                            ])),
+                            None,
+                            &selection.0,
+                        );
+                    }
+                }),
+            },
+        ));
     }
 
     clip_children.add::<Element>((
@@ -573,11 +591,21 @@ pub fn render(
         WoodpeckerStyle {
             font_size: style.font_size,
             color: style.color,
-            text_wrap: TextWrap::None,
+            text_wrap: if text_box.multi_line {
+                TextWrap::WordOrGlyph
+            } else {
+                TextWrap::None
+            },
             ..Default::default()
         },
-        WidgetRender::Text {
-            content: state.current_value.clone(),
+        if let Some(text_highlight) = (text_box.text_highlighting.inner)(&state.current_value) {
+            WidgetRender::RichText {
+                content: RichText::from_hightlighted(&state.current_value, text_highlight),
+            }
+        } else {
+            WidgetRender::Text {
+                content: state.current_value.clone(),
+            }
         },
     ));
 
@@ -588,9 +616,7 @@ pub fn render(
     children.add::<Clip>((
         Clip,
         WoodpeckerStyle {
-            width: style.width,
-            height: style.height,
-            align_items: Some(WidgetAlignItems::Center),
+            width: Units::Percentage(100.0),
             ..Default::default()
         },
         clip_children,
@@ -619,6 +645,250 @@ pub fn cursor_animation_system(
         if let Ok(mut state) = state_query.p1().get_mut(state_entity) {
             state.cursor_last_update = Instant::now();
             state.cursor_visible = !state.cursor_visible;
+        }
+    }
+}
+
+pub fn textbox_handle_keyboard_events(
+    trigger: Trigger<WidgetKeyboardButtonEvent>,
+    mut commands: Commands,
+    style_query: Query<&WoodpeckerStyle>,
+    mut state_query: Query<&mut TextBoxState>,
+    mut font_manager: ResMut<FontManager>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    state_entity: Entity,
+) {
+    if trigger.code == KeyCode::Enter {
+        let Ok(styles) = style_query.get(trigger.target) else {
+            return;
+        };
+        let Ok(mut state) = state_query.get_mut(state_entity) else {
+            return;
+        };
+        let mut driver = font_manager.driver(&mut state.engine);
+        driver.insert_or_replace_selection("\n");
+        state.selections = state.engine.selection_geometry();
+        state.cursor = state
+            .engine
+            .cursor_geometry(styles.font_size)
+            .unwrap_or_default();
+        state.current_value = state.engine.text().to_string();
+        commands.trigger_targets(
+            Change {
+                target: trigger.target,
+                data: TextChanged {
+                    value: state.current_value.clone(),
+                },
+            },
+            trigger.target,
+        );
+    }
+
+    if trigger.code == KeyCode::ArrowDown {
+        let Ok(styles) = style_query.get(trigger.target) else {
+            return;
+        };
+        let Ok(mut state) = state_query.get_mut(state_entity) else {
+            return;
+        };
+        let mut driver = font_manager.driver(&mut state.engine);
+        let shift = keyboard_input.pressed(KeyCode::ShiftLeft);
+
+        if shift {
+            driver.select_down();
+        } else {
+            driver.move_down();
+        }
+
+        state.selections = state.engine.selection_geometry();
+        state.cursor = state
+            .engine
+            .cursor_geometry(styles.font_size)
+            .unwrap_or_default();
+    }
+    if trigger.code == KeyCode::ArrowUp {
+        let Ok(styles) = style_query.get(trigger.target) else {
+            return;
+        };
+        let Ok(mut state) = state_query.get_mut(state_entity) else {
+            return;
+        };
+
+        let shift = keyboard_input.pressed(KeyCode::ShiftLeft);
+
+        let mut driver = font_manager.driver(&mut state.engine);
+        if shift {
+            driver.select_up();
+        } else {
+            driver.move_up();
+        }
+        state.selections = state.engine.selection_geometry();
+        state.cursor = state
+            .engine
+            .cursor_geometry(styles.font_size)
+            .unwrap_or_default();
+    }
+
+    if trigger.code == KeyCode::ArrowRight {
+        let Ok(styles) = style_query.get(trigger.target) else {
+            return;
+        };
+        let Ok(mut state) = state_query.get_mut(state_entity) else {
+            return;
+        };
+        let mut driver = font_manager.driver(&mut state.engine);
+        let shift = keyboard_input.pressed(KeyCode::ShiftLeft);
+
+        if keyboard_input.pressed(KeyCode::ControlLeft) || keyboard_input.pressed(KeyCode::AltLeft)
+        {
+            if shift {
+                driver.select_word_right();
+            } else {
+                driver.move_word_right();
+            }
+        } else if keyboard_input.pressed(KeyCode::SuperLeft) {
+            if shift {
+                driver.select_to_line_end();
+            } else {
+                driver.move_to_line_end();
+            }
+        } else if shift {
+            driver.select_left();
+        } else {
+            driver.move_right();
+        }
+        state.selections = state.engine.selection_geometry();
+        state.cursor = state
+            .engine
+            .cursor_geometry(styles.font_size)
+            .unwrap_or_default();
+    }
+    if trigger.code == KeyCode::ArrowLeft {
+        let Ok(styles) = style_query.get(trigger.target) else {
+            return;
+        };
+        let Ok(mut state) = state_query.get_mut(state_entity) else {
+            return;
+        };
+
+        let shift = keyboard_input.pressed(KeyCode::ShiftLeft);
+
+        let mut driver = font_manager.driver(&mut state.engine);
+        if keyboard_input.pressed(KeyCode::ControlLeft) || keyboard_input.pressed(KeyCode::AltLeft)
+        {
+            if shift {
+                driver.select_word_left();
+            } else {
+                driver.move_word_left();
+            }
+        } else if keyboard_input.pressed(KeyCode::SuperLeft) {
+            if shift {
+                driver.select_to_line_start();
+            } else {
+                driver.move_to_line_start();
+            }
+        } else if shift {
+            driver.select_left();
+        } else {
+            driver.move_left();
+        }
+        state.selections = state.engine.selection_geometry();
+        state.cursor = state
+            .engine
+            .cursor_geometry(styles.font_size)
+            .unwrap_or_default();
+    }
+    if trigger.code == KeyCode::Backspace {
+        let Ok(styles) = style_query.get(trigger.target) else {
+            return;
+        };
+        let Ok(mut state) = state_query.get_mut(state_entity) else {
+            return;
+        };
+        let mut driver = font_manager.driver(&mut state.engine);
+        driver.backdelete();
+        state.cursor = state
+            .engine
+            .cursor_geometry(styles.font_size)
+            .unwrap_or_default();
+        state.selections = state.engine.selection_geometry();
+        state.current_value = state.engine.text().to_string();
+        commands.trigger_targets(
+            Change {
+                target: trigger.target,
+                data: TextChanged {
+                    value: state.current_value.clone(),
+                },
+            },
+            trigger.target,
+        );
+    }
+    if (keyboard_input.pressed(KeyCode::SuperLeft) || keyboard_input.pressed(KeyCode::ControlLeft))
+        && keyboard_input.just_pressed(KeyCode::KeyC)
+    {
+        let Ok(state) = state_query.get_mut(state_entity) else {
+            return;
+        };
+        if let Some(text) = state.engine.selected_text() {
+            #[cfg(not(target_arch = "wasm32"))]
+            if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                match clipboard.set_text(text) {
+                    Ok(_) => {}
+                    Err(err) => error!("{err}"),
+                }
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                let Some(clipboard) =
+                    web_sys::window().and_then(|window| Some(window.navigator().clipboard()))
+                else {
+                    warn!("no clipboard");
+                    return;
+                };
+                let promise = clipboard.write_text(text);
+                let future = wasm_bindgen_futures::JsFuture::from(promise);
+
+                let (sender, receiver) = futures_channel::oneshot::channel::<String>();
+
+                let pool = bevy::tasks::TaskPool::new();
+                pool.spawn(async move {
+                    let Ok(text) = future.await else {
+                        return;
+                    };
+                    let Some(text) = text.as_string() else {
+                        return;
+                    };
+                    let _ = sender.send(text);
+                });
+            }
+        }
+    }
+    if trigger.code == KeyCode::Delete {
+        let Ok(styles) = style_query.get(trigger.target) else {
+            return;
+        };
+        let Ok(mut state) = state_query.get_mut(state_entity) else {
+            return;
+        };
+
+        if !state.current_value.is_empty() {
+            let mut driver = font_manager.driver(&mut state.engine);
+            driver.delete();
+            state.cursor = state
+                .engine
+                .cursor_geometry(styles.font_size)
+                .unwrap_or_default();
+            state.selections = state.engine.selection_geometry();
+            state.current_value = state.engine.text().to_string();
+            commands.trigger_targets(
+                Change {
+                    target: trigger.target,
+                    data: TextChanged {
+                        value: state.current_value.clone(),
+                    },
+                },
+                trigger.target,
+            );
         }
     }
 }

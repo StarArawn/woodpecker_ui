@@ -21,16 +21,16 @@
 //!     mut materials: ResMut<Assets<ColorMaterial>>,
 //! ) {
 //!     commands.spawn(Camera2dBundle::default());
-//!     
+//!
 //!     let material_red = materials.add(Color::Srgba(Srgba::RED.with_alpha(0.5)));
-//!     
+//!
 //!     commands.spawn(MaterialMesh2dBundle {
 //!         mesh: Mesh2dHandle(meshes.add(Circle { radius: 50.0 })),
 //!         material: material_red,
 //!         transform: Transform::from_xyz(0.0, 0.0, 0.0),
 //!         ..default()
 //!     });
-//!     
+//!
 //!     let root = commands
 //!         .spawn((WoodpeckerAppBundle {
 //!             styles: WoodpeckerStyle {
@@ -98,6 +98,7 @@ mod observer_cache;
 mod on_change;
 mod picking_backend;
 mod render;
+mod rich_text;
 mod runner;
 mod styles;
 mod svg;
@@ -118,6 +119,7 @@ pub mod prelude {
     pub use crate::metrics::WidgetMetrics;
     pub use crate::on_change::Change;
     pub use crate::render::{WidgetRender, WidgetRenderCustom};
+    pub use crate::rich_text::*;
     pub use crate::styles::*;
     pub use crate::svg::SvgAsset;
     pub use crate::widgets::*;

@@ -33,6 +33,8 @@ web-time = "1.1"
 # Local
 woodpecker_ui_macros.path = "crates/woodpecker_ui_macros" # TODO: Make this crates.io friendly..
 ttf-parser = "0.25.1"
+autumnus = "0.3.2"
+ansi-parser = "0.9.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 arboard = "3.4"
