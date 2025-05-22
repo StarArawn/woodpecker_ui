@@ -3,15 +3,13 @@ use std::{
     sync::Arc,
 };
 
+use crate::prelude::WoodpeckerStyle;
 use bevy::{
     platform::collections::{HashMap, HashSet},
     prelude::*,
 };
 use bevy_vello::{prelude::VelloFont, vello::peniko::Brush};
 use cosmic_text::{Buffer, Family};
-use skrifa::FontRef;
-
-use crate::prelude::WoodpeckerStyle;
 
 /// The text alignment of the font.
 #[derive(Debug, Clone, Copy, Default, Reflect, PartialEq)]
@@ -77,13 +75,6 @@ impl FontManager {
         engine: &'a mut parley::PlainEditor<Brush>,
     ) -> parley::PlainEditorDriver<'a, Brush> {
         engine.driver(&mut self.font_cx, &mut self.layout_cx)
-    }
-
-    /// Used for vello rendering.
-    pub(crate) fn get_vello_font(&mut self, vello_font: &AssetId<VelloFont>) -> FontRef {
-        let font_data = self.font_data.get(&Handle::Weak(*vello_font)).unwrap();
-        let font_ref = FontRef::from_index(font_data, 0).unwrap();
-        font_ref
     }
 
     /// Retrieves the font family name.

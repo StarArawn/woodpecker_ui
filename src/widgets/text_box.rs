@@ -175,8 +175,14 @@ pub fn render(
 
     if text_box.is_changed() {
         state.current_value.clone_from(&text_box.initial_value);
+        state.engine.set_text(&text_box.initial_value);
         let mut driver = font_manager.driver(&mut state.engine);
         driver.move_to_line_end();
+        state.selections = state.engine.selection_geometry();
+        state.cursor = state
+            .engine
+            .cursor_geometry(styles.normal.font_size)
+            .unwrap_or_default();
     }
 
     if state.focused {

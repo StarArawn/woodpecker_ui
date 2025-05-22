@@ -9,14 +9,12 @@ use bevy_vello::{
     vello::{
         self,
         kurbo::{self, Affine, RoundedRectRadii},
-        peniko::{self, Blob, Brush},
+        peniko::{self, Brush},
         wgpu::{TextureFormat, TextureUsages},
-        Glyph,
     },
     VelloScene,
 };
 use image::GenericImage;
-use skrifa::MetadataProvider;
 
 use crate::{
     convert_render_target::RenderTargetImages,
@@ -27,8 +25,6 @@ use crate::{
     svg::{SvgAsset, SvgManager},
     DefaultFont,
 };
-
-pub(crate) const VARIATIONS: &[(&str, f32)] = &[];
 
 /// Used to tell Woodpecker UI's rendering system(vello) how
 /// to render a specific widget entity.
@@ -107,9 +103,9 @@ impl WidgetRender {
         &self,
         vello_scene: &mut VelloScene,
         layout: &WidgetLayout,
-        _parent_layout: &WidgetLayout,
+        parent_layout: &WidgetLayout,
         default_font: &DefaultFont,
-        font_assets: &Assets<VelloFont>,
+        _font_assets: &Assets<VelloFont>,
         image_assets: &mut Assets<Image>,
         svg_assets: &Assets<SvgAsset>,
         font_manager: &mut FontManager,
@@ -192,71 +188,102 @@ impl WidgetRender {
                 metrics.increase_quad_counts();
             }
             WidgetRender::Text { content } => {
-                let font_handle = widget_style
-                    .font
-                    .as_ref()
-                    .map(|a| Handle::<VelloFont>::Weak(*a))
-                    .unwrap_or(default_font.0.clone());
+                // TODO: Cache this.
+                let mut layout_editor = parley::PlainEditor::new(widget_style.font_size);
+                layout_editor.set_text(&content);
+                let styles = layout_editor.edit_styles();
+                styles.insert(parley::StyleProperty::LineHeight(
+                    widget_style
+                        .line_height
+                        .map(|lh| widget_style.font_size / lh)
+                        .unwrap_or(1.2),
+                ));
+                styles.insert(parley::StyleProperty::FontStack(parley::FontStack::Single(
+                    parley::FontFamily::Named(
+                        font_manager
+                            .get_family(widget_style.font.as_ref().unwrap_or(&default_font.0.id()))
+                            .into(),
+                    ),
+                )));
 
-                let Some(vello_font) = font_assets.get(&font_handle) else {
-                    return false;
+                styles.insert(parley::StyleProperty::OverflowWrap(
+                    match widget_style.text_wrap {
+                        crate::styles::TextWrap::None => parley::OverflowWrap::Normal,
+                        crate::styles::TextWrap::Glyph => parley::OverflowWrap::Anywhere,
+                        crate::styles::TextWrap::Word => parley::OverflowWrap::BreakWord,
+                        crate::styles::TextWrap::WordOrGlyph => parley::OverflowWrap::Anywhere,
+                    },
+                ));
+                layout_editor.set_width(Some(parent_layout.size.x * camera_scale.x));
+                let alignment = match widget_style
+                    .text_alignment
+                    .unwrap_or(crate::font::TextAlign::Left)
+                {
+                    crate::font::TextAlign::Left => parley::Alignment::Left,
+                    crate::font::TextAlign::Right => parley::Alignment::Right,
+                    crate::font::TextAlign::Center => parley::Alignment::Middle,
+                    crate::font::TextAlign::Justified => parley::Alignment::Justified,
+                    crate::font::TextAlign::End => parley::Alignment::End,
                 };
+                layout_editor.set_alignment(alignment);
+                let text_layout =
+                    layout_editor.layout(&mut font_manager.font_cx, &mut font_manager.layout_cx);
 
-                let Some(buffer) = font_manager.layout(
-                    Vec2::new(layout.size.x, layout.size.y) * camera_scale,
-                    widget_style,
-                    &font_handle,
-                    content,
-                    camera_scale,
-                ) else {
-                    return false;
-                };
+                for line in text_layout.lines() {
+                    for item in line.items() {
+                        let parley::PositionedLayoutItem::GlyphRun(glyph_run) = item else {
+                            continue;
+                        };
 
-                let font_ref = font_manager.get_vello_font(&font_handle.id());
-                for run in buffer.layout_runs() {
-                    let mut glyphs = vec![];
-                    for glyph in run.glyphs.iter() {
-                        glyphs.push(Glyph {
-                            id: glyph.glyph_id as u32,
-                            x: glyph.x,
-                            y: glyph.y,
-                        });
+                        let mut x = glyph_run.offset();
+                        let y = glyph_run.baseline();
+                        let run = glyph_run.run();
+                        let font = run.font();
+                        let font_size = run.font_size();
+                        let synthesis = run.synthesis();
+
+                        let posx = location_x;
+                        let posy = location_y;
+
+                        // Culling
+                        let mut glyph_xform = synthesis
+                            .skew()
+                            .map(|angle| Affine::skew(angle.to_radians().tan() as f64, 0.0))
+                            .unwrap_or_else(|| vello::kurbo::Affine::default());
+
+                        let trans = glyph_xform.translation();
+                        glyph_xform = glyph_xform.with_translation(
+                            trans + bevy_vello::vello::kurbo::Vec2::new(posx as f64, posy as f64),
+                        );
+
+                        let color = widget_style.color.to_srgba();
+
+                        vello_scene
+                            .draw_glyphs(&font)
+                            .hint(true)
+                            .font_size(font_size * camera_scale.x)
+                            .transform(glyph_xform)
+                            .normalized_coords(run.normalized_coords())
+                            .brush(&Brush::Solid(vello::peniko::Color::new([
+                                color.red,
+                                color.green,
+                                color.blue,
+                                color.alpha,
+                            ])))
+                            .draw(
+                                vello::peniko::Fill::NonZero,
+                                glyph_run.glyphs().map(|glyph| {
+                                    let gx = x + glyph.x;
+                                    let gy = y - glyph.y;
+                                    x += glyph.advance;
+                                    vello::Glyph {
+                                        id: glyph.id as _,
+                                        x: gx,
+                                        y: gy,
+                                    }
+                                }),
+                            );
                     }
-
-                    let posx = location_x;
-                    let posy = location_y + run.line_y;
-
-                    // Culling
-                    if posx + run.line_w < 0.0
-                        || posy + widget_style.font_size < 0.0
-                        || posx > camera_size.x
-                        || posy > camera_size.y
-                    {
-                        continue;
-                    }
-
-                    let transform = vello::kurbo::Affine::translate((posx as f64, posy as f64));
-
-                    let axes = font_ref.axes();
-                    let var_loc = axes.location(VARIATIONS);
-                    let color = widget_style.color.to_srgba();
-                    let font = bevy_vello::vello::peniko::Font::new(
-                        Blob::new(Arc::new(vello_font.bytes.clone())),
-                        0,
-                    );
-
-                    vello_scene
-                        .draw_glyphs(&font)
-                        .font_size(widget_style.font_size * camera_scale.x)
-                        .transform(transform)
-                        .normalized_coords(bytemuck::cast_slice(var_loc.coords()))
-                        .brush(&Brush::Solid(vello::peniko::Color::new([
-                            color.red,
-                            color.green,
-                            color.blue,
-                            color.alpha,
-                        ])))
-                        .draw(vello::peniko::Fill::NonZero, glyphs.into_iter());
                 }
             }
             WidgetRender::Custom { render } => {

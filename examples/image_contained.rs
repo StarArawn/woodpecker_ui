@@ -10,14 +10,8 @@ pub struct MyWidgetState {
 #[auto_update(render)]
 #[props(MyWidget)]
 #[state(MyWidgetState)]
+#[require(WoodpeckerStyle, WidgetChildren)]
 struct MyWidget;
-
-#[derive(Bundle, Default, Clone)]
-struct MyWidgetBundle {
-    my_widget: MyWidget,
-    styles: WoodpeckerStyle,
-    children: WidgetChildren,
-}
 
 fn render(
     mut commands: Commands,
@@ -37,6 +31,7 @@ fn render(
         MyWidgetState { show_modal: true },
     );
 
+    dbg!("GOT HERE!");
     let Ok(state) = state_query.get(state_entity) else {
         return;
     };

@@ -188,6 +188,7 @@ fn render(
                         height: Units::Pixels(24.0),
                         width: Units::Percentage(100.0),
                         padding: Edge::new(0.0, 0.0, 0.0, 5.0),
+                        justify_items: Some(WidgetJustifyItems::Center),
                         ..Default::default()
                     },
                     // Title text
@@ -195,7 +196,6 @@ fn render(
                         Element,
                         WoodpeckerStyle {
                             font_size: 14.0,
-                            line_height: Some(18.0),
                             text_wrap: TextWrap::None,
                             ..Default::default()
                         },

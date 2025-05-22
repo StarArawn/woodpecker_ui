@@ -415,30 +415,79 @@ fn match_render_size(
         }
         WidgetRender::Text { content } => {
             // Measure text
-            let font_handle = styles
-                .font
-                .as_ref()
-                .map(|a| Handle::Weak(*a))
-                .unwrap_or(default_font.0.clone());
-            if let Some(buffer) = font_manager.layout(
-                Vec2::new(
-                    parent_layout.size.width * camera_scale.x,
-                    parent_layout.size.height + 100000.0,
+            // TODO: Cache this.
+            let mut layout_editor = parley::PlainEditor::new(styles.font_size);
+            layout_editor.set_text(&content);
+            let text_styles = layout_editor.edit_styles();
+            text_styles.insert(parley::StyleProperty::LineHeight(
+                styles
+                    .line_height
+                    .map(|lh| styles.font_size / lh)
+                    .unwrap_or(1.2),
+            ));
+            text_styles.insert(parley::StyleProperty::FontStack(parley::FontStack::Single(
+                parley::FontFamily::Named(
+                    font_manager
+                        .get_family(styles.font.as_ref().unwrap_or(&default_font.0.id()))
+                        .into(),
                 ),
-                styles,
-                &font_handle,
-                content,
-                camera_scale,
-            ) {
+            )));
+
+            text_styles.insert(parley::StyleProperty::OverflowWrap(
+                match styles.text_wrap {
+                    crate::styles::TextWrap::None => parley::OverflowWrap::Normal,
+                    crate::styles::TextWrap::Glyph => parley::OverflowWrap::Anywhere,
+                    crate::styles::TextWrap::Word => parley::OverflowWrap::BreakWord,
+                    crate::styles::TextWrap::WordOrGlyph => parley::OverflowWrap::Anywhere,
+                },
+            ));
+            layout_editor.set_width(Some(parent_layout.size.width * camera_scale.x));
+            let alignment = match styles
+                .text_alignment
+                .unwrap_or(crate::font::TextAlign::Left)
+            {
+                crate::font::TextAlign::Left => parley::Alignment::Left,
+                crate::font::TextAlign::Right => parley::Alignment::Right,
+                crate::font::TextAlign::Center => parley::Alignment::Middle,
+                crate::font::TextAlign::Justified => parley::Alignment::Justified,
+                crate::font::TextAlign::End => parley::Alignment::End,
+            };
+            layout_editor.set_alignment(alignment);
+            let text_layout =
+                layout_editor.layout(&mut font_manager.font_cx, &mut font_manager.layout_cx);
+
+            if !text_layout.is_empty() {
                 let mut size = Vec2::new(0.0, 0.0);
-                buffer.layout_runs().for_each(|r| {
-                    size.x = size.x.max(r.line_w);
-                    size.y += r.line_height;
+                text_layout.lines().for_each(|l| {
+                    let line_metrics = l.metrics();
+                    size.x = size.x.max(line_metrics.advance + 1.0);
+                    size.y += line_metrics.line_height;
                 });
                 Some(LayoutMeasure::Fixed(super::measure::FixedMeasure { size }))
             } else {
                 None
             }
+
+            // if let Some(buffer) = font_manager.layout(
+            //     Vec2::new(
+            //         parent_layout.size.width * camera_scale.x,
+            //         parent_layout.size.height + 100000.0,
+            //     ),
+            //     styles,
+            //     &styles.font.unwrap_or(default_font.0),
+            //     content,
+            //     camera_scale,
+            // ) {
+            //     let mut size = Vec2::new(0.0, 0.0);
+            //     buffer.layout_runs().for_each(|r| {
+            //         size.x = size.x.max(r.line_w);
+            //         size.y += r.line_height;
+            //     });
+            //     Some(LayoutMeasure::Fixed(super::measure::FixedMeasure { size }))
+            // } else {
+            //     None
+            // }
+            //
         }
         _ => None,
     }
