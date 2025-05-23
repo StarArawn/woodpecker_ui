@@ -206,6 +206,30 @@ pub struct WoodpeckerStyle {
     /// Alignent for text rendering
     /// If none is set it uses right for RTL and left for LTR text.
     pub text_alignment: Option<TextAlign>,
+    /// Image Quality
+    pub image_quality: ImageQuality,
+}
+
+/// Image Quality
+#[derive(Reflect, Debug, Default, Clone, PartialEq, Copy)]
+pub enum ImageQuality {
+    /// Nearest Neighbor Filtering
+    Low,
+    /// Bilinear Filtering
+    #[default]
+    Medium,
+    /// Bicubic Filtering
+    High,
+}
+
+impl Into<bevy_vello::vello::peniko::ImageQuality> for ImageQuality {
+    fn into(self) -> bevy_vello::vello::peniko::ImageQuality {
+        match self {
+            ImageQuality::Low => bevy_vello::vello::peniko::ImageQuality::Low,
+            ImageQuality::Medium => bevy_vello::vello::peniko::ImageQuality::Medium,
+            ImageQuality::High => bevy_vello::vello::peniko::ImageQuality::High,
+        }
+    }
 }
 
 impl Default for WoodpeckerStyle {
@@ -286,6 +310,7 @@ impl WoodpeckerStyle {
         font: None,
         text_wrap: TextWrap::WordOrGlyph,
         text_alignment: None,
+        image_quality: ImageQuality::Medium,
     };
 
     /// Lerps between two styles.

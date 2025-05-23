@@ -455,16 +455,19 @@ impl WidgetRender {
                     bevy_vello::prelude::kurbo::Vec2::new(location_x as f64, location_y as f64),
                 );
 
+                let image_quality = widget_style.image_quality.into();
                 let vello_image = image_manager
                     .images
                     .entry(image_handle.into())
-                    .or_insert_with(|| {
-                        peniko::Image::new(
+                    .or_insert_with(move || {
+                        let mut image = peniko::Image::new(
                             image.data.clone().unwrap().into(), // TODO: Don't unwrap here.
                             peniko::ImageFormat::Rgba8,
                             image.size().x,
                             image.size().y,
-                        )
+                        );
+                        image.quality = image_quality;
+                        image
                     });
 
                 vello_scene.draw_image(vello_image, transform);
