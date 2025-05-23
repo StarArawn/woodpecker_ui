@@ -99,7 +99,10 @@ impl PartialEq for WidgetChildren {
 
 impl WidgetChildren {
     /// Builder pattern for adding children when you initially create the component.
-    pub fn with_child<T: Widget>(mut self, bundle: impl Bundle + Clone) -> Self {
+    pub fn with_child<T: Widget + Component + Default>(
+        mut self,
+        bundle: impl Bundle + Clone,
+    ) -> Self {
         self.add::<T>(bundle);
         self
     }
@@ -125,7 +128,10 @@ impl WidgetChildren {
     ///
     /// Note: Make sure to call [`WidgetChildren::apply`] in the render system of the parent
     /// otherwise the entities will not be spawned! This will NOT spawn the bundles.
-    pub fn add<T: Widget>(&mut self, bundle: impl Bundle + Clone) -> &mut Self {
+    pub fn add<T: Widget + Component + Default>(
+        &mut self,
+        bundle: impl Bundle + Clone,
+    ) -> &mut Self {
         let widget_type = T::get_name();
         self.children_queue.push((
             widget_type,
@@ -149,6 +155,7 @@ impl WidgetChildren {
                     );
                     world
                         .entity_mut(child_widget)
+                        .insert(T::default())
                         .insert(bundle.clone())
                         .insert(Mounted)
                         .insert(Name::new(type_name_without_path.clone()));

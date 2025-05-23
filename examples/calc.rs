@@ -187,7 +187,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
 #[derive(Debug, Resource)]
 pub struct CalcOutput(pub String);
 
-#[derive(Component, Reflect, Clone)]
+#[derive(Component, Reflect, Clone, Default)]
 pub struct Output;
 impl Widget for Output {}
 

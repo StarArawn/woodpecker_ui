@@ -38,7 +38,7 @@ ansi-parser = "0.9.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 arboard = "3.4"
-bevy = { version = "0.16" }
+bevy = { version = "0.16", default-features = false, features = ["bevy_picking", "bevy_log"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 bevy = { version = "0.16", default-features = false, features = ["webgpu"] }
@@ -51,7 +51,7 @@ calc = { version = "0.4.0", default-features = false }
 bevy = { version = "0.16", features = ["jpeg", "bevy_dev_tools"] }
 bevy-inspector-egui = "0.31"
 
-[patch.crates-io]
+# [patch.crates-io]
 # bevy_vello = { git = "https://github.com/linebender/bevy_vello", rev = "7fe648ccb9766ecf2ef469f08c9f21093c3544e6" }
 
 [[example]]
