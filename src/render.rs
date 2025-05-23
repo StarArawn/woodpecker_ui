@@ -145,13 +145,18 @@ impl WidgetRender {
 
         match self {
             WidgetRender::Quad => {
+                let border_left = layout.border.left.value_or(0.0) as f64;
+                let border_top = layout.border.top.value_or(0.0) as f64;
+                let border_right = layout.border.right.value_or(0.0) as f64;
+                let border_bottom = layout.border.bottom.value_or(0.0) as f64;
+
                 let color = widget_style.background_color.to_srgba();
                 let border_color = widget_style.border_color.to_srgba();
                 let rect = kurbo::RoundedRect::new(
-                    location_x as f64 - layout.border.left.value_or(0.0) as f64,
-                    location_y as f64 - layout.border.top.value_or(0.0) as f64,
-                    location_x as f64 + (size_x as f64 + layout.border.right.value_or(0.0) as f64),
-                    location_y as f64 + (size_y as f64 + layout.border.bottom.value_or(0.0) as f64),
+                    location_x as f64,
+                    location_y as f64,
+                    location_x as f64 + size_x as f64,
+                    location_y as f64 + size_y as f64,
                     RoundedRectRadii::new(
                         widget_style.border_radius.top_left.value_or(0.0) as f64,
                         widget_style.border_radius.top_right.value_or(0.0) as f64,
@@ -174,10 +179,10 @@ impl WidgetRender {
                 );
 
                 let rect = kurbo::RoundedRect::new(
-                    location_x as f64,
-                    location_y as f64,
-                    location_x as f64 + size_x as f64,
-                    location_y as f64 + size_y as f64,
+                    location_x as f64 + border_left,
+                    location_y as f64 + border_top,
+                    location_x as f64 + (size_x as f64 - border_right),
+                    location_y as f64 + (size_y as f64 - border_bottom),
                     RoundedRectRadii::new(
                         widget_style.border_radius.top_left.value_or(0.0) as f64,
                         widget_style.border_radius.top_right.value_or(0.0) as f64,
@@ -566,12 +571,14 @@ impl WidgetRender {
                         let mut image: image::DynamicImage = image::DynamicImage::ImageRgba8(image);
                         let sub_section_data =
                             subsection_image_data(&mut image, texture_rect_floor);
-                        let vello_image = peniko::Image::new(
+                        let image_quality = widget_style.image_quality.into();
+                        let mut vello_image = peniko::Image::new(
                             sub_section_data.into(),
                             peniko::ImageFormat::Rgba8,
                             texture_rect_floor.size().x as u32,
                             texture_rect_floor.size().y as u32,
                         );
+                        vello_image.quality = image_quality;
                         image_manager.nine_patch_slices.insert(key, vello_image);
                     }
 

@@ -123,6 +123,7 @@ pub mod prelude {
     pub use crate::styles::*;
     pub use crate::svg::SvgAsset;
     pub use crate::widgets::*;
+    pub use crate::PreviousResource;
     pub use crate::WoodpeckerView;
     pub use crate::{
         CurrentWidget, ParentWidget, RenderSettings, WidgetRegisterExt, WoodpeckerUIPlugin,
@@ -165,6 +166,10 @@ impl FromWorld for DefaultFont {
         )
     }
 }
+
+/// Previous resource
+#[derive(Resource)]
+pub struct PreviousResource<T: Resource>(pub T);
 
 /// Wraps an entity and lets woodpecker know its a parent.
 #[derive(Resource, Debug, Clone, Copy, Deref, DerefMut, PartialEq, Eq, Hash)]

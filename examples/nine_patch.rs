@@ -71,6 +71,8 @@ fn startup(
                 left: position.x.into(),
                 top: position.y.into(),
                 position: WidgetPosition::Fixed,
+                // Nearest filtering to avoid texture bleeding.
+                image_quality: ImageQuality::Low,
                 ..Default::default()
             },
             WidgetRender::NinePatch {

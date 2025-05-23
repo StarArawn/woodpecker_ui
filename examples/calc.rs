@@ -25,7 +25,6 @@ fn main() {
         .add_systems(Startup, startup)
         .insert_resource(CalcOutput("".into()))
         .register_widget::<Output>()
-        .add_widget_systems(Output::get_name(), update, render)
         .run();
 }
 
@@ -184,16 +183,14 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     ui_context.set_root_widget(root.entity());
 }
 
-#[derive(Debug, Resource)]
+#[derive(Debug, Resource, PartialEq, Clone)]
 pub struct CalcOutput(pub String);
 
-#[derive(Component, Reflect, Clone, Default)]
+#[derive(Widget, Component, Reflect, Clone, Default, PartialEq)]
+#[auto_update(render)]
+#[props(Output)]
+#[resource(CalcOutput)]
 pub struct Output;
-impl Widget for Output {}
-
-fn update(output: Res<CalcOutput>) -> bool {
-    output.is_changed()
-}
 
 fn render(
     current_entity: Res<CurrentWidget>,

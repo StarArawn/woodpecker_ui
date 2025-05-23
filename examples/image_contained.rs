@@ -31,7 +31,6 @@ fn render(
         MyWidgetState { show_modal: true },
     );
 
-    dbg!("GOT HERE!");
     let Ok(state) = state_query.get(state_entity) else {
         return;
     };

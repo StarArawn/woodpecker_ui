@@ -5,7 +5,10 @@ use quote::quote;
 use syn::{spanned::Spanned, Ident};
 
 #[proc_macro_error]
-#[proc_macro_derive(Widget, attributes(widget_systems, auto_update, props, state, context))]
+#[proc_macro_derive(
+    Widget,
+    attributes(widget_systems, auto_update, props, state, context, resource)
+)]
 pub fn widget_macro(input: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
 
@@ -21,13 +24,16 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
     let mut is_auto_update = false;
     let mut is_auto_diff_state = false;
     let mut is_auto_diff_context = false;
+    let mut is_auto_diff_resource = false;
     let mut is_diff_props = false;
     let mut diff_props = vec![];
     let mut diff_state = vec![];
+    let mut diff_resource = vec![];
     let mut diff_context = vec![];
 
     let mut props_span = None;
     let mut state_span = None;
+    let mut resource_span = None;
     let mut context_span = None;
 
     for attr in input.attrs.iter() {
@@ -98,6 +104,22 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
             state_span = Some(attr.path().get_ident().span());
         }
 
+        if attr.path().is_ident("resource") && is_auto_update {
+            let list = attr.meta.require_list().expect(ATTR_ERROR_MESSAGE);
+            let system_names = list.tokens.to_string();
+            let split = system_names.split(',').collect::<Vec<_>>();
+            if split.is_empty() {
+                return syn::Error::new(list.span(), ATTR_ERROR_MESSAGE)
+                    .to_compile_error()
+                    .into();
+            }
+            for component in split {
+                diff_resource.push(component.to_string().replace(' ', ""));
+            }
+            is_auto_diff_resource = true;
+            resource_span = Some(attr.path().get_ident().span());
+        }
+
         if attr.path().is_ident("context") && is_auto_update {
             let list = attr.meta.require_list().expect(ATTR_ERROR_MESSAGE);
             let system_names = list.tokens.to_string();
@@ -144,6 +166,61 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
             .to_compile_error()
             .into();
         }
+
+        let (resource_statements, resource_lookups) = if is_auto_diff_resource {
+            let mut diff_items = diff_resource
+                .iter()
+                .map(|c| Ident::new(c, Span::call_site()))
+                .collect::<Vec<_>>();
+
+            diff_items.sort();
+            diff_items.dedup();
+
+            if diff_items.len() > 1 {
+                let num_dups = diff_items.len() - diff_resource.len();
+
+                if num_dups > 0 {
+                    return syn::Error::new(
+                        resource_span.unwrap(),
+                        "You have duplicate resources!",
+                    )
+                    .to_compile_error()
+                    .into();
+                }
+            }
+
+            let resource_names_a = diff_items
+                .iter()
+                .map(|n| Ident::new(&format!("resource_{}_a", n), Span::call_site()))
+                .collect::<Vec<_>>();
+            let resource_names_b = diff_items
+                .iter()
+                .map(|n| Ident::new(&format!("resource_{}_b", n), Span::call_site()))
+                .collect::<Vec<_>>();
+
+            let resource_type_names = diff_items.iter().map(|tn| tn).collect::<Vec<_>>();
+
+            (
+                Some(quote! {
+                    #(#resource_names_a: Res<#resource_type_names>,)*
+                    #(#resource_names_b: Option<Res<PreviousResource<#resource_type_names>>>,)*
+                }),
+                Some(quote! {
+                    #(
+                        commands.insert_resource(PreviousResource(#resource_names_a.clone()));
+                        if let Some(#resource_names_b) = #resource_names_b {
+                            if &*#resource_names_a != &#resource_names_b.0 {
+                                return true;
+                            }
+                        } else {
+                            return true;
+                        }
+                    )*
+                }),
+            )
+        } else {
+            (None, None)
+        };
 
         let (state_query_statements, state_query_lookups) = if is_auto_diff_state {
             let (compiler_error, state_names_a, state_names_b, state_type_names) =
@@ -288,11 +365,14 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
                 query_b: Query<(Entity, #(&#prop_type_names, )*), With<PreviousWidget>>,
                 #state_query_statements
                 #context_query_statements
+                #resource_statements
                 transition_query: Query<&Transition>,
                 #hot_reaload_param
             | {
 
                 #hot_reload_diff
+
+                #resource_lookups
 
                 // Ignore no children
                 if let Ok(children) = child_query.get(**current_widget) {

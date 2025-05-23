@@ -1,25 +1,58 @@
 use bevy::prelude::*;
-// use bevy_mod_picking::{
-//     events::{Click, Out, Over, Pointer},
-//     prelude::{ListenerMut, On},
-//     PickableBundle,
-// };
-
-use crate::prelude::*;
 
 use super::colors;
+use crate::prelude::*;
 
 #[derive(Component, Reflect, PartialEq, Clone, Debug)]
 pub struct ModalState {
     previous_visibility: bool,
 }
 
+/// Styles for the modal
+#[derive(Component, Reflect, PartialEq, Clone, Debug)]
+pub struct ModalStyles {
+    /// Window Styles
+    pub window: WoodpeckerStyle,
+    /// Titlebar Styles
+    pub title_bar: WoodpeckerStyle,
+}
+
+impl Default for ModalStyles {
+    fn default() -> Self {
+        Self {
+            window: WoodpeckerStyle {
+                background_color: colors::BACKGROUND,
+                border_color: colors::PRIMARY,
+                border: Edge::all(2.0),
+                border_radius: Corner::all(10.0),
+                flex_direction: WidgetFlexDirection::Column,
+                ..Default::default()
+            },
+            title_bar: WoodpeckerStyle {
+                height: Units::Pixels(24.0),
+                width: Units::Percentage(100.0),
+                padding: Edge::new(0.0, 0.0, 0.0, 5.0),
+                align_items: Some(WidgetAlignItems::Center),
+                background_color: colors::DARK_BACKGROUND,
+                border_radius: Corner::all(0.0).top_left(10.0).top_right(10.0),
+                border_color: colors::PRIMARY,
+                border: Edge::all(0.0).bottom(2.0),
+                ..Default::default()
+            },
+        }
+    }
+}
+
+/// Replace title children for modals and windows.
+#[derive(Component, Default, PartialEq, Clone)]
+pub struct TitleChildren(pub WidgetChildren);
+
 /// A widget that displays a modal
 #[derive(Component, Widget, Reflect, PartialEq, Clone, Debug)]
 #[auto_update(render)]
 #[props(Modal)]
 #[state(ModalState)]
-#[require(WoodpeckerStyle = get_styles(), PassedChildren, WidgetChildren, Transition = get_transition(), WidgetRender = WidgetRender::Layer)]
+#[require(WoodpeckerStyle = get_styles(), PassedChildren, WidgetChildren, Transition = get_transition(), WidgetRender = WidgetRender::Layer, ModalStyles)]
 pub struct Modal {
     /// The text to display in the modal's title bar
     pub title: String,
@@ -89,12 +122,21 @@ fn render(
         &mut WidgetChildren,
         &PassedChildren,
         &mut WoodpeckerStyle,
+        &ModalStyles,
         &mut Transition,
+        Option<&TitleChildren>,
     )>,
     mut modal_state: Query<&mut ModalState>,
 ) {
-    let Ok((modal, mut internal_children, passed_children, mut styles, mut transition)) =
-        query.get_mut(**current_widget)
+    let Ok((
+        modal,
+        mut internal_children,
+        passed_children,
+        mut styles,
+        modal_styles,
+        mut transition,
+        title_children,
+    )) = query.get_mut(**current_widget)
     else {
         return;
     };
@@ -171,49 +213,34 @@ fn render(
         .add::<Element>((
             Element,
             WoodpeckerStyle {
-                background_color: colors::BACKGROUND,
-                border_color: colors::PRIMARY,
-                border: Edge::all(2.0),
-                border_radius: Corner::all(10.0),
                 min_width: modal.min_size.x.into(),
                 min_height: modal.min_size.y.into(),
-                flex_direction: WidgetFlexDirection::Column,
-                ..Default::default()
+                ..modal_styles.window
             },
             WidgetChildren::default()
                 // Title Bar
                 .with_child::<Element>((
                     Element,
                     WoodpeckerStyle {
-                        height: Units::Pixels(24.0),
-                        width: Units::Percentage(100.0),
-                        padding: Edge::new(0.0, 0.0, 0.0, 5.0),
-                        justify_items: Some(WidgetJustifyItems::Center),
-                        ..Default::default()
-                    },
-                    // Title text
-                    WidgetChildren::default().with_child::<Element>((
-                        Element,
-                        WoodpeckerStyle {
-                            font_size: 14.0,
-                            text_wrap: TextWrap::None,
-                            ..Default::default()
-                        },
-                        WidgetRender::Text {
-                            content: modal.title.clone(),
-                        },
-                    )),
-                ))
-                // Border
-                .with_child::<Element>((
-                    Element,
-                    WoodpeckerStyle {
-                        background_color: Srgba::new(0.239, 0.258, 0.337, 1.0).into(),
-                        width: Units::Percentage(100.0),
-                        height: 2.0.into(),
-                        ..Default::default()
+                        ..modal_styles.title_bar
                     },
                     WidgetRender::Quad,
+                    // Title text
+                    if let Some(children) = title_children.as_ref() {
+                        children.0.clone()
+                    } else {
+                        WidgetChildren::default().with_child::<Element>((
+                            Element,
+                            WoodpeckerStyle {
+                                font_size: 14.0,
+                                text_wrap: TextWrap::None,
+                                ..Default::default()
+                            },
+                            WidgetRender::Text {
+                                content: modal.title.clone(),
+                            },
+                        ))
+                    },
                 ))
                 // Content
                 .with_child::<Element>((
