@@ -11,6 +11,7 @@ use bevy::prelude::*;
 pub struct WindowState {
     /// The position of the window.
     position: Vec2,
+    drag_offset: Vec2,
 }
 
 /// Window widget
@@ -18,7 +19,8 @@ pub struct WindowState {
 #[auto_update(render)]
 #[props(WoodpeckerWindow, PassedChildren)]
 #[state(WindowState)]
-#[require(WoodpeckerStyle, PassedChildren, WidgetRender = WidgetRender::Quad, WidgetChildren)]
+#[context(WindowingContext)]
+#[require(WoodpeckerStyle, PassedChildren, WidgetRender = WidgetRender::Quad, WidgetChildren, Pickable, Focusable)]
 pub struct WoodpeckerWindow {
     /// The title of the window.
     pub title: String,
@@ -79,6 +81,7 @@ fn render(
         &PassedChildren,
     )>,
     state_query: Query<&mut WindowState>,
+    mut context_query: Query<&mut WindowingContext>,
 ) {
     let Ok((window, mut styles, mut children, layout, passed_children)) =
         query.get_mut(**current_widget)
@@ -91,6 +94,7 @@ fn render(
         *current_widget,
         WindowState {
             position: window.initial_position,
+            drag_offset: Vec2::new(0.0, 0.0),
         },
     );
 
@@ -98,15 +102,38 @@ fn render(
         return;
     };
 
+    // Setup windowing context.
+    let context_entity =
+        hooks.use_context(&mut commands, *current_widget, WindowingContext::default());
+
+    let Ok(mut context) = context_query.get_mut(context_entity) else {
+        return;
+    };
+
+    let z_index = context.get_or_add(current_widget.entity());
+
     *styles = WoodpeckerStyle {
         position: WidgetPosition::Fixed,
         left: state.position.x.into(),
         top: state.position.y.into(),
+        z_index: Some(z_index as u32),
         ..window.window_styles
     };
 
+    *children = WidgetChildren::default();
     let current_widget = *current_widget;
     children
+        .observe(
+            current_widget,
+            move |trigger: Trigger<WidgetFocus>,
+                  mut context_query: Query<&mut WindowingContext>| {
+                let Ok(mut context) = context_query.get_mut(context_entity) else {
+                    return;
+                };
+
+                context.shift_to_top(trigger.target);
+            },
+        )
         // Title
         .add::<Element>((
             Element,
@@ -130,17 +157,47 @@ fn render(
         ))
         .observe(
             current_widget,
-            move |trigger: Trigger<Pointer<Drag>>,
+            move |_trigger: Trigger<Pointer<Pressed>>,
+                  mut context_query: Query<&mut WindowingContext>| {
+                let Ok(mut context) = context_query.get_mut(context_entity) else {
+                    return;
+                };
+
+                context.shift_to_top(current_widget.entity());
+            },
+        )
+        .observe(
+            current_widget,
+            move |trigger: Trigger<Pointer<DragStart>>,
                   mut state_query: Query<&mut WindowState>,
-                  layout_query: Query<&WidgetLayout>| {
+                  mut context_query: Query<&mut WindowingContext>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
-                let Ok(layout) = layout_query.get(*current_widget) else {
+                state.drag_offset = state.position - trigger.pointer_location.position;
+
+                let Ok(mut context) = context_query.get_mut(context_entity) else {
                     return;
                 };
-                state.position =
-                    layout.location + (trigger.pointer_location.position - layout.location);
+
+                context.shift_to_top(current_widget.entity());
+            },
+        )
+        .observe(
+            current_widget,
+            move |trigger: Trigger<Pointer<Drag>>,
+                  mut state_query: Query<&mut WindowState>,
+                  mut context_query: Query<&mut WindowingContext>| {
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
+                state.position = trigger.pointer_location.position + state.drag_offset;
+
+                let Ok(mut context) = context_query.get_mut(context_entity) else {
+                    return;
+                };
+
+                context.shift_to_top(current_widget.entity());
             },
         )
         // Children

@@ -2,6 +2,7 @@ use crate::{
     convert_render_target::RenderTargetImages,
     hook_helper::StateMarker,
     image::ImageManager,
+    layout::system::ReflectedLayout,
     prelude::*,
     svg::{SvgAsset, SvgManager},
     DefaultFont,
@@ -190,7 +191,7 @@ fn traverse_render_tree(
 
     let z_index = styles.z_index;
     let z = z_index.unwrap_or(parent_id);
-    let order = *order_counter;
+    let mut order = *order_counter;
     *order_counter += 1;
 
     let mut did_layer = false;
@@ -200,6 +201,26 @@ fn traverse_render_tree(
             if matches!(widget_render, WidgetRender::Layer) {
                 did_layer = true;
             }
+
+            if styles.opacity > 0.0 && styles.opacity < 1.0 && !did_layer {
+                did_layer = true;
+                render_commands.push(RenderCommand {
+                    z,
+                    order,
+                    widget_render: WidgetRender::Layer,
+                    layout: WidgetLayout(ReflectedLayout {
+                        location: Vec2::splat(0.0),
+                        size: Vec2::splat(10000.0),
+                        ..Default::default()
+                    }),
+                    styles: *styles,
+                    ..Default::default()
+                });
+
+                order = *order_counter;
+                *order_counter += 1;
+            }
+
             render_commands.push(RenderCommand {
                 z,
                 order,

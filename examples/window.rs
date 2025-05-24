@@ -5,12 +5,12 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins((
-            bevy_inspector_egui::bevy_egui::EguiPlugin {
-                enable_multipass_for_primary_context: false,
-            },
-            bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
-        ))
+        // .add_plugins((
+        //     bevy_inspector_egui::bevy_egui::EguiPlugin {
+        //         enable_multipass_for_primary_context: false,
+        //     },
+        //     bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
+        // ))
         .add_systems(Startup, startup)
         .run();
 }
@@ -25,24 +25,29 @@ fn startup(
     let root = commands
         .spawn((
             WoodpeckerApp,
-            WidgetChildren::default().with_child::<WoodpeckerWindow>((
-                WoodpeckerWindow {
-                    title: "Image/SVG fits to content.".into(),
-                    initial_position: Vec2::new(200.0, 200.0),
-                    ..Default::default()
-                },
-                PassedChildren(
-                    WidgetChildren::default().with_child::<Element>((
-                        Element,
-                        WoodpeckerStyle {
-                            align_items: Some(WidgetAlignItems::Center),
-                            flex_direction: WidgetFlexDirection::Column,
-                            padding: Edge::all(10.0),
-                            width: Units::Percentage(100.0).into(),
+            WidgetChildren::default().with_child::<WindowingContextProvider>(
+                WidgetChildren::default()
+                    .with_child::<WoodpeckerWindow>((
+                        WoodpeckerWindow {
+                            title: "Image/SVG fits to content.".into(),
+                            initial_position: Vec2::new(200.0, 200.0),
+                            window_styles: WoodpeckerStyle {
+                                min_width: 400.0.into(),
+                                opacity: 0.75,
+                                ..WoodpeckerWindow::default().window_styles
+                            },
                             ..Default::default()
                         },
-                        WidgetChildren::default()
-                            .with_child::<Element>((
+                        PassedChildren(WidgetChildren::default().with_child::<Element>((
+                            Element,
+                            WoodpeckerStyle {
+                                align_items: Some(WidgetAlignItems::Center),
+                                flex_direction: WidgetFlexDirection::Column,
+                                padding: Edge::all(10.0),
+                                width: Units::Percentage(100.0).into(),
+                                ..Default::default()
+                            },
+                            WidgetChildren::default().with_child::<Element>((
                                 Element,
                                 WoodpeckerStyle {
                                     width: Units::Auto,
@@ -53,8 +58,30 @@ fn startup(
                                 WidgetRender::Image {
                                     handle: asset_server.load("woodpecker.jpg"),
                                 },
-                            ))
-                            .with_child::<Element>((
+                            )),
+                        ))),
+                    ))
+                    .with_child::<WoodpeckerWindow>((
+                        WoodpeckerWindow {
+                            title: "2nd window".into(),
+                            initial_position: Vec2::new(200.0, 200.0),
+                            window_styles: WoodpeckerStyle {
+                                min_width: 400.0.into(),
+                                opacity: 0.75,
+                                ..WoodpeckerWindow::default().window_styles
+                            },
+                            ..Default::default()
+                        },
+                        PassedChildren(WidgetChildren::default().with_child::<Element>((
+                            Element,
+                            WoodpeckerStyle {
+                                align_items: Some(WidgetAlignItems::Center),
+                                flex_direction: WidgetFlexDirection::Column,
+                                padding: Edge::all(10.0),
+                                width: Units::Percentage(100.0).into(),
+                                ..Default::default()
+                            },
+                            WidgetChildren::default().with_child::<Element>((
                                 Element,
                                 WoodpeckerStyle {
                                     width: Units::Auto,
@@ -66,9 +93,9 @@ fn startup(
                                     color: Some(Srgba::RED.into()),
                                 },
                             )),
+                        ))),
                     )),
-                ),
-            )),
+            ),
         ))
         .id();
     ui_context.set_root_widget(root);

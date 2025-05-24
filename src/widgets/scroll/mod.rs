@@ -145,12 +145,12 @@ pub struct ScrollContextProvider {
     pub tag: Option<TaggedContext>,
 }
 
-/// Allows you to attach a tag to the scroll context.
-/// This is useful for querying a specific scroll context for
-/// auto scrolling.
+/// Allows you to attach a tag to the scroll or windowing context.
+/// This is useful for querying a specific context for
+/// manual control.
 #[derive(Clone, Reflect)]
 pub struct TaggedContext {
-    f: Arc<dyn Fn(EntityCommands<'_>) + 'static + Send + Sync>,
+    pub(crate) f: Arc<dyn Fn(EntityCommands<'_>) + 'static + Send + Sync>,
 }
 
 impl PartialEq for TaggedContext {

@@ -20,6 +20,7 @@ mod text_box;
 mod toggle;
 mod transition;
 mod window;
+mod windowing_context;
 
 mod syntax_highlighting;
 pub use syntax_highlighting::highlight;
@@ -46,6 +47,7 @@ pub use text_box::{ApplyHighlighting, TextBox, TextBoxState, TextChanged, Textbo
 pub use toggle::{Toggle, ToggleChanged, ToggleState, ToggleStyles, ToggleWidgetStyles};
 pub use transition::*;
 pub use window::{WindowState, WoodpeckerWindow};
+pub use windowing_context::{WindowingContext, WindowingContextProvider};
 
 /// A core set of UI widgets that Woodpecker UI provides.
 // TODO: Make this optional? Expose publicly.
@@ -72,6 +74,7 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
             .register_widget::<Toggle>()
             .register_widget::<Slider>()
             .register_widget::<WoodpeckerWindow>()
+            .register_widget::<WindowingContextProvider>()
             .register_widget::<Dropdown>()
             .register_widget::<TabButton>()
             .register_widget::<TabContextProvider>()

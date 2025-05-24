@@ -477,7 +477,7 @@ impl WidgetRender {
                 handle: image_handle,
             } => {
                 let Some(image) = image_assets.get(image_handle) else {
-                    return false;
+                    return did_layer;
                 };
 
                 let scale = fit_image(image.size().as_vec2(), Vec2::new(size_x, size_y)) as f64;
@@ -508,7 +508,7 @@ impl WidgetRender {
                 color: path_color,
             } => {
                 let Some(svg_asset) = svg_assets.get(handle) else {
-                    return false;
+                    return did_layer;
                 };
 
                 let (width, height) = (svg_asset.width, svg_asset.height);
@@ -524,14 +524,14 @@ impl WidgetRender {
 
                 let Some(svg_scene) = svg_manager.get_cached(handle, svg_assets, *path_color)
                 else {
-                    return false;
+                    return did_layer;
                 };
 
                 vello_scene.append(&svg_scene, Some(transform));
             }
             WidgetRender::NinePatch { handle, scale_mode } => {
                 let Some(image) = image_assets.get(handle) else {
-                    return false;
+                    return did_layer;
                 };
 
                 let image_rect = Rect {
@@ -629,7 +629,7 @@ impl WidgetRender {
             }
             WidgetRender::RenderTarget { handle } => {
                 let Some(image) = image_assets.get(handle) else {
-                    return false;
+                    return did_layer;
                 };
                 let image_texture_descriptor = image.texture_descriptor.clone();
 
