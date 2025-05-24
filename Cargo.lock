@@ -1616,11 +1616,12 @@ dependencies = [
 [[package]]
 name = "bevy_vello"
 version = "0.8.0"
-source = "git+https://github.com/StarArawn/bevy_vello?rev=845e45d5c85bef6bd6c0432fdb1a668fc43c0b94#845e45d5c85bef6bd6c0432fdb1a668fc43c0b94"
+source = "git+https://github.com/RobertBrewitz/bevy_vello?rev=fbf01ec#fbf01ec30a5b2c612ea1390ee563ea7b3547a08f"
 dependencies = [
  "bevy",
- "parley 0.3.0",
+ "parley 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.12",
+ "tracing",
  "vello",
 ]
 
@@ -2019,12 +2020,6 @@ dependencies = [
  "termcolor",
  "unicode-width",
 ]
-
-[[package]]
-name = "color"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa7f99105610438d4b3ee7ae8e453c2990e325c806a14d71e8ea937d584c5289"
 
 [[package]]
 name = "color"
@@ -2888,20 +2883,21 @@ dependencies = [
 
 [[package]]
 name = "fontique"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b5fcb214137f01bc842c4fd633236255c51f8a24c6d3923eb8361c6d0940737"
+checksum = "64763d1f274c8383333851435b6cdf071c31cfcdb39fd5860d20943205a007a7"
 dependencies = [
  "bytemuck",
  "fontconfig-cache-parser",
  "hashbrown",
  "icu_locid",
  "memmap2",
+ "objc2 0.6.1",
  "objc2-core-foundation",
  "objc2-core-text",
  "objc2-foundation 0.3.1",
- "peniko 0.3.2",
- "read-fonts 0.25.3",
+ "peniko",
+ "read-fonts 0.29.1",
  "roxmltree",
  "smallvec",
  "windows 0.58.0",
@@ -2922,7 +2918,7 @@ dependencies = [
  "objc2-core-foundation",
  "objc2-core-text",
  "objc2-foundation 0.3.1",
- "peniko 0.4.0",
+ "peniko",
  "read-fonts 0.29.1",
  "roxmltree",
  "smallvec",
@@ -4630,14 +4626,14 @@ dependencies = [
 
 [[package]]
 name = "parley"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d1c2b33b240c246f06cfceac48dc6c96040cb177d2aa5348899982b298b5577"
+checksum = "e28dadbe655332fd7d996794ec8d0c376695f6ca47bc75aa01e0967c7f28e42a"
 dependencies = [
- "fontique 0.3.0",
+ "fontique 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hashbrown",
- "peniko 0.3.2",
- "skrifa 0.26.6",
+ "peniko",
+ "skrifa 0.31.1",
  "swash",
 ]
 
@@ -4646,9 +4642,9 @@ name = "parley"
 version = "0.4.0"
 source = "git+https://github.com/linebender/parley?rev=74a3499920675a63450727e44a75a57f76389e7a#74a3499920675a63450727e44a75a57f76389e7a"
 dependencies = [
- "fontique 0.4.0",
+ "fontique 0.4.0 (git+https://github.com/linebender/parley?rev=74a3499920675a63450727e44a75a57f76389e7a)",
  "hashbrown",
- "peniko 0.4.0",
+ "peniko",
  "skrifa 0.31.1",
  "swash",
 ]
@@ -4661,23 +4657,11 @@ checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
 name = "peniko"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c1f594c54ccdc9bd177a726885f066bf28d20e17169e31a8a1456217b1316b4"
-dependencies = [
- "color 0.2.4",
- "kurbo",
- "peniko 0.4.0",
- "smallvec",
-]
-
-[[package]]
-name = "peniko"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f9529efd019889b2a205193c14ffb6e2839b54ed9d2720674f10f4b04d87ac9"
 dependencies = [
- "color 0.3.1",
+ "color",
  "kurbo",
  "smallvec",
 ]
@@ -5155,16 +5139,6 @@ dependencies = [
 
 [[package]]
 name = "read-fonts"
-version = "0.25.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6f9e8a4f503e5c8750e4cd3b32a4e090035c46374b305a15c70bad833dca05f"
-dependencies = [
- "bytemuck",
- "font-types 0.8.4",
-]
-
-[[package]]
-name = "read-fonts"
 version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "600e807b48ac55bad68a8cb75cc3c7739f139b9248f7e003e01e080f589b5288"
@@ -5557,16 +5531,6 @@ name = "siphasher"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56199f7ddabf13fe5074ce809e7d3f42b42ae711800501b5b16ea82ad029c39d"
-
-[[package]]
-name = "skrifa"
-version = "0.26.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cc1aa86c26dbb1b63875a7180aa0819709b33348eb5b1491e4321fae388179d"
-dependencies = [
- "bytemuck",
- "read-fonts 0.25.3",
-]
 
 [[package]]
 name = "skrifa"
@@ -6817,15 +6781,16 @@ checksum = "f1bddf1187be692e79c5ffeab891132dfb0f236ed36a43c7ed39f1165ee20191"
 
 [[package]]
 name = "vello"
-version = "0.4.0"
-source = "git+https://www.github.com/linebender/vello?rev=4b12aa15238c95e2eb1ffe3bf0ada65bca96a879#4b12aa15238c95e2eb1ffe3bf0ada65bca96a879"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df026e62e8b0d12d55ff5e91ae9114a20f82d9b856bedfdbf3abd5d1472dceed"
 dependencies = [
  "bytemuck",
  "futures-intrusive",
  "log",
- "peniko 0.3.2",
+ "peniko",
  "png",
- "skrifa 0.26.6",
+ "skrifa 0.31.1",
  "static_assertions",
  "thiserror 2.0.12",
  "vello_encoding",
@@ -6835,20 +6800,22 @@ dependencies = [
 
 [[package]]
 name = "vello_encoding"
-version = "0.4.0"
-source = "git+https://www.github.com/linebender/vello?rev=4b12aa15238c95e2eb1ffe3bf0ada65bca96a879#4b12aa15238c95e2eb1ffe3bf0ada65bca96a879"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c5702642f6ea77eedc12d119e1eebead0dba3cf91fe5c5d1f3efc12bf0cfaf1"
 dependencies = [
  "bytemuck",
  "guillotiere",
- "peniko 0.3.2",
- "skrifa 0.26.6",
+ "peniko",
+ "skrifa 0.31.1",
  "smallvec",
 ]
 
 [[package]]
 name = "vello_shaders"
-version = "0.4.0"
-source = "git+https://www.github.com/linebender/vello?rev=4b12aa15238c95e2eb1ffe3bf0ada65bca96a879#4b12aa15238c95e2eb1ffe3bf0ada65bca96a879"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "381790a3779021edd9f88267c1b13b49546cb0fb164f329ee2f2587869ddf459"
 dependencies = [
  "bytemuck",
  "naga",
@@ -7867,7 +7834,7 @@ dependencies = [
  "image 0.24.9",
  "interpolation",
  "palette",
- "parley 0.4.0",
+ "parley 0.4.0 (git+https://github.com/linebender/parley?rev=74a3499920675a63450727e44a75a57f76389e7a)",
  "skrifa 0.30.0",
  "smol_str",
  "taffy 0.5.2",
