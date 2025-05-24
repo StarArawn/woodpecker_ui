@@ -208,6 +208,8 @@ pub struct WoodpeckerStyle {
     pub text_alignment: Option<TextAlign>,
     /// Image Quality
     pub image_quality: ImageQuality,
+    /// Z Index
+    pub z_index: Option<u32>,
 }
 
 /// Image Quality
@@ -311,6 +313,7 @@ impl WoodpeckerStyle {
         text_wrap: TextWrap::WordOrGlyph,
         text_alignment: None,
         image_quality: ImageQuality::Medium,
+        z_index: None,
     };
 
     /// Lerps between two styles.

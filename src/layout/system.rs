@@ -18,6 +18,10 @@ use super::{measure::LayoutMeasure, UiLayout, WoodpeckerStyle};
 
 #[derive(Debug, Copy, Clone, Reflect, Default)]
 pub struct ReflectedLayout {
+    /// The z value of the node.
+    /// This can be adjusted by the user to render nodes ontop of nodes
+    /// in the tree regardless of order.
+    pub z: u32,
     /// The relative ordering of the node
     ///
     /// Nodes with a higher order should be rendered on top of those with a lower order.
@@ -41,7 +45,8 @@ pub struct ReflectedLayout {
 impl From<&Layout> for ReflectedLayout {
     fn from(value: &Layout) -> Self {
         Self {
-            order: value.order,
+            z: 0,
+            order: 0,
             location: Vec2::new(value.location.x, value.location.y),
             size: Vec2::new(value.size.width, value.size.height),
             content_size: Vec2::new(value.content_size.width, value.content_size.height),
@@ -252,6 +257,7 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
         &layout_query,
         &mut cache,
         &mut order,
+        0,
     );
 }
 
@@ -272,6 +278,7 @@ fn traverse_layout_update(
     layout_query: &Query<&WidgetLayout>,
     cache: &mut HashMap<Entity, Layout>,
     order: &mut u32,
+    parent_id: u32,
 ) {
     let Ok((entity, _, styles, parent, children)) = query.get(entity) else {
         return;
@@ -295,18 +302,18 @@ fn traverse_layout_update(
             }
         }
 
-        layout.order = *order;
         cache.insert(entity, layout);
-        commands
-            .entity(entity)
-            .insert(WidgetLayout((&layout).into()));
+        let mut layout = WidgetLayout((&layout).into());
+        layout.order = *order;
+        layout.z = styles.z_index.unwrap_or(parent_id);
+        *order += 1;
+        commands.entity(entity).insert(layout);
 
         let Some(children) = children.map(|c| c.iter().collect::<Vec<_>>()) else {
             return;
         };
 
         for child in children.iter() {
-            *order += 1;
             traverse_layout_update(
                 commands,
                 *child,
@@ -315,8 +322,8 @@ fn traverse_layout_update(
                 layout_query,
                 cache,
                 order,
+                layout.z,
             );
-            *order -= 1;
         }
     }
 }

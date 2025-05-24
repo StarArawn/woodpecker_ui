@@ -85,11 +85,16 @@ pub(crate) fn run(renderer_system_param: RenderSystemParam) {
     metrics.clear_quad_last_frame();
 
     let root_node = context.get_root_widget();
+    let mut render_commands = vec![];
+    let mut order = 0;
     // After layout computations update layouts and render scene.
     // Needs to be done in the correct order..
     // We also need to know if we are going back up the tree so we can pop the clipping and opacity layers.
     traverse_render_tree(
         root_node,
+        0,
+        &mut order,
+        &mut render_commands,
         &mut query,
         &default_font,
         &mut font_manager,
@@ -109,11 +114,39 @@ pub(crate) fn run(renderer_system_param: RenderSystemParam) {
         camera_size,
     );
 
+    // Once tree is traversed we sort the commands
+    render_commands.sort_unstable_by(|a, b| a.z.cmp(&b.z).then_with(|| a.order.cmp(&b.order)));
+
+    // Now we can render with vello
+    for command in render_commands {
+        // dbg!((command.widget_render.to_string(), command.z, command.order));
+        command.widget_render.render(
+            &mut vello_scene,
+            &command.layout,
+            &command.parent_layout,
+            &default_font,
+            &font_assets,
+            &mut image_assets,
+            &svg_assets,
+            &mut font_manager,
+            &mut svg_manager,
+            &mut image_manager,
+            &mut render_targets,
+            &mut metrics,
+            &command.styles,
+            camera_scale,
+            camera_size,
+        );
+    }
+
     metrics.commit_quad_frame();
 }
 
 fn traverse_render_tree(
     root_node: Entity,
+    parent_id: u32,
+    order_counter: &mut u32,
+    render_commands: &mut Vec<RenderCommand>,
     query: &mut Query<
         (
             Entity,
@@ -155,33 +188,39 @@ fn traverse_render_tree(
         return;
     }
 
+    let z_index = styles.z_index;
+    let z = z_index.unwrap_or(parent_id);
+    let order = *order_counter;
+    *order_counter += 1;
+
     let mut did_layer = false;
     if let Ok(widget_render) = widget_render.get(entity) {
         let parent_layout = parent.map(|parent| *layout_query.get(parent.parent()).unwrap());
         if (parent_layout.is_some() || root_node == entity) && should_render {
-            did_layer = widget_render.render(
-                vello_scene,
-                layout,
-                &parent_layout.unwrap_or_default(),
-                default_font,
-                font_assets,
-                image_assets,
-                svg_assets,
-                font_manager,
-                svg_manager,
-                image_manager,
-                render_targets,
-                metrics,
-                styles,
-                camera_scale,
-                camera_size,
-            );
+            if matches!(widget_render, WidgetRender::Layer) {
+                did_layer = true;
+            }
+            render_commands.push(RenderCommand {
+                z,
+                order,
+                layout: *layout,
+                parent_layout: parent_layout.unwrap_or_default(),
+                widget_render: widget_render.clone(),
+                styles: *styles,
+            });
         }
     }
 
     let Some(children) = children.map(|c| c.iter().collect::<Vec<_>>()) else {
         if did_layer {
-            vello_scene.pop_layer();
+            let order = *order_counter;
+            // vello_scene.pop_layer();
+            render_commands.push(RenderCommand {
+                z,
+                order,
+                widget_render: WidgetRender::PopLayer,
+                ..Default::default()
+            });
         }
         return;
     };
@@ -189,6 +228,9 @@ fn traverse_render_tree(
     for child in children.iter() {
         traverse_render_tree(
             root_node,
+            z,
+            order_counter,
+            render_commands,
             query,
             default_font,
             font_manager,
@@ -210,6 +252,35 @@ fn traverse_render_tree(
     }
 
     if did_layer {
-        vello_scene.pop_layer();
+        // vello_scene.pop_layer();
+        let order = *order_counter;
+        render_commands.push(RenderCommand {
+            z,
+            order,
+            widget_render: WidgetRender::PopLayer,
+            ..Default::default()
+        });
+    }
+}
+
+struct RenderCommand {
+    z: u32,
+    order: u32,
+    layout: WidgetLayout,
+    parent_layout: WidgetLayout,
+    widget_render: WidgetRender,
+    styles: WoodpeckerStyle,
+}
+
+impl Default for RenderCommand {
+    fn default() -> Self {
+        Self {
+            z: 0,
+            order: 0,
+            layout: Default::default(),
+            parent_layout: Default::default(),
+            widget_render: Default::default(),
+            styles: Default::default(),
+        }
     }
 }

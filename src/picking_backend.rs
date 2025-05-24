@@ -122,10 +122,8 @@ fn process_entity(
                     });
                     gizmos.linestrip_2d([tl, tr, br, bl, tl], Srgba::RED);
                 }
-                pick_list.push((
-                    entity,
-                    HitData::new(cam_entity, total as f32 - layout.order as f32, None, None),
-                ));
+                let depth = -(layout.z as f32 + (layout.order as f32 / 1_000_000.0));
+                pick_list.push((entity, HitData::new(cam_entity, depth, None, None)));
             }
         }
     }

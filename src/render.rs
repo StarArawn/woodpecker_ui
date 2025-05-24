@@ -29,7 +29,7 @@ use crate::{
 
 /// Used to tell Woodpecker UI's rendering system(vello) how
 /// to render a specific widget entity.
-#[derive(Component, Clone, Reflect, Default)]
+#[derive(Component, Clone, Reflect, Default, Debug)]
 pub enum WidgetRender {
     #[default]
     /// A basic quad shape. Can include borders.
@@ -59,6 +59,9 @@ pub enum WidgetRender {
     ///    as a group instead of individually.
     // TODO: Allow users to define custom clip shapes (supported by vello we just need to expose somehow)
     Layer,
+    /// Pops the last layer applied.
+    /// Note: This is mostly done automatically. You shouldn't need to call this.
+    PopLayer,
     /// A simple image renderer
     Image {
         /// A handle to a bevy image.
@@ -95,6 +98,7 @@ impl WidgetRender {
             WidgetRender::RichText { .. } => {}
             WidgetRender::Custom { .. } => {}
             WidgetRender::Layer => {}
+            WidgetRender::PopLayer => {}
             WidgetRender::Image { .. } => {}
             WidgetRender::NinePatch { .. } => {}
             WidgetRender::RenderTarget { .. } => {}
@@ -103,6 +107,22 @@ impl WidgetRender {
             } => {
                 *path_color = Some(color);
             }
+        }
+    }
+
+    /// Gets the name of the command. Useful for debugging.
+    pub fn to_string(&self) -> &'static str {
+        match self {
+            WidgetRender::Quad => "Quad",
+            WidgetRender::Text { .. } => "Text",
+            WidgetRender::RichText { .. } => "RichText",
+            WidgetRender::Custom { .. } => "Custom",
+            WidgetRender::Layer => "Layer",
+            WidgetRender::PopLayer => "PopLayer",
+            WidgetRender::Image { .. } => "Image",
+            WidgetRender::NinePatch { .. } => "NinePatch",
+            WidgetRender::RenderTarget { .. } => "RenderTarget",
+            WidgetRender::Svg { .. } => "Svg",
         }
     }
 
@@ -135,10 +155,13 @@ impl WidgetRender {
         }
 
         // Screen clipping
-        if location_y + size_y < 0.0
+        if (location_y + size_y < 0.0
             || location_x + size_x < 0.0
             || location_x > camera_size.x
-            || location_y > camera_size.y
+            || location_y > camera_size.y)
+            // Don't cull layers! They are important.
+            && !matches!(self, WidgetRender::Layer)
+            && !matches!(self, WidgetRender::PopLayer)
         {
             return false;
         }
@@ -447,6 +470,9 @@ impl WidgetRender {
                 );
                 did_layer = true;
             }
+            WidgetRender::PopLayer => {
+                vello_scene.pop_layer();
+            }
             WidgetRender::Image {
                 handle: image_handle,
             } => {
@@ -672,6 +698,12 @@ pub struct WidgetRenderCustom {
 impl Default for WidgetRenderCustom {
     fn default() -> Self {
         Self::new(|_, _, _, _| {})
+    }
+}
+
+impl std::fmt::Debug for WidgetRenderCustom {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WidgetRenderCustom").finish()
     }
 }
 
