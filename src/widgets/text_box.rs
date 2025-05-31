@@ -163,6 +163,10 @@ pub struct TextBoxState {
     pub multi_line: bool,
 }
 
+// TODO: Remove once Parley is updated.
+unsafe impl Send for TextBoxState {}
+unsafe impl Sync for TextBoxState {}
+
 impl PartialEq for TextBoxState {
     fn eq(&self, other: &Self) -> bool {
         self.hovering == other.hovering
@@ -697,7 +701,7 @@ pub fn render(
         clip_children.add::<Element>((
             Element,
             WoodpeckerStyle {
-                height: Units::Percentage(100.0),
+                height: Units::Pixels(selections.iter().map(|s| s.0.height() as f32).sum()),
                 ..styles.cursor
             },
             WidgetRender::Custom {
