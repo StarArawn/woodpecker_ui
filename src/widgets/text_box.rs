@@ -9,6 +9,7 @@ use web_time::Instant;
 
 use crate::{
     keyboard_input::{WidgetKeyboardButtonEvent, WidgetPasteEvent},
+    picking_backend::compute_letterboxed_transform,
     prelude::*,
     DefaultFont,
 };
@@ -72,10 +73,27 @@ impl Default for TextboxStyles {
     }
 }
 
+/// The tab behavior. Defaults to 4 spaces.
+#[derive(Reflect, PartialEq, Clone, Copy)]
+pub enum TabMode {
+    /// Tab characters :(
+    Tab,
+    /// Space characters :D
+    /// u8 value is how many spaces.
+    /// defaults to 4.
+    Space(u8),
+}
+
+impl Default for TabMode {
+    fn default() -> Self {
+        Self::Space(4)
+    }
+}
+
 /// The Woodpecker UI Button
 #[derive(Component, Reflect, Default, PartialEq, Widget, Clone)]
 #[auto_update(render)]
-#[props(TextBox, TextboxStyles)]
+#[props(TextBox, TextboxStyles, WidgetLayout)]
 #[state(TextBoxState)]
 #[require(WidgetRender = WidgetRender::Quad, WidgetChildren, WoodpeckerStyle, TextboxStyles, Pickable, Focusable)]
 pub struct TextBox {
@@ -87,6 +105,8 @@ pub struct TextBox {
     /// text coloring.
     #[reflect(ignore)]
     pub text_highlighting: ApplyHighlighting,
+    /// The tab behavior. Defaults to 4 spaces.
+    pub tab_mode: TabMode,
 }
 
 /// Applies color highlighting to the text.
@@ -143,6 +163,10 @@ pub struct TextBoxState {
     pub multi_line: bool,
 }
 
+// TODO: Remove once Parley is updated.
+unsafe impl Send for TextBoxState {}
+unsafe impl Sync for TextBoxState {}
+
 impl PartialEq for TextBoxState {
     fn eq(&self, other: &Self) -> bool {
         self.hovering == other.hovering
@@ -175,7 +199,7 @@ pub fn render(
     mut commands: Commands,
     current_widget: Res<CurrentWidget>,
     mut hook_helper: ResMut<HookHelper>,
-    mut font_manager: ResMut<FontManager>,
+    font_manager: Res<FontManager>,
     default_font: Res<DefaultFont>,
     mut query: Query<(
         Ref<TextBox>,
@@ -183,11 +207,14 @@ pub fn render(
         &TextboxStyles,
         &mut WidgetChildren,
     )>,
+    widget_layout: Query<&WidgetLayout>,
     mut state_query: Query<&mut TextBoxState>,
 ) {
     let Ok((text_box, mut style, styles, mut children)) = query.get_mut(**current_widget) else {
         return;
     };
+
+    let tab_mode = text_box.tab_mode;
 
     let mut default_engine = parley::PlainEditor::new(styles.normal.font_size);
     default_engine.set_text(&text_box.initial_value);
@@ -223,12 +250,15 @@ pub fn render(
         return;
     };
 
+    if let Ok(layout) = widget_layout.get(current_widget.entity()) {
+        state.engine.set_width(Some(layout.size.x));
+    }
+
     if text_box.initial_value != state.initial_value {
         state.initial_value = text_box.initial_value.clone();
         state.current_value.clone_from(&text_box.initial_value);
         state.engine.set_text(&text_box.initial_value);
-        let mut driver = font_manager.driver(&mut state.engine);
-        driver.move_to_line_end();
+
         state.selections = state.engine.selection_geometry();
         state.cursor = state
             .engine
@@ -334,6 +364,8 @@ pub fn render(
                   style_query: Query<&WoodpeckerStyle>,
                   mut font_manager: ResMut<FontManager>,
                   widget_layout: Query<&WidgetLayout>,
+                  window: Single<(Entity, &Window), With<PrimaryWindow>>,
+                  camera: Query<&Camera, With<WoodpeckerView>>,
                   mut state_query: Query<&mut TextBoxState>| {
                 let Ok(styles) = style_query.get(trigger.target) else {
                     return;
@@ -355,21 +387,33 @@ pub fn render(
 
                 let mut driver = font_manager.driver(&mut state.engine);
 
+                let Some(camera) = camera.iter().next() else {
+                    return;
+                };
+
+                let (offset, size, _scale) = compute_letterboxed_transform(
+                    window.1.size(),
+                    camera.logical_target_size().unwrap(),
+                );
+
+                let cursor_pos_world = ((trigger.pointer_location.position - offset) / size)
+                    * camera.logical_target_size().unwrap();
+
                 if keyboard_input.pressed(KeyCode::ShiftLeft) {
                     driver.extend_selection_to_point(
-                        trigger.pointer_location.position.x
+                        cursor_pos_world.x
                             - widget_layout.location.x
                             - widget_layout.padding.left.value_or(0.0),
-                        trigger.pointer_location.position.y
+                        cursor_pos_world.y
                             - widget_layout.location.y
                             - widget_layout.padding.top.value_or(0.0),
                     );
                 } else {
                     driver.move_to_point(
-                        trigger.pointer_location.position.x
+                        cursor_pos_world.x
                             - widget_layout.location.x
                             - widget_layout.padding.left.value_or(0.0),
-                        trigger.pointer_location.position.y
+                        cursor_pos_world.y
                             - widget_layout.location.y
                             - widget_layout.padding.top.value_or(0.0),
                     );
@@ -389,6 +433,8 @@ pub fn render(
                   style_query: Query<&WoodpeckerStyle>,
                   mut font_manager: ResMut<FontManager>,
                   widget_layout: Query<&WidgetLayout>,
+                  window: Single<(Entity, &Window), With<PrimaryWindow>>,
+                  camera: Query<&Camera, With<WoodpeckerView>>,
                   mut state_query: Query<&mut TextBoxState>| {
                 let Ok(styles) = style_query.get(trigger.target) else {
                     return;
@@ -403,15 +449,29 @@ pub fn render(
                 if !state.focused && !state.multi_line {
                     return;
                 }
+
+                let Some(camera) = camera.iter().next() else {
+                    return;
+                };
+
+                let (offset, size, _scale) = compute_letterboxed_transform(
+                    window.1.size(),
+                    camera.logical_target_size().unwrap(),
+                );
+
+                let cursor_pos_world = ((trigger.pointer_location.position - offset) / size)
+                    * camera.logical_target_size().unwrap();
                 let mut driver = font_manager.driver(&mut state.engine);
-                driver.move_to_point(
-                    trigger.pointer_location.position.x
+
+                let start_point = bevy::prelude::Vec2::new(
+                    cursor_pos_world.x
                         - widget_layout.location.x
                         - widget_layout.padding.left.value_or(0.0),
-                    trigger.pointer_location.position.y
+                    cursor_pos_world.y
                         - widget_layout.location.y
                         - widget_layout.padding.top.value_or(0.0),
                 );
+                driver.move_to_point(start_point.x, start_point.y);
                 state.cursor = state
                     .engine
                     .cursor_geometry(styles.font_size)
@@ -425,6 +485,8 @@ pub fn render(
                   style_query: Query<&WoodpeckerStyle>,
                   mut font_manager: ResMut<FontManager>,
                   widget_layout: Query<&WidgetLayout>,
+                  window: Single<(Entity, &Window), With<PrimaryWindow>>,
+                  camera: Query<&Camera, With<WoodpeckerView>>,
                   mut state_query: Query<&mut TextBoxState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
@@ -440,14 +502,29 @@ pub fn render(
                     return;
                 }
                 let mut driver = font_manager.driver(&mut state.engine);
-                driver.extend_selection_to_point(
-                    trigger.pointer_location.position.x
+
+                let Some(camera) = camera.iter().next() else {
+                    return;
+                };
+
+                let (offset, size, _scale) = compute_letterboxed_transform(
+                    window.1.size(),
+                    camera.logical_target_size().unwrap(),
+                );
+
+                let cursor_pos_world = ((trigger.pointer_location.position - offset) / size)
+                    * camera.logical_target_size().unwrap();
+
+                let final_point = bevy::prelude::Vec2::new(
+                    cursor_pos_world.x
                         - widget_layout.location.x
                         - widget_layout.padding.left.value_or(0.0),
-                    trigger.pointer_location.position.y
+                    cursor_pos_world.y
                         - widget_layout.location.y
                         - widget_layout.padding.top.value_or(0.0),
                 );
+
+                driver.extend_selection_to_point(final_point.x, final_point.y);
                 state.cursor = state
                     .engine
                     .cursor_geometry(styles.font_size)
@@ -577,24 +654,61 @@ pub fn render(
                     font_manager,
                     keyboard_input,
                     state_entity,
+                    tab_mode,
                 );
             },
         );
 
     let mut clip_children = WidgetChildren::default();
 
+    clip_children.add::<Element>((
+        Element,
+        WoodpeckerStyle {
+            font_size: style.font_size,
+            color: style.color,
+            text_wrap: if text_box.multi_line {
+                TextWrap::WordOrGlyph
+            } else {
+                TextWrap::None
+            },
+            // Forces the text to appear ontop of the selection and
+            // cursor. We could render them first but text is expensive to change the order of
+            // as we need to recompute layouts. So to save on performance we want to only
+            // re-compute the text when it has actually changed.
+            // Since selection and cursor can not be rendered they force the text element to
+            // shift child locations which forces a full re-render.
+            // Shift it by 2 since we have two children after this.
+            z_index: Some(WidgetZ::Relative(2)),
+            ..Default::default()
+        },
+        if let Some(text_highlight) = (text_box.text_highlighting.inner)(&state.current_value) {
+            WidgetRender::RichText {
+                content: RichText::from_hightlighted(&state.current_value, text_highlight),
+            }
+        } else {
+            WidgetRender::Text {
+                content: state.current_value.clone(),
+            }
+        },
+    ));
+
     if !state.selections.is_empty() {
         let selections = state.selections.clone();
-        let multi_line = state.multi_line;
+        let Ok(layout) = widget_layout.get(current_widget.entity()) else {
+            return;
+        };
+        let pos = layout.location;
         clip_children.add::<Element>((
             Element,
-            styles.cursor,
+            WoodpeckerStyle {
+                height: Units::Pixels(selections.iter().map(|s| s.0.height() as f32).sum()),
+                ..styles.cursor
+            },
             WidgetRender::Custom {
-                render: WidgetRenderCustom::new(move |scene, widget_layout, styles, scale| {
+                render: WidgetRenderCustom::new(move |scene, _widget_layout, styles, scale| {
                     let transform = Affine::default().with_translation(Vec2::new(
-                        (widget_layout.location.x * scale) as f64,
-                        ((widget_layout.location.y - if multi_line { 5.0 } else { 0.0 }) * scale)
-                            as f64,
+                        (pos.x * scale) as f64,
+                        (pos.y * scale) as f64,
                     ));
                     let color = styles.background_color.to_srgba();
                     for selection in selections.iter() {
@@ -615,29 +729,6 @@ pub fn render(
             },
         ));
     }
-
-    clip_children.add::<Element>((
-        Element,
-        WoodpeckerStyle {
-            font_size: style.font_size,
-            color: style.color,
-            text_wrap: if text_box.multi_line {
-                TextWrap::WordOrGlyph
-            } else {
-                TextWrap::None
-            },
-            ..Default::default()
-        },
-        if let Some(text_highlight) = (text_box.text_highlighting.inner)(&state.current_value) {
-            WidgetRender::RichText {
-                content: RichText::from_hightlighted(&state.current_value, text_highlight),
-            }
-        } else {
-            WidgetRender::Text {
-                content: state.current_value.clone(),
-            }
-        },
-    ));
 
     if state.cursor_visible && state.focused {
         clip_children.add::<Element>((Element, cursor_styles, WidgetRender::Quad));
@@ -689,7 +780,50 @@ pub fn textbox_handle_keyboard_events(
     mut font_manager: ResMut<FontManager>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     state_entity: Entity,
+    tab_mode: TabMode,
 ) {
+    if trigger.code == KeyCode::Tab {
+        let Ok(styles) = style_query.get(trigger.target) else {
+            return;
+        };
+        let Ok(mut state) = state_query.get_mut(state_entity) else {
+            return;
+        };
+
+        // Tabs are normally for focus unless you have focus on a multi-line textbox.
+        if !state.multi_line {
+            return;
+        }
+        let mut driver = font_manager.driver(&mut state.engine);
+        match tab_mode {
+            TabMode::Tab => {
+                driver.insert_or_replace_selection("\t");
+            }
+            TabMode::Space(spaces) => {
+                driver.insert_or_replace_selection(
+                    &std::iter::repeat(' ')
+                        .take(spaces as usize)
+                        .collect::<String>(),
+                );
+            }
+        }
+        state.selections = state.engine.selection_geometry();
+        state.cursor = state
+            .engine
+            .cursor_geometry(styles.font_size)
+            .unwrap_or_default();
+        state.current_value = state.engine.text().to_string();
+        commands.trigger_targets(
+            Change {
+                target: trigger.target,
+                data: TextChanged {
+                    value: state.current_value.clone(),
+                },
+            },
+            trigger.target,
+        );
+    }
+
     if trigger.code == KeyCode::Enter {
         let Ok(styles) = style_query.get(trigger.target) else {
             return;

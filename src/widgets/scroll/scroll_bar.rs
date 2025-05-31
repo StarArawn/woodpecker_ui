@@ -1,5 +1,5 @@
-use crate::prelude::*;
-use bevy::prelude::*;
+use crate::{picking_backend::compute_letterboxed_transform, prelude::*};
+use bevy::{prelude::*, window::PrimaryWindow};
 // use bevy_mod_picking::{
 //     events::{Click, Drag, DragEnd, DragStart, Drop, Pointer},
 //     prelude::{ListenerMut, On, Pickable},
@@ -192,6 +192,8 @@ pub fn render(
                         current_widget,
                         move |trigger: Trigger<Pointer<Drag>>,
                         layout_query: Query<&WidgetLayout>,
+                        window: Single<&Window, With<PrimaryWindow>>,
+                        camera: Query<&Camera, With<WoodpeckerView>>,
                          mut context_query: Query<&mut ScrollContext>| {
                             let Ok(mut context) = context_query.get_mut(context_entity) else {
                                 return;
@@ -200,6 +202,19 @@ pub fn render(
                             let Ok(layout) = layout_query.get(*current_widget) else {
                                 return;
                             };
+
+                            let Some(camera) = camera.iter().next() else {
+                                return;
+                            };
+
+                            let (offset, size, _scale) = compute_letterboxed_transform(
+                                window.size(),
+                                camera.logical_target_size().unwrap(),
+                            );
+
+                            let cursor_pos_world =
+                                ((trigger.pointer_location.position - offset) / size) * camera.logical_target_size().unwrap();
+
 
                             // The size of the thumb as a percentage
                             let content_width = context.content_width();
@@ -214,10 +229,10 @@ pub fn render(
                             // Positional difference (scaled by thumb size)
                             let pos_diff = (
                                 (context.start_pos.x
-                                    - (trigger.pointer_location.position.x - layout.location.x))
+                                    - (cursor_pos_world.x - layout.location.x))
                                     / thumb_size_percent,
                                 (context.start_pos.y
-                                    - (trigger.pointer_location.position.y - layout.location.y))
+                                    - (cursor_pos_world.y - layout.location.y))
                                     / thumb_size_percent,
                             );
 
@@ -233,7 +248,12 @@ pub fn render(
         Pickable::default(),
         WidgetRender::Quad,
     )).observe(
-        current_widget,move |trigger: Trigger<Pointer<Click>>, layout_query: Query<&WidgetLayout>, mut context_query: Query<&mut ScrollContext>| {
+        current_widget,move |
+            trigger: Trigger<Pointer<Click>>, 
+            layout_query: Query<&WidgetLayout>,
+            window: Single<&Window, With<PrimaryWindow>>,
+            camera: Query<&Camera, With<WoodpeckerView>>,
+            mut context_query: Query<&mut ScrollContext>| {
         let Ok(mut context) = context_query.get_mut(context_entity) else {
             return;
         };
@@ -242,12 +262,24 @@ pub fn render(
             return;
         };
 
+        let Some(camera) = camera.iter().next() else {
+            return;
+        };
+
+        let (offset, size, _scale) = compute_letterboxed_transform(
+            window.size(),
+            camera.logical_target_size().unwrap(),
+        );
+
+        let cursor_pos_world =
+            ((trigger.pointer_location.position - offset) / size) * camera.logical_target_size().unwrap();
+
         // --- Move Thumb --- //
         // Positional difference (scaled by thumb size)
         let pos_diff = (
-            (context.start_pos.x - (trigger.pointer_location.position.x - layout.location.x))
+            (context.start_pos.x - (cursor_pos_world.x - layout.location.x))
                 / thumb_size_percent,
-            (context.start_pos.y - (trigger.pointer_location.position.y - layout.location.y))
+            (context.start_pos.y - (cursor_pos_world.y - layout.location.y))
                 / thumb_size_percent,
         );
 

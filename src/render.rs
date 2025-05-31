@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use bevy::{asset::RenderAssetUsages, prelude::*};
+use bevy::{asset::RenderAssetUsages, image::ImageSampler, prelude::*};
 use bevy_vello::{
     prelude::VelloFont,
     vello::{
@@ -654,21 +654,25 @@ impl WidgetRender {
                     );
                     conv_image.texture_descriptor.usage =
                         TextureUsages::COPY_SRC | TextureUsages::RENDER_ATTACHMENT;
+                    conv_image.sampler = match widget_style.image_quality {
+                        crate::styles::ImageQuality::Low => ImageSampler::nearest(),
+                        crate::styles::ImageQuality::Medium => ImageSampler::linear(),
+                        crate::styles::ImageQuality::High => ImageSampler::linear(),
+                    };
                     let conv_image_handle = image_assets.add(conv_image);
 
                     render_targets
                         .images
                         .insert(handle.clone(), conv_image_handle);
                     let data: Vec<u8> = vec![];
-                    render_targets.vello_images.insert(
-                        handle.clone(),
-                        peniko::Image::new(
-                            data.into(),
-                            peniko::ImageFormat::Rgba8,
-                            image_texture_descriptor.size.width,
-                            image_texture_descriptor.size.height,
-                        ),
+                    let mut image = peniko::Image::new(
+                        data.into(),
+                        peniko::ImageFormat::Rgba8,
+                        image_texture_descriptor.size.width,
+                        image_texture_descriptor.size.height,
                     );
+                    image.quality = widget_style.image_quality.into();
+                    render_targets.vello_images.insert(handle.clone(), image);
                 }
                 let vello_image = render_targets.vello_images.get(handle).unwrap();
                 vello_scene.draw_image(vello_image, transform);

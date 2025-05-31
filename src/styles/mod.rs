@@ -209,7 +209,34 @@ pub struct WoodpeckerStyle {
     /// Image Quality
     pub image_quality: ImageQuality,
     /// Z Index
-    pub z_index: Option<u32>,
+    pub z_index: Option<WidgetZ>,
+}
+
+/// A z index which is either global or relative.
+#[derive(Reflect, Debug, Clone, PartialEq, Copy)]
+pub enum WidgetZ {
+    /// Global to the entire widget tree
+    Global(u32),
+    /// Relative to the order of its sibilings.
+    Relative(i32),
+}
+
+impl WidgetZ {
+    /// Retrieves the global z index or returns none.
+    pub fn get_global(&self) -> Option<u32> {
+        match self {
+            WidgetZ::Global(z) => Some(*z),
+            WidgetZ::Relative(_) => None,
+        }
+    }
+
+    /// Retrieves the relative z index or returns none.
+    pub fn get_relative(&self) -> Option<i32> {
+        match self {
+            WidgetZ::Global(_) => None,
+            WidgetZ::Relative(z) => Some(*z),
+        }
+    }
 }
 
 /// Image Quality

@@ -1,4 +1,4 @@
-mod measure;
+pub(crate) mod measure;
 pub(crate) mod system;
 
 use bevy::{ecs::entity::EntityHashMap, prelude::*};
