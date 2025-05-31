@@ -1,9 +1,9 @@
 use bevy::{
+    platform::collections::{HashMap, HashSet},
     prelude::*,
-    utils::{HashMap, HashSet},
 };
 
-use crate::{context::Widget, ParentWidget};
+use crate::{context::Widget, runner::get_all_children, ObserverCache, ParentWidget};
 
 /// Maps parent widgets to child widgets.
 /// Will overwrite old widgets with new entities if the type and or key has changed.
@@ -83,6 +83,7 @@ impl WidgetMapper {
     pub(crate) fn get_or_insert_entity_world(
         &mut self,
         world: &mut World,
+        observer_cache: &mut ObserverCache,
         widget_name: String,
         parent: ParentWidget,
         child_key: Option<String>,
@@ -99,12 +100,30 @@ impl WidgetMapper {
                     self.new_this_tick.insert(mapping.entity);
                     return mapping.entity;
                 } else {
-                    world.entity_mut(mapping.entity).despawn_recursive();
+                    let entity_to_remove = mapping.entity;
+                    // Remove observers
+                    observer_cache.despawn_for_target(world, entity_to_remove);
+
+                    // Remove from the mapper.
+                    self.remove_by_entity_id(parent.entity(), entity_to_remove);
+
+                    // Remove children of this child
+                    for child in get_all_children(world, entity_to_remove) {
+                        if world.get_entity(child).is_err() {
+                            continue;
+                        }
+                        let parent = world.entity(child).get::<ChildOf>().expect("Unknown dangling child! This is an error with woodpecker UI source please file a bug report.").parent();
+                        self.remove_by_entity_id(parent, child);
+                        observer_cache.despawn_for_target(world, child);
+                    }
+
+                    // Remove
+                    world.entity_mut(entity_to_remove).despawn();
                 }
             }
         }
 
-        let child_entity = world.spawn_empty().set_parent(*parent).id();
+        let child_entity = world.spawn(ChildOf(*parent)).id();
         self.add(key, parent, child_entity, child_position_index);
 
         self.new_this_tick.insert(child_entity);

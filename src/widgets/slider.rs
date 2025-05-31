@@ -1,10 +1,5 @@
 use crate::prelude::*;
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Drag, Pointer},
-    focus::PickingInteraction,
-    prelude::{Listener, ListenerMut, On, Pickable},
-};
 
 /// A slider change event.
 #[derive(Reflect, Debug, Clone, PartialEq, Default)]
@@ -15,7 +10,7 @@ pub struct SliderChanged {
 }
 
 /// Slider state
-#[derive(Component, Reflect, Clone, Copy, PartialEq, Default)]
+#[derive(Component, Debug, Reflect, Clone, Copy, PartialEq, Default)]
 pub struct SliderState {
     /// The value of the slider
     pub value: f32,
@@ -79,6 +74,7 @@ impl Default for SliderStyles {
 #[auto_update(render)]
 #[props(Slider, SliderStyles)]
 #[state(SliderState)]
+#[require(SliderStyles, WidgetChildren, WoodpeckerStyle, WidgetRender = WidgetRender::Quad, Pickable)]
 pub struct Slider {
     /// Start value
     pub start: f32,
@@ -94,42 +90,6 @@ impl Default for Slider {
             start: 0.0,
             end: 1.0,
             value: 0.0,
-        }
-    }
-}
-
-/// A bundle for convince when creating the widget.
-#[derive(Bundle, Clone)]
-pub struct SliderBundle {
-    /// The slider
-    pub slider: Slider,
-    /// The collection of styles used by the slider
-    pub slider_styles: SliderStyles,
-    /// The internal children used by the slider
-    pub children: WidgetChildren,
-    /// The styles of the slider
-    pub styles: WoodpeckerStyle,
-    /// The render mode of the slider. Default: Quad
-    pub render: WidgetRender,
-    /// Change detection event
-    pub on_changed: On<Change<SliderChanged>>,
-    /// Provides overrides for picking behavior.
-    pub pickable: Pickable,
-    /// Tracks entity interaction state.
-    pub interaction: PickingInteraction,
-}
-
-impl Default for SliderBundle {
-    fn default() -> Self {
-        Self {
-            slider: Default::default(),
-            slider_styles: Default::default(),
-            children: Default::default(),
-            styles: Default::default(),
-            render: WidgetRender::Quad,
-            on_changed: On::<Change<SliderChanged>>::run(|| {}),
-            pickable: Default::default(),
-            interaction: Default::default(),
         }
     }
 }
@@ -164,42 +124,46 @@ fn render(
 
     *styles = slider_styles.bar;
 
-    let widget_layout = *widget_layout;
     let current_widget = *current_widget;
-    commands
-        .entity(*current_widget)
-        .insert(On::<Pointer<Click>>::run(
-            move |event: Listener<Pointer<Click>>,
-                  mut state_query: Query<&mut SliderState>,
-                  mut event_writer: EventWriter<Change<SliderChanged>>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
+    *children = WidgetChildren::default().with_observe(
+        current_widget,
+        move |trigger: Trigger<Pointer<Click>>,
+              mut commands: Commands,
+              layout_query: Query<&WidgetLayout>,
+              mut state_query: Query<&mut SliderState>| {
+            let Ok(mut state) = state_query.get_mut(state_entity) else {
+                return;
+            };
+            let Ok(widget_layout) = layout_query.get(*current_widget) else {
+                return;
+            };
 
-                state.value = (event.pointer_location.position.x - widget_layout.location.x)
-                    / widget_layout.size.x;
-                state.value = state.value.clamp(0.0, 1.0);
-                event_writer.send(Change {
+            state.value = (trigger.pointer_location.position.x - widget_layout.location.x)
+                / widget_layout.size.x;
+            state.value = state.value.clamp(0.0, 1.0);
+            commands.trigger_targets(
+                Change {
                     target: *current_widget,
                     data: SliderChanged { value: state.value },
-                });
-            },
-        ));
+                },
+                *current_widget,
+            );
+        },
+    );
 
     children.add::<Element>((
-        ElementBundle {
-            styles: WoodpeckerStyle {
-                width: (slider_left + 10.0).into(),
-                ..slider_styles.fill
-            },
-            ..Default::default()
+        Element,
+        WoodpeckerStyle {
+            width: (slider_left + 10.0).into(),
+            ..slider_styles.fill
         },
         WidgetRender::Quad,
     ));
 
-    children.add::<WButton>((
-        WButtonBundle {
-            button_styles: ButtonStyles {
+    children
+        .add::<WButton>((
+            WButton,
+            ButtonStyles {
                 normal: WoodpeckerStyle {
                     left: slider_left.into(),
                     ..slider_styles.button.normal
@@ -209,26 +173,31 @@ fn render(
                     ..slider_styles.button.hovered
                 },
             },
-            ..default()
-        },
-        On::<Pointer<Drag>>::run(
-            move |event: ListenerMut<Pointer<Drag>>,
-                  mut state_query: Query<&mut SliderState>,
-                  mut event_writer: EventWriter<Change<SliderChanged>>| {
+        ))
+        .observe(
+            current_widget,
+            move |trigger: Trigger<Pointer<Drag>>,
+                  mut commands: Commands,
+                  layout_query: Query<&WidgetLayout>,
+                  mut state_query: Query<&mut SliderState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
-
-                state.value = (event.pointer_location.position.x - widget_layout.location.x)
+                let Ok(widget_layout) = layout_query.get(*current_widget) else {
+                    return;
+                };
+                state.value = (trigger.pointer_location.position.x - widget_layout.location.x)
                     / widget_layout.size.x;
                 state.value = state.value.clamp(0.0, 1.0);
-                event_writer.send(Change {
-                    target: *current_widget,
-                    data: SliderChanged { value: state.value },
-                });
+                commands.trigger_targets(
+                    Change {
+                        target: *current_widget,
+                        data: SliderChanged { value: state.value },
+                    },
+                    *current_widget,
+                );
             },
-        ),
-    ));
+        );
 
     children.apply(current_widget.as_parent());
 }

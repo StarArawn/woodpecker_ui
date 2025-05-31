@@ -1,16 +1,17 @@
 use crate::prelude::*;
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Drag, Pointer},
-    prelude::{Listener, On},
-    PickableBundle,
-};
+// use bevy_mod_picking::{
+//     events::{Drag, Pointer},
+//     prelude::{Listener, On},
+//     PickableBundle,
+// };
 
 /// State to keep track of window data.
-#[derive(Default, Component, Reflect, PartialEq, Clone)]
+#[derive(Default, Debug, Component, Reflect, PartialEq, Clone)]
 pub struct WindowState {
     /// The position of the window.
     position: Vec2,
+    drag_offset: Vec2,
 }
 
 /// Window widget
@@ -18,6 +19,8 @@ pub struct WindowState {
 #[auto_update(render)]
 #[props(WoodpeckerWindow, PassedChildren)]
 #[state(WindowState)]
+#[context(WindowingContext)]
+#[require(WoodpeckerStyle, PassedChildren, WidgetRender = WidgetRender::Quad, WidgetChildren, Pickable, Focusable)]
 pub struct WoodpeckerWindow {
     /// The title of the window.
     pub title: String,
@@ -66,33 +69,6 @@ impl Default for WoodpeckerWindow {
     }
 }
 
-/// A convince bundle for spawning a [`Window``] widget.
-#[derive(Bundle, Clone)]
-pub struct WoodpeckerWindowBundle {
-    /// The window widget component
-    pub window: WoodpeckerWindow,
-    /// The internal styles
-    pub internal_styles: WoodpeckerStyle,
-    /// Passed in children
-    pub children: PassedChildren,
-    /// The internal rendering component
-    pub internal_render: WidgetRender,
-    /// the internal children.
-    pub internal_children: WidgetChildren,
-}
-
-impl Default for WoodpeckerWindowBundle {
-    fn default() -> Self {
-        Self {
-            window: Default::default(),
-            internal_styles: Default::default(),
-            internal_render: WidgetRender::Quad,
-            internal_children: Default::default(),
-            children: Default::default(),
-        }
-    }
-}
-
 fn render(
     mut commands: Commands,
     current_widget: Res<CurrentWidget>,
@@ -101,11 +77,14 @@ fn render(
         &WoodpeckerWindow,
         &mut WoodpeckerStyle,
         &mut WidgetChildren,
+        &WidgetLayout,
         &PassedChildren,
     )>,
     state_query: Query<&mut WindowState>,
+    mut context_query: Query<&mut WindowingContext>,
 ) {
-    let Ok((window, mut styles, mut children, passed_children)) = query.get_mut(**current_widget)
+    let Ok((window, mut styles, mut children, layout, passed_children)) =
+        query.get_mut(**current_widget)
     else {
         return;
     };
@@ -115,6 +94,7 @@ fn render(
         *current_widget,
         WindowState {
             position: window.initial_position,
+            drag_offset: Vec2::new(0.0, 0.0),
         },
     );
 
@@ -122,57 +102,106 @@ fn render(
         return;
     };
 
+    // Setup windowing context.
+    let context_entity =
+        hooks.use_context(&mut commands, *current_widget, WindowingContext::default());
+
+    let Ok(mut context) = context_query.get_mut(context_entity) else {
+        return;
+    };
+
+    let z_index = context.get_or_add(current_widget.entity());
+
     *styles = WoodpeckerStyle {
         position: WidgetPosition::Fixed,
         left: state.position.x.into(),
         top: state.position.y.into(),
+        z_index: Some(z_index as u32),
         ..window.window_styles
     };
 
+    *children = WidgetChildren::default();
     let current_widget = *current_widget;
     children
+        .observe(
+            current_widget,
+            move |trigger: Trigger<WidgetFocus>,
+                  mut context_query: Query<&mut WindowingContext>| {
+                let Ok(mut context) = context_query.get_mut(context_entity) else {
+                    return;
+                };
+
+                context.shift_to_top(trigger.target);
+            },
+        )
         // Title
         .add::<Element>((
-            ElementBundle {
-                styles: window.title_styles,
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: WoodpeckerStyle {
-                            font_size: 14.0,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    WidgetRender::Text {
-                        content: window.title.clone(),
-                        word_wrap: false,
-                    },
-                )),
-                ..Default::default()
+            Element,
+            WoodpeckerStyle {
+                width: layout.width().into(),
+                ..window.title_styles
             },
-            PickableBundle::default(),
-            WidgetRender::Quad,
-            On::<Pointer<Drag>>::run(
-                move |event: Listener<Pointer<Drag>>,
-                      mut state_query: Query<&mut WindowState>,
-                      layout_query: Query<&WidgetLayout>| {
-                    let Ok(mut state) = state_query.get_mut(state_entity) else {
-                        return;
-                    };
-                    let Ok(layout) = layout_query.get(*current_widget) else {
-                        return;
-                    };
-                    state.position =
-                        layout.location + (event.pointer_location.position - layout.location);
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 14.0,
+                    text_wrap: TextWrap::None,
+                    ..Default::default()
                 },
-            ),
+                WidgetRender::Text {
+                    content: window.title.clone(),
+                },
+            )),
+            WidgetRender::Quad,
+            Pickable::default(),
         ))
+        .observe(
+            current_widget,
+            move |_trigger: Trigger<Pointer<Pressed>>,
+                  mut context_query: Query<&mut WindowingContext>| {
+                let Ok(mut context) = context_query.get_mut(context_entity) else {
+                    return;
+                };
+
+                context.shift_to_top(current_widget.entity());
+            },
+        )
+        .observe(
+            current_widget,
+            move |trigger: Trigger<Pointer<DragStart>>,
+                  mut state_query: Query<&mut WindowState>,
+                  mut context_query: Query<&mut WindowingContext>| {
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
+                state.drag_offset = state.position - trigger.pointer_location.position;
+
+                let Ok(mut context) = context_query.get_mut(context_entity) else {
+                    return;
+                };
+
+                context.shift_to_top(current_widget.entity());
+            },
+        )
+        .observe(
+            current_widget,
+            move |trigger: Trigger<Pointer<Drag>>,
+                  mut state_query: Query<&mut WindowState>,
+                  mut context_query: Query<&mut WindowingContext>| {
+                let Ok(mut state) = state_query.get_mut(state_entity) else {
+                    return;
+                };
+                state.position = trigger.pointer_location.position + state.drag_offset;
+
+                let Ok(mut context) = context_query.get_mut(context_entity) else {
+                    return;
+                };
+
+                context.shift_to_top(current_widget.entity());
+            },
+        )
         // Children
-        .add::<Element>(ElementBundle {
-            styles: window.children_styles,
-            children: passed_children.0.clone(),
-            ..Default::default()
-        });
+        .add::<Element>((Element, window.children_styles, passed_children.0.clone()));
 
     children.apply(current_widget.as_parent());
 }

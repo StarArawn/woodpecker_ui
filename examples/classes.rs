@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_mod_picking::DefaultPickingPlugins;
 use woodpecker_ui::prelude::*;
 
 /// A list of classes our widgets will use
@@ -44,50 +43,40 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)
         .run();
 }
 
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2d, WoodpeckerView));
 
     let root = commands
-        .spawn(WoodpeckerAppBundle {
-            styles: classes::app_styles,
-            children: WidgetChildren::default()
+        .spawn((
+            WoodpeckerApp,
+            classes::app_styles,
+            WidgetChildren::default()
                 .with_child::<Element>((
-                    ElementBundle {
-                        styles: classes::red_text,
-                        ..Default::default()
-                    },
+                    Element,
+                    classes::red_text,
                     WidgetRender::Text {
                         content: "Hello, I am red text!".into(),
-                        word_wrap: false,
                     },
                 ))
                 .with_child::<Element>((
-                    ElementBundle {
-                        styles: classes::blue_text,
-                        ..Default::default()
-                    },
+                    Element,
+                    classes::blue_text,
                     WidgetRender::Text {
                         content: "Hello, I am blue text!".into(),
-                        word_wrap: false,
                     },
                 ))
                 .with_child::<Element>((
-                    ElementBundle {
-                        styles: classes::green_text,
-                        ..Default::default()
-                    },
+                    Element,
+                    classes::green_text,
                     WidgetRender::Text {
                         content: "Hello, I am green text!".into(),
-                        word_wrap: false,
                     },
                 )),
-            ..Default::default()
-        })
+        ))
         .id();
     ui_context.set_root_widget(root);
 }

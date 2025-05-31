@@ -1,22 +1,18 @@
 use crate::prelude::*;
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Out, Over, Pointer},
-    focus::PickingInteraction,
-    prelude::{On, Pickable},
-};
 
 use super::colors;
 
 /// A checkbox change event
-#[derive(Debug, Reflect, Clone)]
+#[derive(Clone, PartialEq, Debug, Reflect)]
+#[reflect(Clone, PartialEq)]
 pub struct CheckboxChanged {
     /// Is the checkbox "checked"?
     pub checked: bool,
 }
 
 /// The state of the checkbox button
-#[derive(Component, Default, Reflect, PartialEq, Clone)]
+#[derive(Component, Debug, Default, Reflect, PartialEq, Clone)]
 pub struct CheckboxState {
     /// Is hovering
     pub is_hovering: bool,
@@ -106,43 +102,8 @@ impl Default for CheckboxWidgetStyles {
 #[auto_update(render)]
 #[props(Checkbox, CheckboxWidgetStyles)]
 #[state(CheckboxState)]
+#[require(CheckboxWidgetStyles, WidgetChildren, WoodpeckerStyle,  WidgetRender = WidgetRender::Quad, Pickable)]
 pub struct Checkbox;
-
-/// A convince bundle for the widget
-#[derive(Bundle, Clone)]
-pub struct CheckboxBundle {
-    /// The checkbox
-    pub checkbox: Checkbox,
-    /// The checkbox styles
-    pub checkbox_styles: CheckboxWidgetStyles,
-    /// The internal children
-    pub internal_children: WidgetChildren,
-    /// The internal styles
-    pub styles: WoodpeckerStyle,
-    /// The render mode of the checkbox. Default: Quad
-    pub render: WidgetRender,
-    /// Provides overrides for picking behavior.
-    pub pickable: Pickable,
-    /// Tracks entity interaction state.
-    pub interaction: PickingInteraction,
-    /// Change detection event
-    pub on_changed: On<Change<CheckboxChanged>>,
-}
-
-impl Default for CheckboxBundle {
-    fn default() -> Self {
-        Self {
-            checkbox: Default::default(),
-            checkbox_styles: Default::default(),
-            internal_children: Default::default(),
-            styles: Default::default(),
-            render: WidgetRender::Quad,
-            pickable: Default::default(),
-            interaction: Default::default(),
-            on_changed: On::<Change<CheckboxChanged>>::run(|| {}),
-        }
-    }
-}
 
 fn render(
     mut commands: Commands,
@@ -170,50 +131,55 @@ fn render(
 
     let state = state_query.get(state_entity).unwrap_or(&default_state);
 
-    // Insert event listeners
     let current_widget = *current_widget;
-    commands
-        .entity(*current_widget)
-        .insert(On::<Pointer<Over>>::run(
-            move |mut state_query: Query<&mut CheckboxState>| {
+
+    *children = WidgetChildren::default();
+    // Insert event listeners
+    children
+        .observe(
+            current_widget,
+            move |_: Trigger<Pointer<Over>>, mut state_query: Query<&mut CheckboxState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
                 state.is_hovering = true;
             },
-        ))
-        .insert(On::<Pointer<Out>>::run(
-            move |mut state_query: Query<&mut CheckboxState>| {
+        )
+        .observe(
+            current_widget,
+            move |_: Trigger<Pointer<Out>>, mut state_query: Query<&mut CheckboxState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
                 state.is_hovering = false;
             },
-        ))
-        .insert(On::<Pointer<Click>>::run(
-            move |mut state_query: Query<&mut CheckboxState>,
-                  mut event_writer: EventWriter<Change<CheckboxChanged>>| {
+        )
+        .observe(
+            current_widget,
+            move |trigger: Trigger<Pointer<Click>>,
+                  mut commands: Commands,
+                  mut state_query: Query<&mut CheckboxState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
                 state.is_checked = !state.is_checked;
-                event_writer.send(Change {
-                    target: *current_widget,
-                    data: CheckboxChanged {
-                        checked: state.is_checked,
+                commands.trigger_targets(
+                    Change {
+                        target: *current_widget,
+                        data: CheckboxChanged {
+                            checked: state.is_checked,
+                        },
                     },
-                });
+                    trigger.target,
+                );
             },
-        ));
+        );
 
-    *children = WidgetChildren::default();
     if state.is_checked {
         let check_styles = checkbox_styles.check.get_style(&default_state);
         children.add::<Element>((
-            ElementBundle {
-                styles: check_styles,
-                ..Default::default()
-            },
+            Element,
+            check_styles,
             WidgetRender::Svg {
                 handle: asset_server
                     .load("embedded://woodpecker_ui/embedded_assets/icons/checkmark.svg"),

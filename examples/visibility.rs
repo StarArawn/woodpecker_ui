@@ -1,27 +1,22 @@
 use bevy::{color::palettes::tailwind::*, prelude::*};
-use bevy_mod_picking::{
-    events::{Click, Pointer},
-    prelude::{On, Pickable},
-    DefaultPickingPlugins,
-};
 use woodpecker_ui::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(DefaultPickingPlugins)
         .register_widget::<MyWidget>()
         .add_systems(Startup, startup)
         .run();
 }
 
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2d, WoodpeckerView));
 
     let root = commands
-        .spawn(WoodpeckerAppBundle {
-            children: WidgetChildren::default().with_child::<MyWidget>(MyWidgetBundle {
+        .spawn((
+            WoodpeckerApp,
+            WidgetChildren::default().with_child::<MyWidget>(MyWidgetBundle {
                 styles: WoodpeckerStyle {
                     display: WidgetDisplay::Flex,
                     flex_direction: WidgetFlexDirection::Column,
@@ -30,8 +25,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                 my_widget: MyWidget,
                 ..default()
             }),
-            ..default()
-        })
+        ))
         .id();
     ui_context.set_root_widget(root);
 }
@@ -90,23 +84,21 @@ fn render(
 
     let buttons = WidgetChildren::default()
         .with_child::<WButton>((
-            WButtonBundle {
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: WoodpeckerStyle {
-                            font_size: 20.0,
-                            ..default()
-                        },
-                        ..default()
-                    },
-                    WidgetRender::Text {
-                        content: "Text".into(),
-                        word_wrap: false,
-                    },
-                )),
-                ..default()
-            },
-            On::<Pointer<Click>>::run(move |mut query: Query<&mut MyWidgetState>| {
+            WButton,
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 20.0,
+                    ..default()
+                },
+                WidgetRender::Text {
+                    content: "Text".into(),
+                },
+            )),
+        ))
+        .with_observe(
+            *current_widget,
+            move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                 let Ok(mut input) = query.get_mut(state_entity) else {
                     return;
                 };
@@ -114,26 +106,24 @@ fn render(
                     WidgetVisibility::Visible => WidgetVisibility::Hidden,
                     WidgetVisibility::Hidden => WidgetVisibility::Visible,
                 };
-            }),
-        ))
-        .with_child::<WButton>((
-            WButtonBundle {
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: WoodpeckerStyle {
-                            font_size: 20.0,
-                            ..default()
-                        },
-                        ..default()
-                    },
-                    WidgetRender::Text {
-                        content: "Image".into(),
-                        word_wrap: false,
-                    },
-                )),
-                ..default()
             },
-            On::<Pointer<Click>>::run(move |mut query: Query<&mut MyWidgetState>| {
+        )
+        .with_child::<WButton>((
+            WButton,
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 20.0,
+                    ..default()
+                },
+                WidgetRender::Text {
+                    content: "Image".into(),
+                },
+            )),
+        ))
+        .with_observe(
+            *current_widget,
+            move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                 let Ok(mut input) = query.get_mut(state_entity) else {
                     return;
                 };
@@ -141,26 +131,24 @@ fn render(
                     WidgetVisibility::Visible => WidgetVisibility::Hidden,
                     WidgetVisibility::Hidden => WidgetVisibility::Visible,
                 };
-            }),
-        ))
-        .with_child::<WButton>((
-            WButtonBundle {
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: WoodpeckerStyle {
-                            font_size: 20.0,
-                            ..default()
-                        },
-                        ..default()
-                    },
-                    WidgetRender::Text {
-                        content: "Quad".into(),
-                        word_wrap: false,
-                    },
-                )),
-                ..default()
             },
-            On::<Pointer<Click>>::run(move |mut query: Query<&mut MyWidgetState>| {
+        )
+        .with_child::<WButton>((
+            WButton,
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 20.0,
+                    ..default()
+                },
+                WidgetRender::Text {
+                    content: "Quad".into(),
+                },
+            )),
+        ))
+        .with_observe(
+            *current_widget,
+            move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                 let Ok(mut input) = query.get_mut(state_entity) else {
                     return;
                 };
@@ -168,26 +156,24 @@ fn render(
                     WidgetVisibility::Visible => WidgetVisibility::Hidden,
                     WidgetVisibility::Hidden => WidgetVisibility::Visible,
                 };
-            }),
-        ))
-        .with_child::<WButton>((
-            WButtonBundle {
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: WoodpeckerStyle {
-                            font_size: 20.0,
-                            ..default()
-                        },
-                        ..default()
-                    },
-                    WidgetRender::Text {
-                        content: "SVG".into(),
-                        word_wrap: false,
-                    },
-                )),
-                ..default()
             },
-            On::<Pointer<Click>>::run(move |mut query: Query<&mut MyWidgetState>| {
+        )
+        .with_child::<WButton>((
+            WButton,
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 20.0,
+                    ..default()
+                },
+                WidgetRender::Text {
+                    content: "SVG".into(),
+                },
+            )),
+        ))
+        .with_observe(
+            *current_widget,
+            move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                 let Ok(mut input) = query.get_mut(state_entity) else {
                     return;
                 };
@@ -195,26 +181,24 @@ fn render(
                     WidgetVisibility::Visible => WidgetVisibility::Hidden,
                     WidgetVisibility::Hidden => WidgetVisibility::Visible,
                 };
-            }),
-        ))
-        .with_child::<WButton>((
-            WButtonBundle {
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: WoodpeckerStyle {
-                            font_size: 20.0,
-                            ..default()
-                        },
-                        ..default()
-                    },
-                    WidgetRender::Text {
-                        content: "nine_patch".into(),
-                        word_wrap: false,
-                    },
-                )),
-                ..default()
             },
-            On::<Pointer<Click>>::run(move |mut query: Query<&mut MyWidgetState>| {
+        )
+        .with_child::<WButton>((
+            WButton,
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 20.0,
+                    ..default()
+                },
+                WidgetRender::Text {
+                    content: "nine_patch".into(),
+                },
+            )),
+        ))
+        .with_observe(
+            *current_widget,
+            move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                 let Ok(mut input) = query.get_mut(state_entity) else {
                     return;
                 };
@@ -222,26 +206,24 @@ fn render(
                     WidgetVisibility::Visible => WidgetVisibility::Hidden,
                     WidgetVisibility::Hidden => WidgetVisibility::Visible,
                 };
-            }),
-        ))
-        .with_child::<WButton>((
-            WButtonBundle {
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: WoodpeckerStyle {
-                            font_size: 20.0,
-                            ..default()
-                        },
-                        ..default()
-                    },
-                    WidgetRender::Text {
-                        content: "layer".into(),
-                        word_wrap: false,
-                    },
-                )),
-                ..default()
             },
-            On::<Pointer<Click>>::run(move |mut query: Query<&mut MyWidgetState>| {
+        )
+        .with_child::<WButton>((
+            WButton,
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 20.0,
+                    ..default()
+                },
+                WidgetRender::Text {
+                    content: "layer".into(),
+                },
+            )),
+        ))
+        .with_observe(
+            *current_widget,
+            move |_trigger: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                 let Ok(mut input) = query.get_mut(state_entity) else {
                     return;
                 };
@@ -249,81 +231,72 @@ fn render(
                     WidgetVisibility::Visible => WidgetVisibility::Hidden,
                     WidgetVisibility::Hidden => WidgetVisibility::Visible,
                 };
-            }),
-        ));
+            },
+        );
 
     widget_children
-        .add::<Element>((ElementBundle {
-            styles: WoodpeckerStyle {
+        .add::<Element>((
+            Element,
+            WoodpeckerStyle {
                 margin: Edge::all(10.0),
                 display: WidgetDisplay::Flex,
                 gap: (Units::Pixels(5.), Units::Pixels(5.)),
                 width: Units::Pixels(100.),
                 ..default()
             },
-            children: buttons,
-            ..default()
-        },))
+            buttons,
+        ))
         .add::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
-                    visibility: state.text,
-                    font_size: 50.0,
-                    color: Srgba::RED.into(),
-                    margin: Edge::all(10.0),
-                    ..default()
-                },
+            Element,
+            WoodpeckerStyle {
+                visibility: state.text,
+                font_size: 50.0,
+                color: Srgba::RED.into(),
+                margin: Edge::all(10.0),
                 ..default()
             },
             WidgetRender::Text {
                 content: "Hello World! I am Woodpecker UI!".into(),
-                word_wrap: false,
             },
             Pickable::default(),
-            On::<Pointer<Click>>::run(|| {
-                info!("Clicked!");
-            }),
         ))
+        .observe(*current_widget, |_trigger: Trigger<Pointer<Click>>| {
+            info!("Clicked!");
+        })
         .add::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
-                    visibility: state.image,
-                    height: Units::Pixels(100.),
-                    ..default()
-                },
+            Element,
+            WoodpeckerStyle {
+                visibility: state.image,
+                height: Units::Pixels(100.),
                 ..default()
             },
             WidgetRender::Image {
                 handle: asset_server.load("woodpecker.jpg"),
             },
             Pickable::default(),
-            On::<Pointer<Click>>::run(|| {
-                info!("Clicked!");
-            }),
         ))
+        .observe(*current_widget, |_trigger: Trigger<Pointer<Click>>| {
+            info!("Clicked!");
+        })
         .add::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
-                    visibility: state.quad,
-                    height: Units::Pixels(100.),
-                    background_color: BLUE_400.into(),
-                    ..default()
-                },
+            Element,
+            WoodpeckerStyle {
+                visibility: state.quad,
+                height: Units::Pixels(100.),
+                background_color: BLUE_400.into(),
                 ..default()
             },
             WidgetRender::Quad,
             Pickable::default(),
-            On::<Pointer<Click>>::run(|| {
-                info!("Clicked!");
-            }),
         ))
+        .observe(*current_widget, |_trigger: Trigger<Pointer<Click>>| {
+            info!("Clicked!");
+        })
         .add::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
-                    visibility: state.svg,
-                    height: Units::Pixels(100.),
-                    ..default()
-                },
+            Element,
+            WoodpeckerStyle {
+                visibility: state.svg,
+                height: Units::Pixels(100.),
                 ..default()
             },
             WidgetRender::Svg {
@@ -331,62 +304,56 @@ fn render(
                 color: Some(Srgba::GREEN.into()),
             },
             Pickable::default(),
-            On::<Pointer<Click>>::run(|| {
-                info!("Clicked!");
-            }),
         ))
+        .observe(*current_widget, |_trigger: Trigger<Pointer<Click>>| {
+            info!("Clicked!");
+        })
         .add::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
-                    visibility: state.nine_patch,
-                    width: 100.0.into(),
-                    height: 200.0.into(),
-                    ..default()
-                },
+            Element,
+            WoodpeckerStyle {
+                visibility: state.nine_patch,
+                width: 100.0.into(),
+                height: 200.0.into(),
                 ..default()
             },
             WidgetRender::NinePatch {
                 handle: asset_server.load("slice.png"),
-                scale_mode: ImageScaleMode::Sliced(TextureSlicer {
-                    border: BorderRect::square(135.),
+                scale_mode: SpriteImageMode::Sliced(TextureSlicer {
+                    border: BorderRect::all(135.),
                     center_scale_mode: SliceScaleMode::Stretch,
                     ..default()
                 }),
             },
             Pickable::default(),
-            On::<Pointer<Click>>::run(|| {
-                info!("Clicked!");
-            }),
         ))
+        .observe(*current_widget, |_trigger: Trigger<Pointer<Click>>| {
+            info!("Clicked!");
+        })
         .add::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
-                    visibility: state.layer,
-                    width: 100.0.into(),
-                    height: 50.0.into(),
-                    ..default()
-                },
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: WoodpeckerStyle {
-                            height: Units::Pixels(100.),
-                            ..default()
-                        },
-                        ..default()
-                    },
-                    WidgetRender::Svg {
-                        handle: asset_server.load("woodpecker_svg/woodpecker.svg"),
-                        color: Some(Srgba::RED.into()),
-                    },
-                )),
+            Element,
+            WoodpeckerStyle {
+                visibility: state.layer,
+                width: 100.0.into(),
+                height: 50.0.into(),
                 ..default()
             },
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    height: Units::Pixels(100.),
+                    ..default()
+                },
+                WidgetRender::Svg {
+                    handle: asset_server.load("woodpecker_svg/woodpecker.svg"),
+                    color: Some(Srgba::RED.into()),
+                },
+            )),
             WidgetRender::Layer,
             Pickable::default(),
-            On::<Pointer<Click>>::run(|| {
-                info!("Clicked!");
-            }),
-        ));
+        ))
+        .observe(*current_widget, |_trigger: Trigger<Pointer<Click>>| {
+            info!("Clicked!");
+        });
 
     widget_children.apply(current_widget.as_parent());
 }

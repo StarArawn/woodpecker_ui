@@ -61,16 +61,14 @@ fn render(
     };
 
     *children = WidgetChildren::default().with_child::<Element>((
-        ElementBundle {
-            styles: WoodpeckerStyle {
-                background_color: colors::BACKGROUND,
-                width: Units::Percentage(100.0),
-                height: Units::Percentage(100.0),
-                ..Default::default()
-            },
-            children: passed_children.0.clone(),
+        Element,
+        WoodpeckerStyle {
+            background_color: colors::BACKGROUND,
+            width: Units::Percentage(100.0),
+            height: Units::Percentage(100.0),
             ..Default::default()
         },
+        passed_children.0.clone(),
         WidgetRender::Quad,
     ));
 

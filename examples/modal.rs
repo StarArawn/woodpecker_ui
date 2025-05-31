@@ -1,9 +1,4 @@
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Pointer},
-    prelude::On,
-    DefaultPickingPlugins,
-};
 use woodpecker_ui::prelude::*;
 
 #[derive(Component, Clone, Default, Debug, Copy, PartialEq)]
@@ -15,16 +10,10 @@ pub struct MyWidgetState {
 #[auto_update(render)]
 #[props(MyWidget)]
 #[state(MyWidgetState)]
+#[require(WoodpeckerStyle, WidgetChildren)]
 struct MyWidget {
     depth: usize,
     total: usize,
-}
-
-#[derive(Bundle, Default, Clone)]
-struct MyWidgetBundle {
-    my_widget: MyWidget,
-    styles: WoodpeckerStyle,
-    children: WidgetChildren,
 }
 
 fn render(
@@ -52,100 +41,92 @@ fn render(
         return;
     };
 
-    widget_children.add::<WButton>((
-        WButtonBundle {
-            children: WidgetChildren::default().with_child::<Element>((
-                ElementBundle {
-                    styles: WoodpeckerStyle {
-                        font_size: 20.0,
-                        ..Default::default()
-                    },
+    widget_children
+        .add::<WButton>((
+            WButton,
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 20.0,
                     ..Default::default()
                 },
                 WidgetRender::Text {
                     content: format!("Open Modal {}", my_widget.total - my_widget.depth),
-                    word_wrap: false,
                 },
             )),
-            ..Default::default()
-        },
-        On::<Pointer<Click>>::run(move |mut query: Query<&mut MyWidgetState>| {
-            if let Ok(mut state) = query.get_mut(state_entity) {
-                state.show_modal = true;
-            }
-        }),
-    ));
+        ))
+        .observe(
+            *current_widget,
+            move |_: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
+                if let Ok(mut state) = query.get_mut(state_entity) {
+                    state.show_modal = true;
+                }
+            },
+        );
 
-    widget_children.add::<Modal>(ModalBundle {
-        modal: Modal {
+    widget_children.add::<Modal>((
+        Modal {
             visible: state.show_modal,
             title: "I am a modal".into(),
             ..Default::default()
         },
-        children: PassedChildren(
+        PassedChildren(
             WidgetChildren::default()
-                .with_child::<Element>(ElementBundle {
-                    styles: WoodpeckerStyle {
+                .with_child::<Element>((
+                    Element,
+                    WoodpeckerStyle {
                         align_items: Some(WidgetAlignItems::Center),
                         flex_direction: WidgetFlexDirection::Column,
                         padding: Edge::all(10.0),
                         width: Units::Percentage(100.0),
                         ..Default::default()
                     },
-                    children: WidgetChildren::default().with_child::<Element>((
-                        ElementBundle {
-                            styles: WoodpeckerStyle {
-                                font_size: 20.0,
-                                ..Default::default()
-                            },
+                    WidgetChildren::default().with_child::<Element>((
+                        Element,
+                        WoodpeckerStyle {
+                            font_size: 20.0,
                             ..Default::default()
                         },
                         WidgetRender::Text {
                             content:
                                 "Hello World! I am Woodpecker UI! This is an example of a modal window!"
                                     .into(),
-                            word_wrap: true,
                         },
                     ))
                     .with_child::<WButton>((
-                        WButtonBundle {
-                            children: WidgetChildren::default().with_child::<Element>((
-                                ElementBundle {
-                                    styles: WoodpeckerStyle {
-                                        width: Units::Percentage(100.0),
-                                        font_size: 20.0,
-                                        text_alignment: Some(TextAlign::Center),
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                WidgetRender::Text {
-                                    content: format!("Close Modal {}", my_widget.total - my_widget.depth),
-                                    word_wrap: true,
-                                },
-                            )),
-                            ..Default::default()
-                        },
-                        On::<Pointer<Click>>::run(move |mut query: Query<&mut MyWidgetState>| {
+                        WButton,
+                        WidgetChildren::default().with_child::<Element>((
+                            Element,
+                            WoodpeckerStyle {
+                                width: Units::Percentage(100.0),
+                                font_size: 20.0,
+                                text_alignment: Some(TextAlign::Center),
+                                ..Default::default()
+                            },
+                            WidgetRender::Text {
+                                content: format!("Close Modal {}", my_widget.total - my_widget.depth),
+                            },
+                        )),
+                    ))
+                    .with_observe(
+                        *current_widget,
+                        move |_: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                             if let Ok(mut state) = query.get_mut(state_entity) {
                                 state.show_modal = false;
                             }
-                        }),
-                    ))
-                    .with_child::<MyWidget>(MyWidgetBundle {
-                        my_widget: MyWidget { depth: my_widget.depth - 1, total: my_widget.total },
-                        styles: WoodpeckerStyle {
+                        },
+                    )
+                    .with_child::<MyWidget>((
+                        MyWidget { depth: my_widget.depth - 1, total: my_widget.total },
+                        WoodpeckerStyle {
                             width: Units::Percentage(100.0),
                             justify_content: Some(WidgetAlignContent::Center),
                             ..Default::default()
                         },
-                        ..Default::default()
-                    }),
-                    ..Default::default()
-                })
+                    )),
+                ))
         ),
-        ..Default::default()
-    });
+    ));
 
     widget_children.apply(current_widget.as_parent());
 }
@@ -154,33 +135,31 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(DefaultPickingPlugins)
         .register_widget::<MyWidget>()
         .add_systems(Startup, startup)
         .run();
 }
 
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2d, WoodpeckerView));
 
-    let number_of_modals = 5;
+    let number_of_modals = 3;
 
     let root = commands
-        .spawn(WoodpeckerAppBundle {
-            children: WidgetChildren::default().with_child::<MyWidget>(MyWidgetBundle {
-                styles: WoodpeckerStyle {
+        .spawn((
+            WoodpeckerApp,
+            WidgetChildren::default().with_child::<MyWidget>((
+                WoodpeckerStyle {
                     width: Units::Percentage(100.0),
                     justify_content: Some(WidgetAlignContent::Center),
                     ..Default::default()
                 },
-                my_widget: MyWidget {
+                MyWidget {
                     depth: number_of_modals,
                     total: number_of_modals,
                 },
-                ..Default::default()
-            }),
-            ..Default::default()
-        })
+            )),
+        ))
         .id();
     ui_context.set_root_widget(root);
 }

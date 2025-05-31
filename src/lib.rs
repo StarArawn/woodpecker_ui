@@ -21,16 +21,16 @@
 //!     mut materials: ResMut<Assets<ColorMaterial>>,
 //! ) {
 //!     commands.spawn(Camera2dBundle::default());
-//!     
+//!
 //!     let material_red = materials.add(Color::Srgba(Srgba::RED.with_alpha(0.5)));
-//!     
+//!
 //!     commands.spawn(MaterialMesh2dBundle {
 //!         mesh: Mesh2dHandle(meshes.add(Circle { radius: 50.0 })),
 //!         material: material_red,
 //!         transform: Transform::from_xyz(0.0, 0.0, 0.0),
 //!         ..default()
 //!     });
-//!     
+//!
 //!     let root = commands
 //!         .spawn((WoodpeckerAppBundle {
 //!             styles: WoodpeckerStyle {
@@ -61,27 +61,31 @@
 //! }
 //!
 //! ```
+use bevy::render::extract_resource::ExtractResourcePlugin;
 use bevy::{
     asset::embedded_asset, prelude::*, reflect::GetTypeRegistration, render::view::RenderLayers,
 };
-use bevy_mod_picking::{events::Pointer, prelude::EventListenerPlugin};
+// use bevy_mod_picking::{events::Pointer, prelude::EventListenerPlugin};
 use bevy_trait_query::RegisterExt;
-use bevy_vello::{
-    text::VelloFont, vello::AaConfig, CoordinateSpace, VelloPlugin, VelloSceneBundle,
-};
+use bevy_vello::prelude::VelloFont;
+use bevy_vello::render::VelloView;
+use bevy_vello::{vello::AaConfig, VelloPlugin, VelloSceneBundle};
 use context::{Widget, WoodpeckerContext};
+use convert_render_target::ConvertRenderTargetPlugin;
 use entity_mapping::WidgetMapper;
 use font::FontManager;
 use hook_helper::HookHelper;
 use image::ImageManager;
 use layout::WoodpeckerLayoutPlugin;
 use metrics::WidgetMetrics;
-use picking_backend::MouseWheelScroll;
+use observer_cache::ObserverCache;
+// use picking_backend::MouseWheelScroll;
 use svg::{SvgAsset, SvgLoader, SvgManager};
 use widgets::WoodpeckerUIWidgetPlugin;
 
 mod children;
 mod context;
+mod convert_render_target;
 mod entity_mapping;
 mod focus;
 mod font;
@@ -90,14 +94,16 @@ mod image;
 mod keyboard_input;
 mod layout;
 mod metrics;
+mod observer_cache;
 mod on_change;
 mod picking_backend;
 mod render;
+mod rich_text;
 mod runner;
 mod styles;
 mod svg;
-mod vello_svg;
 mod vello_renderer;
+mod vello_svg;
 mod widgets;
 
 /// A module that exports all publicly exposed types.
@@ -108,13 +114,17 @@ pub mod prelude {
     pub use crate::focus::*;
     pub use crate::font::{FontManager, TextAlign};
     pub use crate::hook_helper::{HookHelper, PreviousWidget};
-    pub use crate::keyboard_input::WidgetKeyboardCharEvent;
+    pub use crate::keyboard_input::{WidgetKeyboardButtonEvent, WidgetKeyboardCharEvent};
     pub use crate::layout::system::{WidgetLayout, WidgetPreviousLayout};
     pub use crate::metrics::WidgetMetrics;
     pub use crate::on_change::Change;
     pub use crate::render::{WidgetRender, WidgetRenderCustom};
+    pub use crate::rich_text::*;
     pub use crate::styles::*;
+    pub use crate::svg::SvgAsset;
     pub use crate::widgets::*;
+    pub use crate::PreviousResource;
+    pub use crate::WoodpeckerView;
     pub use crate::{
         CurrentWidget, ParentWidget, RenderSettings, WidgetRegisterExt, WoodpeckerUIPlugin,
     };
@@ -157,6 +167,10 @@ impl FromWorld for DefaultFont {
     }
 }
 
+/// Previous resource
+#[derive(Resource)]
+pub struct PreviousResource<T: Resource>(pub T);
+
 /// Wraps an entity and lets woodpecker know its a parent.
 #[derive(Resource, Debug, Clone, Copy, Deref, DerefMut, PartialEq, Eq, Hash)]
 pub struct ParentWidget(pub Entity);
@@ -185,6 +199,15 @@ impl CurrentWidget {
     }
 }
 
+/// A marker for woodpecker UI views.
+#[derive(Component, Clone, Copy, Debug)]
+#[require(VelloView = vello_view())]
+pub struct WoodpeckerView;
+
+fn vello_view() -> VelloView {
+    VelloView
+}
+
 /// The Woodpecker UI bevy Plugin
 /// Add this to bevy to use.
 #[derive(Default)]
@@ -208,15 +231,12 @@ impl Plugin for WoodpeckerUIPlugin {
                 antialiasing: self.render_settings.antialiasing,
             })
             .add_plugins(WoodpeckerUIWidgetPlugin)
-            .add_plugins(EventListenerPlugin::<focus::WidgetFocus>::default())
-            .add_plugins(EventListenerPlugin::<focus::WidgetBlur>::default())
-            .add_plugins(EventListenerPlugin::<keyboard_input::WidgetKeyboardCharEvent>::default())
-            .add_plugins(EventListenerPlugin::<
-                keyboard_input::WidgetKeyboardButtonEvent,
-            >::default())
-            .add_plugins(EventListenerPlugin::<Pointer<MouseWheelScroll>>::default())
-            .add_plugins(EventListenerPlugin::<keyboard_input::WidgetPasteEvent>::default())
+            .add_plugins(ExtractResourcePlugin::<ImageManager>::default())
+            .add_plugins(ConvertRenderTargetPlugin)
+            .add_event::<focus::WidgetFocus>()
+            .add_event::<focus::WidgetBlur>()
             .insert_resource(focus::CurrentFocus::new(Entity::PLACEHOLDER))
+            .init_resource::<ObserverCache>()
             .init_resource::<FontManager>()
             .init_resource::<HookHelper>()
             .init_resource::<WoodpeckerContext>()
@@ -283,8 +303,12 @@ fn has_root() -> impl Condition<(), ()> {
 
 fn startup(mut commands: Commands, render_settings: Res<RenderSettings>) {
     commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            ..default()
+        },
+        Interaction::default(),
         VelloSceneBundle {
-            coordinate_space: CoordinateSpace::ScreenSpace,
             transform: Transform::from_xyz(0.0, 0.0, f32::MAX),
             ..Default::default()
         },

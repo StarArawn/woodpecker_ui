@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_mod_picking::DefaultPickingPlugins;
 use woodpecker_ui::prelude::*;
 
 mod input;
@@ -15,8 +14,6 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new())
-        .add_plugins(DefaultPickingPlugins)
         .register_widget::<TodoList>()
         .register_widget::<TodoInput>()
         .insert_resource(TodoListData(vec![
@@ -35,57 +32,48 @@ fn main() {
 }
 
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2d, WoodpeckerView));
 
     let root = commands
-        .spawn(WoodpeckerAppBundle {
-            children: WidgetChildren::default().with_child::<Modal>(ModalBundle {
-                modal: Modal {
+        .spawn((
+            WoodpeckerApp,
+            WidgetChildren::default().with_child::<Modal>((
+                Modal {
                     visible: true,
                     title: "Todo Example".into(),
                     min_size: Vec2::new(500.0, 350.0),
                     ..Default::default()
                 },
-                children: PassedChildren(
+                PassedChildren(
                     WidgetChildren::default().with_child::<ScrollContextProvider>((
-                        ScrollContextProviderBundle {
-                            styles: WoodpeckerStyle {
-                                width: Units::Percentage(100.0),
-                                height: Units::Percentage(100.0),
-                                ..Default::default()
-                            },
-                            children: WidgetChildren::default().with_child::<ScrollBox>(
-                                ScrollBoxBundle {
-                                    children: PassedChildren(
-                                        WidgetChildren::default().with_child::<Element>((
-                                            ElementBundle {
-                                                styles: WoodpeckerStyle {
-                                                    padding: Edge::all(0.0).left(10.0).right(10.0),
-                                                    flex_direction: WidgetFlexDirection::Column,
-                                                    ..Default::default()
-                                                },
-                                                children: WidgetChildren::default()
-                                                    .with_child::<TodoInput>(TodoInputBundle {
-                                                        ..Default::default()
-                                                    })
-                                                    .with_child::<TodoList>(
-                                                        TodoListBundle::default(),
-                                                    ),
-                                                ..Default::default()
-                                            },
-                                        )),
-                                    ),
-                                    ..Default::default()
-                                },
-                            ),
+                        ScrollContextProvider::default(),
+                        WoodpeckerStyle {
+                            width: Units::Percentage(100.0),
+                            height: Units::Percentage(100.0),
                             ..Default::default()
                         },
+                        WidgetChildren::default().with_child::<ScrollBox>((
+                            ScrollBox::default(),
+                            PassedChildren(
+                                WidgetChildren::default().with_child::<Element>((
+                                    Element,
+                                    WoodpeckerStyle {
+                                        padding: Edge::all(0.0).left(10.0).right(10.0),
+                                        flex_direction: WidgetFlexDirection::Column,
+                                        ..Default::default()
+                                    },
+                                    WidgetChildren::default()
+                                        .with_child::<TodoInput>(TodoInputBundle {
+                                            ..Default::default()
+                                        })
+                                        .with_child::<TodoList>(TodoListBundle::default()),
+                                )),
+                            ),
+                        )),
                     )),
                 ),
-                ..Default::default()
-            }),
-            ..Default::default()
-        })
+            )),
+        ))
         .id();
     ui_context.set_root_widget(root);
 }

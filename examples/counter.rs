@@ -1,9 +1,4 @@
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Pointer},
-    prelude::On,
-    DefaultPickingPlugins,
-};
 use woodpecker_ui::prelude::*;
 
 #[derive(Component, PartialEq, Default, Debug, Clone)]
@@ -15,17 +10,12 @@ pub struct CounterState {
 #[auto_update(render)]
 #[props(CounterWidget)]
 #[state(CounterState)]
+#[require(WoodpeckerStyle, WidgetChildren)]
 pub struct CounterWidget {
     initial_count: u32,
 }
 
-#[derive(Bundle, Default, Clone)]
-pub struct CounterWidgetBundle {
-    pub counter: CounterWidget,
-    pub styles: WoodpeckerStyle,
-    pub children: WidgetChildren,
-}
-
+#[cfg_attr(feature = "hotreload", woodpecker_ui::prelude::hot)]
 fn render(
     current_widget: Res<CurrentWidget>,
     mut commands: Commands,
@@ -51,65 +41,61 @@ fn render(
 
     // Dereference so we don't move the reference into the on click closure.
     let current_widget = *current_widget;
-    *children = WidgetChildren::default().with_child::<Element>(ElementBundle {
-        styles: WoodpeckerStyle {
+    *children = WidgetChildren::default().with_child::<Element>((
+        Element,
+        WoodpeckerStyle {
             width: Units::Percentage(100.0),
             flex_direction: WidgetFlexDirection::Column,
             justify_content: Some(WidgetAlignContent::Center),
             align_items: Some(WidgetAlignItems::Center),
             ..Default::default()
         },
-        children: WidgetChildren::default()
+        WidgetChildren::default()
             .with_child::<Element>((
-                ElementBundle {
-                    styles: WoodpeckerStyle {
-                        font_size: 50.0,
-                        margin: Edge::all(10.0),
-                        ..Default::default()
-                    },
+                Element,
+                WoodpeckerStyle {
+                    font_size: 50.0,
+                    margin: Edge::all(10.0),
                     ..Default::default()
                 },
                 WidgetRender::Text {
-                    content: format!("Current Count: {}", state.count),
-                    word_wrap: false,
+                    content: format!("Current Apples: {}", state.count),
                 },
             ))
             .with_child::<WButton>((
-                WButtonBundle {
-                    children: WidgetChildren::default().with_child::<Element>((
-                        ElementBundle {
-                            styles: WoodpeckerStyle {
-                                font_size: 14.0,
-                                margin: Edge::all(10.0),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        WidgetRender::Text {
-                            content: "Increase Count".into(),
-                            word_wrap: false,
-                        },
-                    )),
-                    ..Default::default()
-                },
-                On::<Pointer<Click>>::run(move |mut query: Query<&mut CounterState>| {
+                WButton,
+                WidgetChildren::default().with_child::<Element>((
+                    Element,
+                    WoodpeckerStyle {
+                        font_size: 14.0,
+                        margin: Edge::all(10.0),
+                        ..Default::default()
+                    },
+                    WidgetRender::Text {
+                        content: "Increase Apples".into(),
+                    },
+                )),
+            ))
+            .with_observe(
+                current_widget,
+                move |_: Trigger<Pointer<Click>>, mut query: Query<&mut CounterState>| {
                     let Ok(mut state) = query.get_mut(state_entity) else {
                         return;
                     };
-                    state.count += 1;
-                }),
-            )),
-        ..Default::default()
-    });
+                    state.count += 5;
+                },
+            ),
+    ));
 
     children.apply(current_widget.as_parent());
 }
 
 fn main() {
+    #[cfg(feature = "hotreload")]
+    dioxus_devtools::connect_subsecond();
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)
         .register_widget::<CounterWidget>()
         .run();
@@ -121,22 +107,22 @@ fn startup(
     mut font_manager: ResMut<FontManager>,
     asset_server: Res<AssetServer>,
 ) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2d, WoodpeckerView));
 
     let font = asset_server.load("Outfit/static/Outfit-Regular.ttf");
     font_manager.add(&font);
 
     let root = commands
-        .spawn(WoodpeckerAppBundle {
-            children: WidgetChildren::default().with_child::<CounterWidget>(CounterWidgetBundle {
-                styles: WoodpeckerStyle {
+        .spawn((
+            WoodpeckerApp,
+            WidgetChildren::default().with_child::<CounterWidget>((
+                CounterWidget { initial_count: 0 },
+                WoodpeckerStyle {
                     width: Units::Percentage(100.0),
                     ..Default::default()
                 },
-                ..Default::default()
-            }),
-            ..Default::default()
-        })
+            )),
+        ))
         .id();
     ui_context.set_root_widget(root);
 }

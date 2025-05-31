@@ -1,5 +1,4 @@
 use bevy::{prelude::*, render::view::RenderLayers};
-use bevy_mod_picking::DefaultPickingPlugins;
 use woodpecker_ui::prelude::*;
 
 fn main() {
@@ -11,7 +10,6 @@ fn main() {
                 ..Default::default()
             },
         })
-        .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)
         .add_systems(Update, flip_render_layers)
         .run();
@@ -46,31 +44,28 @@ fn startup(
     mut font_manager: ResMut<FontManager>,
     asset_server: Res<AssetServer>,
 ) {
-    commands.spawn((Camera2dBundle::default(), RenderLayers::layer(1)));
+    commands.spawn((Camera2d, WoodpeckerView, RenderLayers::layer(1)));
 
     let font = asset_server.load("Outfit/static/Outfit-Regular.ttf");
     font_manager.add(&font);
 
     let root = commands
-        .spawn(WoodpeckerAppBundle {
-            children: WidgetChildren::default().with_child::<Element>((
-                ElementBundle {
-                    styles: WoodpeckerStyle {
-                        font_size: 50.0,
-                        color: Srgba::RED.into(),
-                        margin: Edge::all(10.0),
-                        font: Some(font.id()),
-                        ..Default::default()
-                    },
+        .spawn((
+            WoodpeckerApp,
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 50.0,
+                    color: Srgba::RED.into(),
+                    margin: Edge::all(10.0),
+                    font: Some(font.id()),
                     ..Default::default()
                 },
                 WidgetRender::Text {
                     content: "Space to change Camera RenderLayer. WoodPecker is on layer 1".into(),
-                    word_wrap: true,
                 },
             )),
-            ..Default::default()
-        })
+        ))
         .id();
     ui_context.set_root_widget(root);
 }

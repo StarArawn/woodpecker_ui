@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use bevy::{ecs::system::SystemParam, prelude::*, utils::HashMap};
+use bevy::{ecs::system::SystemParam, platform::collections::HashMap, prelude::*};
 use bevy_trait_query::One;
 use taffy::Layout;
 
@@ -18,6 +18,10 @@ use super::{measure::LayoutMeasure, UiLayout, WoodpeckerStyle};
 
 #[derive(Debug, Copy, Clone, Reflect, Default)]
 pub struct ReflectedLayout {
+    /// The z value of the node.
+    /// This can be adjusted by the user to render nodes ontop of nodes
+    /// in the tree regardless of order.
+    pub z: u32,
     /// The relative ordering of the node
     ///
     /// Nodes with a higher order should be rendered on top of those with a lower order.
@@ -41,7 +45,8 @@ pub struct ReflectedLayout {
 impl From<&Layout> for ReflectedLayout {
     fn from(value: &Layout) -> Self {
         Self {
-            order: value.order,
+            z: 0,
+            order: 0,
             location: Vec2::new(value.location.x, value.location.y),
             size: Vec2::new(value.size.width, value.size.height),
             content_size: Vec2::new(value.content_size.width, value.content_size.height),
@@ -145,7 +150,7 @@ pub(crate) struct LayoutSystemParam<'w, 's> {
             Entity,
             One<&'static dyn Widget>,
             &'static WoodpeckerStyle,
-            Option<&'static Parent>,
+            Option<&'static ChildOf>,
             Option<&'static Children>,
         ),
         (Without<StateMarker>, Without<PreviousWidget>),
@@ -163,6 +168,7 @@ pub(crate) struct LayoutSystemParam<'w, 's> {
     context: Res<'w, WoodpeckerContext>,
     image_assets: Res<'w, Assets<Image>>,
     svg_assets: Res<'w, Assets<SvgAsset>>,
+    removed_widgets: RemovedComponents<'w, 's, WidgetLayout>,
 }
 
 // TODO: Document how layouting works..
@@ -181,10 +187,16 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
         context,
         image_assets,
         svg_assets,
+        mut removed_widgets,
     } = layout_system_param;
 
     let root_node = context.get_root_widget();
     ui_layout.root_entity = root_node;
+
+    for entity in removed_widgets.read() {
+        ui_layout.remove_child(entity);
+    }
+
     // This needs to be in the correct order
     traverse_upsert_node(
         root_node,
@@ -196,6 +208,7 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
         &svg_assets,
         &mut ui_layout,
         root_node,
+        Vec2::new(1.0, 1.0),
     );
 
     for (entity, children, _) in children_query.iter() {
@@ -203,15 +216,14 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
             .iter()
             // We only want to add non-fixed entities as children
             .filter(|child| {
-                let Ok((_, _, styles, _, _)) = query.get(**child) else {
-                    return true;
+                let Ok((_, _, styles, _, _)) = query.get(*child) else {
+                    return false;
                 };
                 !matches!(styles.position, WidgetPosition::Fixed)
             })
             .filter(|child| {
-                !state_marker_query.contains(**child) && !prev_marker_query.contains(**child)
+                !state_marker_query.contains(*child) && !prev_marker_query.contains(*child)
             })
-            .copied()
             .collect::<Vec<_>>();
         ui_layout.add_children(entity, &normal_children);
 
@@ -232,13 +244,21 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
     else {
         return;
     };
-
     ui_layout.compute(root_node, Vec2::new(width, height));
 
     // TODO(PERF): Figure out how we can combine traversal and compute together..
     let mut order = 0;
     let mut cache = HashMap::default();
-    traverse_layout_update(&mut commands, root_node, &ui_layout, &query, &layout_query, &mut cache, &mut order);
+    traverse_layout_update(
+        &mut commands,
+        root_node,
+        &ui_layout,
+        &query,
+        &layout_query,
+        &mut cache,
+        &mut order,
+        0,
+    );
 }
 
 fn traverse_layout_update(
@@ -250,7 +270,7 @@ fn traverse_layout_update(
             Entity,
             One<&dyn Widget>,
             &WoodpeckerStyle,
-            Option<&Parent>,
+            Option<&ChildOf>,
             Option<&Children>,
         ),
         (Without<StateMarker>, Without<PreviousWidget>),
@@ -258,6 +278,7 @@ fn traverse_layout_update(
     layout_query: &Query<&WidgetLayout>,
     cache: &mut HashMap<Entity, Layout>,
     order: &mut u32,
+    parent_id: u32,
 ) {
     let Ok((entity, _, styles, parent, children)) = query.get(entity) else {
         return;
@@ -271,27 +292,38 @@ fn traverse_layout_update(
         }
 
         if let Some(parent_layout) = parent.map(|parent| {
-            cache.get(&parent.get()).unwrap_or(ui_layout
-                .get_layout(parent.get()).unwrap())
+            cache
+                .get(&parent.parent())
+                .unwrap_or(ui_layout.get_layout(parent.parent()).unwrap())
         }) {
             if styles.position != WidgetPosition::Fixed {
                 layout.location.x += parent_layout.location.x;
                 layout.location.y += parent_layout.location.y;
             }
         }
-    
-        layout.order = *order;
-        cache.insert(entity, layout);
-        commands.entity(entity).insert(WidgetLayout((&layout).into()));
 
-        let Some(children) = children.map(|c| c.iter().copied().collect::<Vec<_>>()) else {
+        cache.insert(entity, layout);
+        let mut layout = WidgetLayout((&layout).into());
+        layout.order = *order;
+        layout.z = styles.z_index.unwrap_or(parent_id);
+        *order += 1;
+        commands.entity(entity).insert(layout);
+
+        let Some(children) = children.map(|c| c.iter().collect::<Vec<_>>()) else {
             return;
         };
 
         for child in children.iter() {
-            *order += 1;
-            traverse_layout_update(commands, *child, ui_layout, query, layout_query, cache, order);
-            *order -= 1;
+            traverse_layout_update(
+                commands,
+                *child,
+                ui_layout,
+                query,
+                layout_query,
+                cache,
+                order,
+                layout.z,
+            );
         }
     }
 }
@@ -303,7 +335,7 @@ fn traverse_upsert_node(
             Entity,
             One<&dyn Widget>,
             &WoodpeckerStyle,
-            Option<&Parent>,
+            Option<&ChildOf>,
             Option<&Children>,
         ),
         (Without<StateMarker>, Without<PreviousWidget>),
@@ -315,6 +347,7 @@ fn traverse_upsert_node(
     svg_assets: &Assets<SvgAsset>,
     layout: &mut UiLayout,
     current_node: Entity,
+    camera_scale: Vec2,
 ) {
     let Ok((entity, _, styles, parent, children)) = query.get(current_node) else {
         return;
@@ -322,7 +355,7 @@ fn traverse_upsert_node(
 
     let layout_measure = if let Ok(widget_render) = query_widget_render.get(entity) {
         if let Some(parent_layout) = if let Some(parent_entity) = parent {
-            layout.get_layout(parent_entity.get())
+            layout.get_layout(parent_entity.parent())
         } else {
             layout.get_layout(root_node)
         } {
@@ -334,6 +367,7 @@ fn traverse_upsert_node(
                 widget_render,
                 styles,
                 parent_layout,
+                camera_scale,
             )
         } else {
             None
@@ -356,7 +390,8 @@ fn traverse_upsert_node(
             image_assets,
             svg_assets,
             layout,
-            *child,
+            child,
+            camera_scale,
         );
     }
 }
@@ -369,6 +404,7 @@ fn match_render_size(
     widget_render: &WidgetRender,
     styles: &WoodpeckerStyle,
     parent_layout: &Layout,
+    camera_scale: Vec2,
 ) -> Option<LayoutMeasure> {
     match widget_render {
         WidgetRender::Image { handle } => {
@@ -384,33 +420,84 @@ fn match_render_size(
             let size = Vec2::new(svg_asset.width, svg_asset.height);
             Some(LayoutMeasure::Image(super::measure::ImageMeasure { size }))
         }
-        WidgetRender::Text { content, word_wrap } => {
-            // Measure text
-            let font_handle = styles
-                .font
-                .as_ref()
-                .map(|a| Handle::Weak(*a))
-                .unwrap_or(default_font.0.clone());
-            if let Some(buffer) = font_manager.layout(
-                Vec2::new(
-                    parent_layout.size.width,
-                    parent_layout.size.height + 100000.0,
-                ),
-                styles,
-                &font_handle,
-                content,
-                *word_wrap,
-            ) {
-                let mut size = Vec2::new(0.0, 0.0);
-                buffer.layout_runs().for_each(|r| {
-                    size.x = size.x.max(r.line_w);
-                    size.y += r.line_height;
-                });
-                Some(LayoutMeasure::Fixed(super::measure::FixedMeasure { size }))
-            } else {
-                None
-            }
-        }
+        WidgetRender::RichText { content } => measure_text(
+            &content.text,
+            styles,
+            font_manager,
+            default_font,
+            parent_layout,
+            camera_scale,
+        ),
+        WidgetRender::Text { content } => measure_text(
+            content,
+            styles,
+            font_manager,
+            default_font,
+            parent_layout,
+            camera_scale,
+        ),
         _ => None,
+    }
+}
+
+fn measure_text(
+    text: &str,
+    styles: &WoodpeckerStyle,
+    font_manager: &mut FontManager,
+    default_font: &DefaultFont,
+    parent_layout: &Layout,
+    camera_scale: Vec2,
+) -> Option<LayoutMeasure> {
+    // Measure text
+    // TODO: Cache this.
+    let mut layout_editor = parley::PlainEditor::new(styles.font_size);
+    layout_editor.set_text(text);
+    let text_styles = layout_editor.edit_styles();
+    text_styles.insert(parley::StyleProperty::LineHeight(
+        styles
+            .line_height
+            .map(|lh| styles.font_size / lh)
+            .unwrap_or(1.2),
+    ));
+    text_styles.insert(parley::StyleProperty::FontStack(parley::FontStack::Single(
+        parley::FontFamily::Named(
+            font_manager
+                .get_family(styles.font.as_ref().unwrap_or(&default_font.0.id()))
+                .into(),
+        ),
+    )));
+
+    text_styles.insert(parley::StyleProperty::OverflowWrap(
+        match styles.text_wrap {
+            crate::styles::TextWrap::None => parley::OverflowWrap::Normal,
+            crate::styles::TextWrap::Glyph => parley::OverflowWrap::Anywhere,
+            crate::styles::TextWrap::Word => parley::OverflowWrap::BreakWord,
+            crate::styles::TextWrap::WordOrGlyph => parley::OverflowWrap::Anywhere,
+        },
+    ));
+    layout_editor.set_width(Some(parent_layout.size.width * camera_scale.x));
+    let alignment = match styles
+        .text_alignment
+        .unwrap_or(crate::font::TextAlign::Left)
+    {
+        crate::font::TextAlign::Left => parley::Alignment::Left,
+        crate::font::TextAlign::Right => parley::Alignment::Right,
+        crate::font::TextAlign::Center => parley::Alignment::Middle,
+        crate::font::TextAlign::Justified => parley::Alignment::Justified,
+        crate::font::TextAlign::End => parley::Alignment::End,
+    };
+    layout_editor.set_alignment(alignment);
+    let text_layout = layout_editor.layout(&mut font_manager.font_cx, &mut font_manager.layout_cx);
+
+    if !text_layout.is_empty() {
+        let mut size = Vec2::new(0.0, 0.0);
+        text_layout.lines().for_each(|l| {
+            let line_metrics = l.metrics();
+            size.x = size.x.max(line_metrics.advance + 1.0);
+            size.y += line_metrics.line_height;
+        });
+        Some(LayoutMeasure::Fixed(super::measure::FixedMeasure { size }))
+    } else {
+        None
     }
 }

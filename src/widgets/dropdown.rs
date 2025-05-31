@@ -1,9 +1,5 @@
 use crate::prelude::*;
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Pointer},
-    prelude::{ListenerMut, On, Pickable, PointerInteraction},
-};
 
 /// A textbox change event.
 #[derive(Debug, Clone, Reflect)]
@@ -42,6 +38,7 @@ impl Default for DropdownStyles {
                 color: Color::WHITE,
                 font_size: 32.0,
                 flex_grow: 1.0,
+                text_wrap: TextWrap::None,
                 ..Default::default()
             },
             icon: WoodpeckerStyle {
@@ -83,7 +80,7 @@ impl Default for DropdownStyles {
 }
 
 /// Dropdown state
-#[derive(Default, Component, Clone, PartialEq, Reflect)]
+#[derive(Default, Debug, Component, Clone, PartialEq, Reflect)]
 pub struct DropdownState {
     /// Is open?
     is_open: bool,
@@ -96,6 +93,7 @@ pub struct DropdownState {
 #[auto_update(render)]
 #[props(Dropdown)]
 #[state(DropdownState)]
+#[require(WoodpeckerStyle, WidgetRender = WidgetRender::Quad, WidgetChildren, Pickable, Focusable)]
 pub struct Dropdown {
     /// The current value
     pub current_value: String,
@@ -103,39 +101,6 @@ pub struct Dropdown {
     pub list: Vec<String>,
     /// Styles
     pub styles: DropdownStyles,
-}
-
-/// A bundle for convince when creating the widget.
-#[derive(Bundle, Clone)]
-pub struct DropdownBundle {
-    /// The dropdown component
-    pub dropdown: Dropdown,
-    /// The widget style component
-    pub styles: WoodpeckerStyle,
-    /// An internal widget render
-    pub widget_render: WidgetRender,
-    /// Internal children
-    pub children: WidgetChildren,
-    /// Picking
-    pub pickable: Pickable,
-    /// Pointer interaction
-    pub interaction: PointerInteraction,
-    /// Can focus
-    pub focusable: Focusable,
-}
-
-impl Default for DropdownBundle {
-    fn default() -> Self {
-        Self {
-            dropdown: Default::default(),
-            styles: Default::default(),
-            widget_render: WidgetRender::Quad,
-            children: Default::default(),
-            pickable: Default::default(),
-            interaction: Default::default(),
-            focusable: Focusable,
-        }
-    }
 }
 
 fn render(
@@ -163,38 +128,31 @@ fn render(
         return;
     };
 
-    commands
-        .entity(**current_widget)
-        .insert((On::<Pointer<Click>>::run(
-            move |mut state_query: Query<&mut DropdownState>| {
+    *styles = dropdown.styles.background;
+
+    *children = WidgetChildren::default()
+        .with_observe(
+            *current_widget,
+            move |_trigger: Trigger<Pointer<Click>>, mut state_query: Query<&mut DropdownState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
 
                 state.is_open = !state.is_open;
             },
-        ),));
-
-    *styles = dropdown.styles.background;
-
-    *children = WidgetChildren::default()
+        )
         // Text
         .with_child::<Element>((
-            ElementBundle {
-                styles: dropdown.styles.text,
-                ..Default::default()
-            },
+            Element,
+            dropdown.styles.text,
             WidgetRender::Text {
                 content: state.current_value.clone(),
-                word_wrap: false,
             },
         ))
         // Icon
         .with_child::<Element>((
-            ElementBundle {
-                styles: dropdown.styles.icon,
-                ..Default::default()
-            },
+            Element,
+            dropdown.styles.icon,
             WidgetRender::Svg {
                 handle: if state.is_open {
                     asset_server.load("embedded://woodpecker_ui/embedded_assets/icons/arrow-up.svg")
@@ -206,31 +164,30 @@ fn render(
             },
         ));
 
-    // List area
     let dropdown_entity = **current_widget;
     let mut list_children = WidgetChildren::default();
+
+    // List area
     for (i, item) in dropdown.list.iter().enumerate() {
-        list_children.add::<WButton>((
-            WButtonBundle {
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: dropdown.styles.text,
-                        ..Default::default()
-                    },
+        list_children
+            .add::<WButton>((
+                WButton,
+                WidgetChildren::default().with_child::<Element>((
+                    Element,
+                    dropdown.styles.text,
                     WidgetRender::Text {
                         content: item.clone(),
-                        word_wrap: false,
                     },
                 )),
-                button_styles: dropdown.styles.list_item,
-                ..Default::default()
-            },
-            On::<Pointer<Click>>::run(
-                move |mut event: ListenerMut<Pointer<Click>>,
+                dropdown.styles.list_item,
+            ))
+            .observe(
+                *current_widget,
+                move |mut trigger: Trigger<Pointer<Click>>,
+                      mut commands: Commands,
                       mut state_query: Query<&mut DropdownState>,
-                      dropdown_query: Query<&Dropdown>,
-                      mut event_writer: EventWriter<Change<DropdownChanged>>| {
-                    event.stop_propagation();
+                      dropdown_query: Query<&Dropdown>| {
+                    trigger.propagate(false);
                     let Ok(mut state) = state_query.get_mut(state_entity) else {
                         return;
                     };
@@ -239,29 +196,30 @@ fn render(
                     };
                     state.current_value.clone_from(&dropdown.list[i]);
                     state.is_open = false;
-                    event_writer.send(Change {
-                        target: dropdown_entity,
-                        data: DropdownChanged {
-                            value: state.current_value.clone(),
+                    commands.trigger_targets(
+                        Change {
+                            target: dropdown_entity,
+                            data: DropdownChanged {
+                                value: state.current_value.clone(),
+                            },
                         },
-                    });
+                        dropdown_entity,
+                    );
                 },
-            ),
-        ));
+            );
     }
     children.add::<Element>((
-        ElementBundle {
-            styles: WoodpeckerStyle {
-                display: if state.is_open {
-                    WidgetDisplay::Flex
-                } else {
-                    WidgetDisplay::None
-                },
-                ..dropdown.styles.list_area
+        Element,
+        WoodpeckerStyle {
+            display: if state.is_open {
+                WidgetDisplay::Flex
+            } else {
+                WidgetDisplay::None
             },
-            children: list_children,
-            ..Default::default()
+            z_index: Some(1000),
+            ..dropdown.styles.list_area
         },
+        list_children,
         WidgetRender::Quad,
     ));
 

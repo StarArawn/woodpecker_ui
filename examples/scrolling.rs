@@ -1,18 +1,16 @@
 use bevy::prelude::*;
-use bevy_mod_picking::DefaultPickingPlugins;
 use woodpecker_ui::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)
         .run();
 }
 
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2d, WoodpeckerView));
 
     let lorem_ipsum = r#"
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras sed tellus neque. Proin tempus ligula a mi molestie aliquam. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Nullam venenatis consequat ultricies. Sed ac orci purus. Nullam velit nisl, dapibus vel mauris id, dignissim elementum sapien. Vestibulum faucibus sapien ut erat bibendum, id lobortis nisi luctus. Mauris feugiat at lectus at pretium. Pellentesque vitae finibus ante. Nulla non ex neque. Cras varius, lorem facilisis consequat blandit, lorem mauris mollis massa, eget consectetur magna sem vel enim. Nam aliquam risus pulvinar, volutpat leo eget, eleifend urna. Suspendisse in magna sed ligula vehicula volutpat non vitae augue. Phasellus aliquam viverra consequat. Nam rhoncus molestie purus, sed laoreet neque imperdiet eget. Sed egestas metus eget sodales congue.
@@ -27,51 +25,41 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras sed tellus neque. 
     "#.to_string();
 
     let root = commands
-        .spawn(WoodpeckerAppBundle {
-            children: WidgetChildren::default().with_child::<Modal>(ModalBundle {
-                modal: Modal {
+        .spawn((
+            WoodpeckerApp,
+            WidgetChildren::default().with_child::<Modal>((
+                Modal {
                     visible: true,
                     title: "Scrolling example".into(),
                     ..Default::default()
                 },
-                children: PassedChildren(
+                PassedChildren(
                     WidgetChildren::default().with_child::<ScrollContextProvider>((
-                        ScrollContextProviderBundle {
-                            styles: WoodpeckerStyle {
-                                margin: Edge::all(0.0).left(10.0).right(10.0).bottom(10.0),
-                                width: Units::Percentage(100.0),
-                                height: Units::Percentage(100.0),
-                                ..Default::default()
-                            },
-                            children: WidgetChildren::default().with_child::<ScrollBox>(
-                                ScrollBoxBundle {
-                                    children: PassedChildren(
-                                        WidgetChildren::default().with_child::<Element>((
-                                            ElementBundle {
-                                                styles: WoodpeckerStyle {
-                                                    font_size: 14.0,
-                                                    color: Srgba::WHITE.into(),
-                                                    ..Default::default()
-                                                },
-                                                ..Default::default()
-                                            },
-                                            WidgetRender::Text {
-                                                content: lorem_ipsum,
-                                                word_wrap: true,
-                                            },
-                                        )),
-                                    ),
-                                    ..Default::default()
-                                },
-                            ),
+                        ScrollContextProvider::default(),
+                        WoodpeckerStyle {
+                            margin: Edge::all(0.0).left(10.0).right(10.0).bottom(10.0),
+                            width: Units::Percentage(100.0),
+                            height: Units::Percentage(100.0),
                             ..Default::default()
                         },
+                        WidgetChildren::default().with_child::<ScrollBox>((
+                            ScrollBox::default(),
+                            PassedChildren(WidgetChildren::default().with_child::<Element>((
+                                Element,
+                                WoodpeckerStyle {
+                                    font_size: 14.0,
+                                    color: Srgba::WHITE.into(),
+                                    ..Default::default()
+                                },
+                                WidgetRender::Text {
+                                    content: lorem_ipsum,
+                                },
+                            ))),
+                        )),
                     )),
                 ),
-                ..Default::default()
-            }),
-            ..Default::default()
-        })
+            )),
+        ))
         .id();
     ui_context.set_root_widget(root);
 }

@@ -1,9 +1,4 @@
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Pointer},
-    prelude::On,
-    DefaultPickingPlugins,
-};
 use calc::Context;
 use woodpecker_ui::prelude::*;
 
@@ -27,11 +22,9 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)
         .insert_resource(CalcOutput("".into()))
         .register_widget::<Output>()
-        .add_widget_systems(Output::get_name(), update, render)
         .run();
 }
 
@@ -50,160 +43,154 @@ pub const BUTTON_STYLES_HOVER: WoodpeckerStyle = WoodpeckerStyle {
 };
 
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2d, WoodpeckerView));
 
     let mut buttons = WidgetChildren::default();
 
+    let root = CurrentWidget(commands.spawn_empty().id());
+
     // Clear button
-    buttons.add::<WButton>((
-        WButtonBundle {
-            button_styles: ButtonStyles {
+    buttons
+        .add::<WButton>((
+            WButton,
+            ButtonStyles {
                 normal: BUTTON_STYLES,
                 hovered: BUTTON_STYLES_HOVER,
             },
-            children: WidgetChildren::default().with_child::<Element>((
-                ElementBundle {
-                    styles: WoodpeckerStyle {
-                        font_size: FONT_SIZE,
-                        color: Color::WHITE,
-                        ..Default::default()
-                    },
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: FONT_SIZE,
+                    color: Color::WHITE,
+                    text_wrap: TextWrap::None,
                     ..Default::default()
                 },
                 WidgetRender::Text {
                     content: "C".into(),
-                    word_wrap: false,
                 },
             )),
-            ..Default::default()
-        },
-        On::<Pointer<Click>>::run(|mut calc_output: ResMut<CalcOutput>| {
-            calc_output.0 = "".into();
-        }),
-    ));
+        ))
+        .observe(
+            root,
+            |_: Trigger<Pointer<Click>>, mut calc_output: ResMut<CalcOutput>| {
+                calc_output.0 = "".into();
+            },
+        );
 
     // Text box
     buttons.add::<Element>((
-        ElementBundle {
-            styles: WoodpeckerStyle {
-                width: (BUTTON_SIZE * 3. + GAP * 2.).into(),
-                height: BUTTON_SIZE.into(),
-                background_color: Srgba::hex("DE3161").unwrap().into(),
-                border_radius: Corner::all(Units::Pixels(5.0)),
-                ..Default::default()
-            },
-            children: WidgetChildren::default().with_child::<Clip>(ClipBundle {
-                styles: WoodpeckerStyle {
-                    align_items: Some(WidgetAlignItems::Center),
-                    ..ClipBundle::default().styles
-                },
-                children: WidgetChildren::default().with_child::<Output>((
-                    Output,
-                    WoodpeckerStyle {
-                        margin: Edge::new(0.0, 0.0, 0.0, 15.0),
-                        font_size: FONT_SIZE,
-                        color: Color::WHITE,
-                        ..Default::default()
-                    },
-                    WidgetRender::Text {
-                        content: "".into(),
-                        word_wrap: false,
-                    },
-                )),
-                ..Default::default()
-            }),
+        Element,
+        WoodpeckerStyle {
+            width: (BUTTON_SIZE * 3. + GAP * 2.).into(),
+            height: BUTTON_SIZE.into(),
+            background_color: Srgba::hex("DE3161").unwrap().into(),
+            border_radius: Corner::all(Units::Pixels(5.0)),
             ..Default::default()
         },
+        WidgetChildren::default().with_child::<Clip>((
+            Clip,
+            WoodpeckerStyle {
+                align_items: Some(WidgetAlignItems::Center),
+                width: Units::Percentage(100.0),
+                height: Units::Percentage(100.0),
+                ..Default::default()
+            },
+            WidgetChildren::default().with_child::<Output>((
+                Output,
+                WoodpeckerStyle {
+                    margin: Edge::new(0.0, 0.0, 0.0, 15.0),
+                    font_size: FONT_SIZE,
+                    color: Color::WHITE,
+                    text_wrap: TextWrap::None,
+                    ..Default::default()
+                },
+                WidgetRender::Text { content: "".into() },
+            )),
+        )),
         WidgetRender::Quad,
     ));
 
     for button in get_buttons() {
-        buttons.add::<WButton>((
-            WButtonBundle {
-                button_styles: ButtonStyles {
+        buttons
+            .add::<WButton>((
+                WButton,
+                ButtonStyles {
                     normal: BUTTON_STYLES,
                     hovered: BUTTON_STYLES_HOVER,
                 },
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: WoodpeckerStyle {
-                            font_size: FONT_SIZE,
-                            color: Color::WHITE,
-                            ..Default::default()
-                        },
+                WidgetChildren::default().with_child::<Element>((
+                    Element,
+                    WoodpeckerStyle {
+                        font_size: FONT_SIZE,
+                        color: Color::WHITE,
+                        text_wrap: TextWrap::None,
                         ..Default::default()
                     },
                     WidgetRender::Text {
                         content: button.into(),
-                        word_wrap: true,
                     },
                 )),
-                ..Default::default()
-            },
-            On::<Pointer<Click>>::run(move |mut calc_output: ResMut<CalcOutput>| {
-                if button == "=" {
-                    if let Ok(result) = Context::<f64>::default().evaluate(&calc_output.0) {
-                        calc_output.0 = result.to_string();
+            ))
+            .observe(
+                root,
+                move |_: Trigger<Pointer<Click>>, mut calc_output: ResMut<CalcOutput>| {
+                    if button == "=" {
+                        if let Ok(result) = Context::<f64>::default().evaluate(&calc_output.0) {
+                            calc_output.0 = result.to_string();
+                        }
+                    } else {
+                        calc_output.0 += button;
                     }
-                } else {
-                    calc_output.0 += button;
-                }
-            }),
-        ));
+                },
+            );
     }
 
-    let root = commands
-        .spawn(WoodpeckerAppBundle {
-            children: WidgetChildren::default().with_child::<Element>(ElementBundle {
-                styles: WoodpeckerStyle {
-                    width: Units::Percentage(100.0),
-                    height: Units::Percentage(100.0),
+    commands.entity(root.entity()).insert((
+        WoodpeckerApp,
+        WidgetChildren::default().with_child::<Element>((
+            Element,
+            WoodpeckerStyle {
+                width: Units::Percentage(100.0),
+                height: Units::Percentage(100.0),
+                justify_content: Some(WidgetAlignContent::Center),
+                align_content: Some(WidgetAlignContent::Center),
+                padding: Edge {
+                    left: 0.0.into(),
+                    right: 0.0.into(),
+                    top: 25.0.into(),
+                    bottom: 0.0.into(),
+                },
+                ..Default::default()
+            },
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    background_color: Srgba::hex("FF007F").unwrap().into(),
+                    border_radius: Corner::all(Units::Pixels(5.0)),
+                    width: WIDTH.into(),
+                    height: HEIGHT.into(),
+                    gap: (GAP.into(), GAP.into()),
                     justify_content: Some(WidgetAlignContent::Center),
                     align_content: Some(WidgetAlignContent::Center),
-                    padding: Edge {
-                        left: 0.0.into(),
-                        right: 0.0.into(),
-                        top: 25.0.into(),
-                        bottom: 0.0.into(),
-                    },
+                    flex_wrap: WidgetFlexWrap::Wrap,
                     ..Default::default()
                 },
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: WoodpeckerStyle {
-                            background_color: Srgba::hex("FF007F").unwrap().into(),
-                            border_radius: Corner::all(Units::Pixels(5.0)),
-                            width: WIDTH.into(),
-                            height: HEIGHT.into(),
-                            gap: (GAP.into(), GAP.into()),
-                            justify_content: Some(WidgetAlignContent::Center),
-                            align_content: Some(WidgetAlignContent::Center),
-                            flex_wrap: WidgetFlexWrap::Wrap,
-                            ..Default::default()
-                        },
-                        children: buttons,
-                        ..Default::default()
-                    },
-                    WidgetRender::Quad,
-                )),
-                ..Default::default()
-            }),
-            ..Default::default()
-        })
-        .id();
-    ui_context.set_root_widget(root);
+                buttons,
+                WidgetRender::Quad,
+            )),
+        )),
+    ));
+    ui_context.set_root_widget(root.entity());
 }
 
-#[derive(Debug, Resource)]
+#[derive(Debug, Resource, PartialEq, Clone)]
 pub struct CalcOutput(pub String);
 
-#[derive(Component, Reflect, Clone)]
+#[derive(Widget, Component, Reflect, Clone, Default, PartialEq)]
+#[auto_update(render)]
+#[props(Output)]
+#[resource(CalcOutput)]
 pub struct Output;
-impl Widget for Output {}
-
-fn update(output: Res<CalcOutput>) -> bool {
-    output.is_changed()
-}
 
 fn render(
     current_entity: Res<CurrentWidget>,

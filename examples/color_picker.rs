@@ -1,18 +1,10 @@
-use bevy::{
-    prelude::*,
-    sprite::{MaterialMesh2dBundle, Mesh2dHandle},
-};
-use bevy_mod_picking::{
-    prelude::{Listener, On},
-    DefaultPickingPlugins,
-};
+use bevy::prelude::*;
 use woodpecker_ui::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, startup)
         .run();
 }
@@ -23,44 +15,38 @@ fn startup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2d, WoodpeckerView));
 
     let color = Color::Srgba(Srgba::RED);
     let material_red = materials.add(color);
 
-    commands.spawn(MaterialMesh2dBundle {
-        mesh: Mesh2dHandle(meshes.add(Circle { radius: 50.0 })),
-        material: material_red,
-        transform: Transform::from_xyz(0.0, 0.0, 0.0),
-        ..default()
-    });
-
-    let root = commands
-        .spawn(WoodpeckerAppBundle {
-            styles: WoodpeckerStyle {
-                align_items: Some(WidgetAlignItems::Center),
-                padding: Edge::all(0.0).left(50.0),
-                ..Default::default()
-            },
-            children: WidgetChildren::default().with_child::<ColorPicker>((
-                ColorPickerBundle {
-                    color_picker: ColorPicker {
-                        initial_color: color,
-                    },
-                    ..Default::default()
-                },
-                On::<Change<ColorPickerChanged>>::run(
-                    |event: Listener<Change<ColorPickerChanged>>,
-                     mut material_assets: ResMut<Assets<ColorMaterial>>,
-                     query: Query<&Handle<ColorMaterial>>| {
-                        for material in query.iter() {
-                            material_assets.get_mut(material).unwrap().color = event.data.color;
-                        }
-                    },
-                ),
-            )),
+    commands.spawn((
+        Mesh2d(meshes.add(Circle { radius: 50.0 })),
+        MeshMaterial2d(material_red),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+    ));
+    let root = commands.spawn_empty().id();
+    commands.entity(root).insert((
+        WoodpeckerApp,
+        WoodpeckerStyle {
+            align_items: Some(WidgetAlignItems::Center),
+            padding: Edge::all(0.0).left(50.0),
             ..Default::default()
-        })
-        .id();
+        },
+        WidgetChildren::default()
+            .with_child::<ColorPicker>((ColorPicker {
+                initial_color: color,
+            },))
+            .with_observe(
+                CurrentWidget(root),
+                |trigger: Trigger<Change<ColorPickerChanged>>,
+                 mut material_assets: ResMut<Assets<ColorMaterial>>,
+                 query: Query<&MeshMaterial2d<ColorMaterial>>| {
+                    for material in query.iter() {
+                        material_assets.get_mut(material).unwrap().color = trigger.data.color;
+                    }
+                },
+            ),
+    ));
     ui_context.set_root_widget(root);
 }

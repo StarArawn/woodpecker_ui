@@ -1,17 +1,13 @@
 use crate::prelude::*;
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::{Click, Drag, DragEnd, Pointer},
-    prelude::{Listener, On},
-    PickableBundle,
-};
+use bevy_vello::vello::peniko::color::parse_color;
 use palette::FromColor;
 use vello::{
     kurbo::{self, RoundedRectRadii},
     peniko,
 };
 
-#[derive(Component, Reflect, Clone, Copy, PartialEq, Default)]
+#[derive(Component, Debug, Reflect, Clone, Copy, PartialEq, Default)]
 struct ColorPickerState {
     is_dragging: bool,
     current_color: Hsva,
@@ -29,33 +25,10 @@ pub struct ColorPickerChanged {
 #[auto_update(render)]
 #[props(ColorPicker)]
 #[state(ColorPickerState)]
+#[require(WoodpeckerStyle, WidgetChildren, WidgetRender = WidgetRender::Quad)]
 pub struct ColorPicker {
     /// Initial color to use
     pub initial_color: Color,
-}
-
-/// The color picker bundle
-#[derive(Bundle, Clone)]
-pub struct ColorPickerBundle {
-    /// Color picker
-    pub color_picker: ColorPicker,
-    /// Internal styles
-    pub internal_styles: WoodpeckerStyle,
-    /// Internal children
-    pub internal_children: WidgetChildren,
-    /// Internal render
-    pub internal_render: WidgetRender,
-}
-
-impl Default for ColorPickerBundle {
-    fn default() -> Self {
-        Self {
-            color_picker: Default::default(),
-            internal_styles: Default::default(),
-            internal_children: Default::default(),
-            internal_render: WidgetRender::Quad,
-        }
-    }
 }
 
 fn render(
@@ -90,8 +63,9 @@ fn render(
 
     // So we can pass it in.
     let widget_entity = **current_widget;
-    *children = WidgetChildren::default().with_child::<Clip>(ClipBundle {
-        styles: WoodpeckerStyle {
+    *children = WidgetChildren::default().with_child::<Clip>((
+        Clip,
+        WoodpeckerStyle {
             border_radius: Corner::all(20.0),
             width: Units::Percentage(100.0),
             height: Units::Percentage(100.0),
@@ -99,45 +73,43 @@ fn render(
             ..Default::default()
         },
         // Main color
-        children: WidgetChildren::default().with_child::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
+        WidgetChildren::default()
+            .with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
                     background_color: srgba_color,
                     width: Units::Percentage(100.0),
                     height: 140.0.into(),
                     margin: Edge::all(0.0).bottom(20.0),
                     ..Default::default()
                 },
-                ..Default::default()
-            },
-            WidgetRender::Quad,
-        ))
-        // Color hex value
-        .with_child::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
+                WidgetRender::Quad,
+            ))
+            // Color hex value
+            .with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
                     align_items: Some(WidgetAlignItems::Center),
                     margin: Edge::all(0.0).bottom(20.0).left(20.0).right(20.0),
                     ..Default::default()
                 },
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: WoodpeckerStyle {
+                WidgetChildren::default()
+                    .with_child::<Element>((
+                        Element,
+                        WoodpeckerStyle {
                             font_size: 22.0,
                             color: Color::WHITE,
                             flex_grow: 1.0,
+                            text_wrap: TextWrap::None,
                             ..Default::default()
                         },
-                        ..Default::default()
-                    },
-                    WidgetRender::Text {
-                        content: srgba_color.to_srgba().to_hex(),
-                        word_wrap: false,
-                    }
-                ))
-                .with_child::<IconButton>((
-                    IconButtonBundle {
-                        button_styles: IconButtonStyles {
+                        WidgetRender::Text {
+                            content: srgba_color.to_srgba().to_hex(),
+                        },
+                    ))
+                    .with_child::<IconButton>((
+                        IconButton,
+                        IconButtonStyles {
                             normal: WoodpeckerStyle {
                                 background_color: Color::WHITE,
                                 ..Default::default()
@@ -149,336 +121,394 @@ fn render(
                             width: 32.0.into(),
                             height: 32.0.into(),
                         },
-                        render: WidgetRender::Svg {
-                            handle: asset_server.load("embedded://woodpecker_ui/embedded_assets/icons/copy-outline.svg"),
+                        WidgetRender::Svg {
+                            handle: asset_server.load(
+                                "embedded://woodpecker_ui/embedded_assets/icons/copy-outline.svg",
+                            ),
                             color: None, // Set by IconButton
                         },
-                        ..Default::default()
-                    },
-                    On::<Pointer<Click>>::run(move |state_query: Query<&ColorPickerState>| {
-                        let Ok(state) = state_query.get(state_entity) else {
-                            return;
-                        };
-
-                        let color: Color = state.current_color.into();
-                        let hex = color.to_srgba().to_hex();
-
-                        #[cfg(not(target_arch = "wasm32"))]
-                        {
-                            let Ok(mut clipboard) = arboard::Clipboard::new() else {
-                                warn!("no clipboard");
+                    ))
+                    .with_observe(
+                        *current_widget,
+                        move |_trigger: Trigger<Pointer<Click>>,
+                              state_query: Query<&ColorPickerState>| {
+                            let Ok(state) = state_query.get(state_entity) else {
                                 return;
                             };
-                            let _ = clipboard.set_text(hex);
-                        }
 
-                        #[cfg(target_arch = "wasm32")]
-                        {
-                            let Some(clipboard) = web_sys::window().and_then(|window| window.navigator().clipboard()) else {
-                                warn!("no clipboard");
-                                return;
-                            };
-                            let _ = clipboard.write_text(&hex);
-                        }
-                    }),
-                )),
-                ..Default::default()
-            },
-        ))
-        // Hue
-        .with_child::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
+                            let color: Color = state.current_color.into();
+                            let hex = color.to_srgba().to_hex();
+
+                            #[cfg(not(target_arch = "wasm32"))]
+                            {
+                                let Ok(mut clipboard) = arboard::Clipboard::new() else {
+                                    warn!("no clipboard");
+                                    return;
+                                };
+                                let _ = clipboard.set_text(hex);
+                            }
+
+                            #[cfg(target_arch = "wasm32")]
+                            {
+                                let Some(clipboard) = web_sys::window()
+                                    .and_then(|window| Some(window.navigator().clipboard()))
+                                else {
+                                    warn!("no clipboard");
+                                    return;
+                                };
+                                let _ = clipboard.write_text(&hex);
+                            }
+                        },
+                    ),
+            ))
+            // Hue
+            .with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
                     margin: Edge::all(0.0).left(20.0).right(20.0),
                     width: 280.0.into(),
                     height: 32.0.into(),
                     ..Default::default()
                 },
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: WoodpeckerStyle {
-                            position: WidgetPosition::Absolute,
-                            top: 7.0.into(),
-                            left: (9.0 + ((state.current_color.hue / 365.0) * 245.0)).into(),
-                            background_color: srgba_color,
-                            width: 18.0.into(),
-                            height: 18.0.into(),
-                            border_radius: Corner::all(100.0),
-                            border_color: Color::WHITE,
-                            border: Edge::all(4.0),
-                            ..Default::default()
-                        },
+                WidgetChildren::default().with_child::<Element>((
+                    Element,
+                    WoodpeckerStyle {
+                        position: WidgetPosition::Absolute,
+                        top: 7.0.into(),
+                        left: (9.0 + ((state.current_color.hue / 365.0) * 245.0)).into(),
+                        background_color: srgba_color,
+                        width: 18.0.into(),
+                        height: 18.0.into(),
+                        border_radius: Corner::all(100.0),
+                        border_color: Color::WHITE,
+                        border: Edge::all(4.0),
                         ..Default::default()
                     },
                     WidgetRender::Quad,
                 )),
-                ..Default::default()
-            },
-            get_hue_gradient(state.current_color),
-            PickableBundle::default(),
-            On::<Pointer<Drag>>::run(move |event: Listener<Pointer<Drag>>, mut query: Query<&mut ColorPickerState>, layout_query: Query<&WidgetLayout>, mut event_writer: EventWriter<Change<ColorPickerChanged>>| {
-                let Ok(mut state) = query.get_mut(state_entity) else {
-                    return;
-                };
+                get_hue_gradient(state.current_color),
+                Pickable::default(),
+            ))
+            .with_observe(
+                *current_widget,
+                move |trigger: Trigger<Pointer<Drag>>,
+                      mut commands: Commands,
+                      mut query: Query<&mut ColorPickerState>,
+                      layout_query: Query<&WidgetLayout>| {
+                    let Ok(mut state) = query.get_mut(state_entity) else {
+                        return;
+                    };
 
-                state.is_dragging = true;
+                    state.is_dragging = true;
 
-                let Ok(layout) = layout_query.get(widget_entity) else {
-                    return;
-                };
+                    let Ok(layout) = layout_query.get(widget_entity) else {
+                        return;
+                    };
 
-                let value = (event.pointer_location.position.x - layout.location.x)
-                / layout.size.x;
-                state.current_color.hue = value.clamp(0.0, 1.0) * 365.0;
+                    let value =
+                        (trigger.pointer_location.position.x - layout.location.x) / layout.size.x;
+                    state.current_color.hue = value.clamp(0.0, 1.0) * 365.0;
 
-                let color: Color = state.current_color.into();
-                event_writer.send(Change {
-                    target: widget_entity,
-                    data: ColorPickerChanged {
-                        color: color.to_srgba().into(),
-                    },
-                });
-            }),
-            On::<Pointer<DragEnd>>::run(move |mut query: Query<&mut ColorPickerState>| {
-                let Ok(mut state) = query.get_mut(state_entity) else {
-                    return;
-                };
+                    let color: Color = state.current_color.into();
+                    commands.trigger_targets(
+                        Change {
+                            target: widget_entity,
+                            data: ColorPickerChanged {
+                                color: color.to_srgba().into(),
+                            },
+                        },
+                        widget_entity,
+                    );
+                },
+            )
+            .with_observe(
+                *current_widget,
+                move |_trigger: Trigger<Pointer<DragEnd>>,
+                      mut query: Query<&mut ColorPickerState>| {
+                    let Ok(mut state) = query.get_mut(state_entity) else {
+                        return;
+                    };
 
-                state.is_dragging = false;
-            }),
-            On::<Pointer<Click>>::run(move |event: Listener<Pointer<Click>>, mut query: Query<&mut ColorPickerState>, layout_query: Query<&WidgetLayout>, mut event_writer: EventWriter<Change<ColorPickerChanged>>| {
-                let Ok(mut state) = query.get_mut(state_entity) else {
-                    return;
-                };
+                    state.is_dragging = false;
+                },
+            )
+            .with_observe(
+                *current_widget,
+                move |trigger: Trigger<Pointer<Click>>,
+                      mut commands: Commands,
+                      mut query: Query<&mut ColorPickerState>,
+                      layout_query: Query<&WidgetLayout>| {
+                    let Ok(mut state) = query.get_mut(state_entity) else {
+                        return;
+                    };
 
-                if state.is_dragging {
-                    return;
-                }
+                    if state.is_dragging {
+                        return;
+                    }
 
-                let Ok(layout) = layout_query.get(widget_entity) else {
-                    return;
-                };
+                    let Ok(layout) = layout_query.get(widget_entity) else {
+                        return;
+                    };
 
-                let relative_x = event.pointer_location.position.x - (layout.location.x + 40.0);
-                let value = relative_x / (layout.size.x - 80.0);
-                state.current_color.hue = value.clamp(0.0, 1.0) * 365.0;
-                let color: Color = state.current_color.into();
-                event_writer.send(Change {
-                    target: widget_entity,
-                    data: ColorPickerChanged {
-                        color: color.to_srgba().into(),
-                    },
-                });
-            }),
-        ))
-        // Saturation
-        .with_child::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
+                    let relative_x =
+                        trigger.pointer_location.position.x - (layout.location.x + 40.0);
+                    let value = relative_x / (layout.size.x - 80.0);
+                    state.current_color.hue = value.clamp(0.0, 1.0) * 365.0;
+                    let color: Color = state.current_color.into();
+                    commands.trigger_targets(
+                        Change {
+                            target: widget_entity,
+                            data: ColorPickerChanged {
+                                color: color.to_srgba().into(),
+                            },
+                        },
+                        widget_entity,
+                    );
+                },
+            )
+            // Saturation
+            .with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
                     margin: Edge::all(0.0).left(20.0).right(20.0).top(20.0),
                     width: 280.0.into(),
                     height: 32.0.into(),
                     ..Default::default()
                 },
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: WoodpeckerStyle {
-                            position: WidgetPosition::Absolute,
-                            top: 7.0.into(),
-                            left: (9.0 + (state.current_color.saturation * 245.0)).into(),
-                            background_color: srgba_color,
-                            width: 18.0.into(),
-                            height: 18.0.into(),
-                            border_radius: Corner::all(100.0),
-                            border_color: Color::WHITE,
-                            border: Edge::all(4.0),
-                            ..Default::default()
-                        },
-                        children: WidgetChildren::default().with_child::<Element>((
-                            ElementBundle {
-                                styles: WoodpeckerStyle {
-                                    position: WidgetPosition::Absolute,
-                                    left: (-3.0).into(),
-                                    top: (-3.0).into(),
-                                    background_color: srgba_color,
-                                    width: 16.0.into(),
-                                    height: 16.0.into(),
-                                    border_radius: Corner::all(100.0),
-                                    border_color: colors::BACKGROUND_LIGHT,
-                                    border: Edge::all(3.0),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            WidgetRender::Quad,
-                        )),
+                WidgetChildren::default().with_child::<Element>((
+                    Element,
+                    WoodpeckerStyle {
+                        position: WidgetPosition::Absolute,
+                        top: 7.0.into(),
+                        left: (9.0 + (state.current_color.saturation * 245.0)).into(),
+                        background_color: srgba_color,
+                        width: 18.0.into(),
+                        height: 18.0.into(),
+                        border_radius: Corner::all(100.0),
+                        border_color: Color::WHITE,
+                        border: Edge::all(4.0),
                         ..Default::default()
                     },
+                    WidgetChildren::default().with_child::<Element>((
+                        Element,
+                        WoodpeckerStyle {
+                            position: WidgetPosition::Absolute,
+                            left: (-3.0).into(),
+                            top: (-3.0).into(),
+                            background_color: srgba_color,
+                            width: 16.0.into(),
+                            height: 16.0.into(),
+                            border_radius: Corner::all(100.0),
+                            border_color: colors::BACKGROUND_LIGHT,
+                            border: Edge::all(3.0),
+                            ..Default::default()
+                        },
+                        WidgetRender::Quad,
+                    )),
                     WidgetRender::Quad,
                 )),
-                ..Default::default()
-            },
-            get_saturation_gradient(state.current_color),
-            PickableBundle::default(),
-            On::<Pointer<Drag>>::run(move |event: Listener<Pointer<Drag>>, mut query: Query<&mut ColorPickerState>, layout_query: Query<&WidgetLayout>, mut event_writer: EventWriter<Change<ColorPickerChanged>>| {
-                let Ok(mut state) = query.get_mut(state_entity) else {
-                    return;
-                };
+                get_saturation_gradient(state.current_color),
+                Pickable::default(),
+            ))
+            .with_observe(
+                *current_widget,
+                move |trigger: Trigger<Pointer<Drag>>,
+                      mut commands: Commands,
+                      mut query: Query<&mut ColorPickerState>,
+                      layout_query: Query<&WidgetLayout>| {
+                    let Ok(mut state) = query.get_mut(state_entity) else {
+                        return;
+                    };
 
-                state.is_dragging = true;
+                    state.is_dragging = true;
 
-                let Ok(layout) = layout_query.get(widget_entity) else {
-                    return;
-                };
+                    let Ok(layout) = layout_query.get(widget_entity) else {
+                        return;
+                    };
 
-                let value = (event.pointer_location.position.x - layout.location.x)
-                / layout.size.x;
-                state.current_color.saturation = value.clamp(0.0, 1.0);
-                let color: Color = state.current_color.into();
-                event_writer.send(Change {
-                    target: widget_entity,
-                    data: ColorPickerChanged {
-                        color: color.to_srgba().into(),
-                    },
-                });
-            }),
-            On::<Pointer<DragEnd>>::run(move |mut query: Query<&mut ColorPickerState>| {
-                let Ok(mut state) = query.get_mut(state_entity) else {
-                    return;
-                };
+                    let value =
+                        (trigger.pointer_location.position.x - layout.location.x) / layout.size.x;
+                    state.current_color.saturation = value.clamp(0.0, 1.0);
 
-                state.is_dragging = false;
-            }),
-            On::<Pointer<Click>>::run(move |event: Listener<Pointer<Click>>, mut query: Query<&mut ColorPickerState>, layout_query: Query<&WidgetLayout>, mut event_writer: EventWriter<Change<ColorPickerChanged>>| {
-                let Ok(mut state) = query.get_mut(state_entity) else {
-                    return;
-                };
+                    let color: Color = state.current_color.into();
+                    commands.trigger_targets(
+                        Change {
+                            target: widget_entity,
+                            data: ColorPickerChanged {
+                                color: color.to_srgba().into(),
+                            },
+                        },
+                        widget_entity,
+                    );
+                },
+            )
+            .with_observe(
+                *current_widget,
+                move |_trigger: Trigger<Pointer<DragEnd>>,
+                      mut query: Query<&mut ColorPickerState>| {
+                    let Ok(mut state) = query.get_mut(state_entity) else {
+                        return;
+                    };
 
-                if state.is_dragging {
-                    return;
-                }
+                    state.is_dragging = false;
+                },
+            )
+            .with_observe(
+                *current_widget,
+                move |trigger: Trigger<Pointer<Click>>,
+                      mut commands: Commands,
+                      mut query: Query<&mut ColorPickerState>,
+                      layout_query: Query<&WidgetLayout>| {
+                    let Ok(mut state) = query.get_mut(state_entity) else {
+                        return;
+                    };
 
-                let Ok(layout) = layout_query.get(widget_entity) else {
-                    return;
-                };
+                    if state.is_dragging {
+                        return;
+                    }
 
-                let relative_x = event.pointer_location.position.x - (layout.location.x + 40.0);
-                let value = relative_x / (layout.size.x - 80.0);
-                state.current_color.saturation = value.clamp(0.0, 1.0);
-                let color: Color = state.current_color.into();
-                event_writer.send(Change {
-                    target: widget_entity,
-                    data: ColorPickerChanged {
-                        color: color.to_srgba().into(),
-                    },
-                });
-            }),
-        ))
-        // Value
-        .with_child::<Element>((
-            ElementBundle {
-                styles: WoodpeckerStyle {
+                    let Ok(layout) = layout_query.get(widget_entity) else {
+                        return;
+                    };
+
+                    let relative_x =
+                        trigger.pointer_location.position.x - (layout.location.x + 40.0);
+                    let value = relative_x / (layout.size.x - 80.0);
+                    state.current_color.saturation = value.clamp(0.0, 1.0);
+                    let color: Color = state.current_color.into();
+                    commands.trigger_targets(
+                        Change {
+                            target: widget_entity,
+                            data: ColorPickerChanged {
+                                color: color.to_srgba().into(),
+                            },
+                        },
+                        widget_entity,
+                    );
+                },
+            )
+            // Value
+            .with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
                     margin: Edge::all(0.0).left(20.0).right(20.0).top(20.0).bottom(20.0),
                     width: 280.0.into(),
                     height: 32.0.into(),
                     ..Default::default()
                 },
-                children: WidgetChildren::default().with_child::<Element>((
-                    ElementBundle {
-                        styles: WoodpeckerStyle {
-                            position: WidgetPosition::Absolute,
-                            top: 7.0.into(),
-                            left: (9.0 + (state.current_color.value * 245.0)).into(),
-                            background_color: srgba_color,
-                            width: 18.0.into(),
-                            height: 18.0.into(),
-                            border_radius: Corner::all(100.0),
-                            border_color: Color::WHITE,
-                            border: Edge::all(4.0),
-                            ..Default::default()
-                        },
-                        children: WidgetChildren::default().with_child::<Element>((
-                            ElementBundle {
-                                styles: WoodpeckerStyle {
-                                    position: WidgetPosition::Absolute,
-                                    left: (-3.0).into(),
-                                    top: (-3.0).into(),
-                                    background_color: srgba_color,
-                                    width: 16.0.into(),
-                                    height: 16.0.into(),
-                                    border_radius: Corner::all(100.0),
-                                    border_color: colors::BACKGROUND_LIGHT,
-                                    border: Edge::all(3.0),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            WidgetRender::Quad,
-                        )),
+                WidgetChildren::default().with_child::<Element>((
+                    Element,
+                    WoodpeckerStyle {
+                        position: WidgetPosition::Absolute,
+                        top: 7.0.into(),
+                        left: (9.0 + (state.current_color.value * 245.0)).into(),
+                        background_color: srgba_color,
+                        width: 18.0.into(),
+                        height: 18.0.into(),
+                        border_radius: Corner::all(100.0),
+                        border_color: Color::WHITE,
+                        border: Edge::all(4.0),
                         ..Default::default()
                     },
+                    WidgetChildren::default().with_child::<Element>((
+                        Element,
+                        WoodpeckerStyle {
+                            position: WidgetPosition::Absolute,
+                            left: (-3.0).into(),
+                            top: (-3.0).into(),
+                            background_color: srgba_color,
+                            width: 16.0.into(),
+                            height: 16.0.into(),
+                            border_radius: Corner::all(100.0),
+                            border_color: colors::BACKGROUND_LIGHT,
+                            border: Edge::all(3.0),
+                            ..Default::default()
+                        },
+                        WidgetRender::Quad,
+                    )),
                     WidgetRender::Quad,
                 )),
-                ..Default::default()
-            },
-            get_value_gradient(state.current_color),
-            PickableBundle::default(),
-            On::<Pointer<Drag>>::run(move |event: Listener<Pointer<Drag>>, mut query: Query<&mut ColorPickerState>, layout_query: Query<&WidgetLayout>, mut event_writer: EventWriter<Change<ColorPickerChanged>>| {
-                let Ok(mut state) = query.get_mut(state_entity) else {
-                    return;
-                };
+                get_value_gradient(state.current_color),
+                Pickable::default(),
+            ))
+            .with_observe(
+                *current_widget,
+                move |trigger: Trigger<Pointer<Drag>>,
+                      mut commands: Commands,
+                      mut query: Query<&mut ColorPickerState>,
+                      layout_query: Query<&WidgetLayout>| {
+                    let Ok(mut state) = query.get_mut(state_entity) else {
+                        return;
+                    };
 
-                state.is_dragging = true;
+                    state.is_dragging = true;
 
-                let Ok(layout) = layout_query.get(widget_entity) else {
-                    return;
-                };
+                    let Ok(layout) = layout_query.get(widget_entity) else {
+                        return;
+                    };
 
-                let value = (event.pointer_location.position.x - layout.location.x)
-                / layout.size.x;
-                state.current_color.value = value.clamp(0.0, 1.0);
-                let color: Color = state.current_color.into();
-                event_writer.send(Change {
-                    target: widget_entity,
-                    data: ColorPickerChanged {
-                        color: color.to_srgba().into(),
-                    },
-                });
-            }),
-            On::<Pointer<DragEnd>>::run(move |mut query: Query<&mut ColorPickerState>| {
-                let Ok(mut state) = query.get_mut(state_entity) else {
-                    return;
-                };
+                    let value =
+                        (trigger.pointer_location.position.x - layout.location.x) / layout.size.x;
+                    state.current_color.value = value.clamp(0.0, 1.0);
 
-                state.is_dragging = false;
-            }),
-            On::<Pointer<Click>>::run(move |event: Listener<Pointer<Click>>, mut query: Query<&mut ColorPickerState>, layout_query: Query<&WidgetLayout>, mut event_writer: EventWriter<Change<ColorPickerChanged>>| {
-                let Ok(mut state) = query.get_mut(state_entity) else {
-                    return;
-                };
+                    let color: Color = state.current_color.into();
+                    commands.trigger_targets(
+                        Change {
+                            target: widget_entity,
+                            data: ColorPickerChanged {
+                                color: color.to_srgba().into(),
+                            },
+                        },
+                        widget_entity,
+                    );
+                },
+            )
+            .with_observe(
+                *current_widget,
+                move |_trigger: Trigger<Pointer<DragEnd>>,
+                      mut query: Query<&mut ColorPickerState>| {
+                    let Ok(mut state) = query.get_mut(state_entity) else {
+                        return;
+                    };
 
-                if state.is_dragging {
-                    return;
-                }
+                    state.is_dragging = false;
+                },
+            )
+            .with_observe(
+                *current_widget,
+                move |trigger: Trigger<Pointer<Click>>,
+                      mut commands: Commands,
+                      mut query: Query<&mut ColorPickerState>,
+                      layout_query: Query<&WidgetLayout>| {
+                    let Ok(mut state) = query.get_mut(state_entity) else {
+                        return;
+                    };
 
-                let Ok(layout) = layout_query.get(widget_entity) else {
-                    return;
-                };
+                    if state.is_dragging {
+                        return;
+                    }
 
-                let relative_x = event.pointer_location.position.x - (layout.location.x + 40.0);
-                let value = relative_x / (layout.size.x - 80.0);
-                state.current_color.value = value.clamp(0.0, 1.0);
-                let color: Color = state.current_color.into();
-                event_writer.send(Change {
-                    target: widget_entity,
-                    data: ColorPickerChanged {
-                        color: color.to_srgba().into(),
-                    },
-                });
-            }),
-        )),
-        ..Default::default()
-    });
+                    let Ok(layout) = layout_query.get(widget_entity) else {
+                        return;
+                    };
+
+                    let relative_x =
+                        trigger.pointer_location.position.x - (layout.location.x + 40.0);
+                    let value = relative_x / (layout.size.x - 80.0);
+                    state.current_color.value = value.clamp(0.0, 1.0);
+                    let color: Color = state.current_color.into();
+                    commands.trigger_targets(
+                        Change {
+                            target: widget_entity,
+                            data: ColorPickerChanged {
+                                color: color.to_srgba().into(),
+                            },
+                        },
+                        widget_entity,
+                    );
+                },
+            ),
+    ));
 
     children.apply(current_widget.as_parent());
 }
@@ -486,7 +516,7 @@ fn render(
 /// Renders a color picker color gradient.
 fn get_hue_gradient(color: Hsva) -> WidgetRender {
     WidgetRender::Custom {
-        render: WidgetRenderCustom::new(move |vello_scene, layout, _styles| {
+        render: WidgetRenderCustom::new(move |vello_scene, layout, _styles, _dpi| {
             let location_x = layout.location.x as f64;
             let location_y = layout.location.y as f64;
             let size_x = layout.size.x as f64;
@@ -508,12 +538,12 @@ fn get_hue_gradient(color: Hsva) -> WidgetRender {
             for _ in 0..size_x as u32 {
                 lch_color.hue += step;
                 let srgba = palette::Srgba::from_color(lch_color);
-                stops.push(peniko::Color::rgba(
-                    srgba.red,
-                    srgba.green,
-                    srgba.blue,
-                    srgba.alpha,
-                ));
+                stops.push(peniko::Color::new([
+                    srgba.red as f32,
+                    srgba.green as f32,
+                    srgba.blue as f32,
+                    srgba.alpha as f32,
+                ]));
             }
 
             let brush = peniko::Gradient::new_linear((location_x, 0.0), (location_x + size_x, 0.0))
@@ -529,8 +559,7 @@ fn get_hue_gradient(color: Hsva) -> WidgetRender {
 
             vello_scene.push_layer(peniko::Mix::Multiply, 0.75, kurbo::Affine::default(), &rect);
 
-            let mut color = peniko::Color::parse("#818181").unwrap();
-            color = color.with_alpha_factor(1.0);
+            let color = parse_color("#818181").unwrap();
             vello_scene.stroke(
                 &kurbo::Stroke::new(5.0),
                 kurbo::Affine::default(),
@@ -547,7 +576,7 @@ fn get_hue_gradient(color: Hsva) -> WidgetRender {
 /// Renders a color picker color gradient.
 fn get_saturation_gradient(color: Hsva) -> WidgetRender {
     WidgetRender::Custom {
-        render: WidgetRenderCustom::new(move |vello_scene, layout, _styles| {
+        render: WidgetRenderCustom::new(move |vello_scene, layout, _styles, _dpi| {
             let location_x = layout.location.x as f64;
             let location_y = layout.location.y as f64;
             let size_x = layout.size.x as f64;
@@ -569,12 +598,12 @@ fn get_saturation_gradient(color: Hsva) -> WidgetRender {
                 color.saturation += step;
                 let srgba: palette::Alpha<palette::rgb::Rgb<palette::encoding::Srgb, f64>, f64> =
                     palette::Srgba::from_color(color);
-                stops.push(peniko::Color::rgba(
-                    srgba.red,
-                    srgba.green,
-                    srgba.blue,
-                    srgba.alpha,
-                ));
+                stops.push(peniko::Color::new([
+                    srgba.red as f32,
+                    srgba.green as f32,
+                    srgba.blue as f32,
+                    srgba.alpha as f32,
+                ]));
             }
 
             let brush = peniko::Gradient::new_linear((location_x, 0.0), (location_x + size_x, 0.0))
@@ -590,8 +619,7 @@ fn get_saturation_gradient(color: Hsva) -> WidgetRender {
 
             vello_scene.push_layer(peniko::Mix::Multiply, 0.75, kurbo::Affine::default(), &rect);
 
-            let mut color = peniko::Color::parse("#818181").unwrap();
-            color = color.with_alpha_factor(1.0);
+            let color = parse_color("#818181").unwrap();
             vello_scene.stroke(
                 &kurbo::Stroke::new(5.0),
                 kurbo::Affine::default(),
@@ -608,7 +636,7 @@ fn get_saturation_gradient(color: Hsva) -> WidgetRender {
 /// Renders a color picker color gradient.
 fn get_value_gradient(color: Hsva) -> WidgetRender {
     WidgetRender::Custom {
-        render: WidgetRenderCustom::new(move |vello_scene, layout, _styles| {
+        render: WidgetRenderCustom::new(move |vello_scene, layout, _styles, _dpi| {
             let location_x = layout.location.x as f64;
             let location_y = layout.location.y as f64;
             let size_x = layout.size.x as f64;
@@ -629,12 +657,12 @@ fn get_value_gradient(color: Hsva) -> WidgetRender {
                 color.value += step;
                 let srgba: palette::Alpha<palette::rgb::Rgb<palette::encoding::Srgb, f64>, f64> =
                     palette::Srgba::from_color(color);
-                stops.push(peniko::Color::rgba(
-                    srgba.red,
-                    srgba.green,
-                    srgba.blue,
-                    srgba.alpha,
-                ));
+                stops.push(peniko::Color::new([
+                    srgba.red as f32,
+                    srgba.green as f32,
+                    srgba.blue as f32,
+                    srgba.alpha as f32,
+                ]));
             }
 
             let brush = peniko::Gradient::new_linear((location_x, 0.0), (location_x + size_x, 0.0))
@@ -650,8 +678,7 @@ fn get_value_gradient(color: Hsva) -> WidgetRender {
 
             vello_scene.push_layer(peniko::Mix::Multiply, 0.75, kurbo::Affine::default(), &rect);
 
-            let mut color = peniko::Color::parse("#818181").unwrap();
-            color = color.with_alpha_factor(1.0);
+            let color = parse_color("#818181").unwrap();
             vello_scene.stroke(
                 &kurbo::Stroke::new(5.0),
                 kurbo::Affine::default(),

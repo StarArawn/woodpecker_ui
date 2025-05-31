@@ -8,8 +8,8 @@
 
 use bevy::{
     ecs::component::Tick,
+    platform::collections::{HashMap, HashSet},
     prelude::*,
-    utils::{HashMap, HashSet},
 };
 use bevy_trait_query::One;
 
@@ -19,7 +19,7 @@ use crate::{
     hook_helper::StateMarker,
     metrics::WidgetMetrics,
     prelude::{PreviousWidget, WidgetMapper},
-    CurrentWidget, WoodpeckerContext,
+    CurrentWidget, ObserverCache, WoodpeckerContext,
 };
 
 pub(crate) fn system(world: &mut World) {
@@ -43,10 +43,11 @@ pub(crate) fn system(world: &mut World) {
             .into_iter()
             .chain(get_all_children(world, root_widget))
             .filter(|e| {
-                if world.get_entity(*e).is_none() {
+                if world.get_entity(*e).is_err() {
                     return false;
                 }
-                !world.entity(*e).contains::<PreviousWidget>()
+                (!world.entity(*e).contains::<PreviousWidget>()
+                    && !world.entity(*e).contains::<Observer>())
                     && !world
                         .entity(*e)
                         .contains::<crate::hook_helper::StateMarker>()
@@ -126,16 +127,19 @@ fn update_widgets(
 }
 
 // Recursively gets all widget children down the tree for a given entity.
-fn get_all_children(world: &mut World, parent_entity: Entity) -> Vec<Entity> {
+pub fn get_all_children(world: &mut World, parent_entity: Entity) -> Vec<Entity> {
     let mut children = vec![];
     let Some(bevy_children) = world
         .entity(parent_entity)
         .get::<Children>()
-        .map(|c| c.iter().copied().collect::<Vec<_>>())
+        .map(|c| c.iter().collect::<Vec<_>>())
     else {
         return vec![];
     };
     for child in bevy_children.into_iter() {
+        if world.get_entity(child).is_err() {
+            continue;
+        }
         // Only widget entities should be traversed here
         if !world.entity(child).contains::<StateMarker>()
             && !world.entity(child).contains::<PreviousWidget>()
@@ -155,7 +159,7 @@ fn run_update_system(
     widget_query_state: &mut QueryState<One<&dyn Widget>, Without<PreviousWidget>>,
 ) -> bool {
     let Ok(widget) = widget_query_state.get(world, widget_entity) else {
-        error!("Woodpecker UI: Missing widget data!");
+        debug!("Woodpecker UI: Missing widget data, this can be safely ignored in most cases.");
         return false;
     };
 
@@ -204,6 +208,8 @@ fn run_render_system(
     widget_entity: Entity,
     widget_query_state: &mut QueryState<One<&dyn Widget>, Without<PreviousWidget>>,
 ) {
+    let root_widget = context.get_root_widget();
+
     // Pull widget data.
     let Ok(widget) = widget_query_state.get(world, widget_entity) else {
         error!("Woodpecker UI: Missing widget data for {}!", widget_entity);
@@ -219,6 +225,16 @@ fn run_render_system(
     };
     if is_uninitialized {
         render.initialize(world);
+    }
+
+    // Root observers never can be re-created so we don't want to despawn them.
+    if widget_entity != root_widget {
+        // Clear out observer entities on re-render
+        world.resource_scope(
+            |world: &mut World, mut observer_cache: Mut<ObserverCache>| {
+                observer_cache.despawn_for_widget(world, widget_entity);
+            },
+        );
     }
 
     trace!("re-rendering: {}-{}", widget_name, widget_entity);
@@ -251,18 +267,31 @@ fn run_render_system(
             // Only remove if the child was not added this frame.
             if !widget_mapper.added_this_frame(*child) {
                 trace!("Removing: {child}");
+
+                if world.get_entity(*child).is_err() {
+                    panic!("Error: Attempted to despawn an entity already despawned. :( Widget entities should never manually be removed. This might be a bug with the widget runner backend, please file a ticket!");
+                }
+
+                // Remove observers
+                world.resource_scope(
+                    |world: &mut World, mut observer_cache: Mut<ObserverCache>| {
+                    observer_cache.despawn_for_target(world, *child);
+                });
+
                 // Remove from the mapper.
                 widget_mapper.remove_by_entity_id(widget_entity, *child);
                 // Despawn and despawn recursive.
                 removed_list.insert(*child);
                 // Entity and its children were despawned lets make sure all of the descendants are removed from the mapper!
                 for child in get_all_children(world, *child) {
-                    let parent = world.entity(child).get::<Parent>().expect("Unknown dangling child! This is an error with woodpecker UI source please file a bug report.").get();
+                    let parent = world.entity(child).get::<ChildOf>().expect("Unknown dangling child! This is an error with woodpecker UI source please file a bug report.").parent();
                     widget_mapper.remove_by_entity_id(parent, child);
                     removed_list.insert(child);
                 }
                 // Do this last so the parent query still works.
-                world.entity_mut(*child).despawn_recursive();
+                if world.get_entity(*child).is_ok() {
+                    world.entity_mut(*child).despawn();
+                }
             }
         }
     });

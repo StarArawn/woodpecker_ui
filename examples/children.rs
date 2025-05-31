@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_mod_picking::DefaultPickingPlugins;
 use woodpecker_ui::prelude::*;
 
 // We can derive widget here and pass in our systems
@@ -84,8 +83,12 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        .add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new())
-        .add_plugins(DefaultPickingPlugins)
+        .add_plugins((
+            bevy_inspector_egui::bevy_egui::EguiPlugin {
+                enable_multipass_for_primary_context: false,
+            },
+            bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
+        ))
         .register_widget::<FooWidget>()
         .register_widget::<BarWidget>()
         .register_widget::<BazWidget>()

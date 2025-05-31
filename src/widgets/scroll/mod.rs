@@ -3,10 +3,12 @@ pub mod content;
 pub mod scroll_bar;
 pub mod scroll_box;
 
+use std::sync::Arc;
+
 use crate::prelude::*;
 use bevy::prelude::*;
 
-/// Context data provided by a [`ScrollBox`](crate::ScrollBox) widget
+/// Context data provided by a [`ScrollBox`](crate::prelude::ScrollBox) widget
 #[derive(Component, Default, Reflect, Debug, Copy, Clone, PartialEq)]
 pub struct ScrollContext {
     pub(super) scroll_x: f32,
@@ -133,19 +135,46 @@ impl ScrollContext {
 #[derive(Component, Widget, Reflect, Default, PartialEq, Clone)]
 #[auto_update(render)]
 #[props(ScrollContextProvider)]
+#[require(WidgetChildren, WoodpeckerStyle)]
 pub struct ScrollContextProvider {
-    initial_value: ScrollContext,
+    /// The initial scroll context
+    pub initial_value: ScrollContext,
+    #[reflect(ignore)]
+    /// An optional TaggedContext that allows you to tag the context
+    /// for smarter querying later.
+    pub tag: Option<TaggedContext>,
 }
 
-/// A bundle for convince when creating the widget.
-#[derive(Bundle, Default, Clone)]
-pub struct ScrollContextProviderBundle {
-    /// The context provider
-    pub provider: ScrollContextProvider,
-    /// The children
-    pub children: WidgetChildren,
-    /// The styles
-    pub styles: WoodpeckerStyle,
+/// Allows you to attach a tag to the scroll or windowing context.
+/// This is useful for querying a specific context for
+/// manual control.
+#[derive(Clone, Reflect)]
+pub struct TaggedContext {
+    pub(crate) f: Arc<dyn Fn(EntityCommands<'_>) + 'static + Send + Sync>,
+}
+
+impl PartialEq for TaggedContext {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Default for TaggedContext {
+    fn default() -> Self {
+        Self {
+            f: Arc::new(|_| {}),
+        }
+    }
+}
+
+impl TaggedContext {
+    /// Creates a new tagged context
+    pub fn new(c: impl Component + Copy) -> Self {
+        let f = Arc::new(move |mut commands: EntityCommands<'_>| {
+            commands.insert(c);
+        });
+        Self { f }
+    }
 }
 
 pub fn render(
@@ -159,7 +188,10 @@ pub fn render(
     };
 
     // Setup scroll context.
-    let _entity = context.use_context(&mut commands, *current_widget, provider.initial_value);
+    let entity = context.use_context(&mut commands, *current_widget, provider.initial_value);
+    if let Some(tag) = provider.tag.as_ref() {
+        (tag.f)(commands.entity(entity));
+    }
 
     children.apply(current_widget.as_parent());
 }

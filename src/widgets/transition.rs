@@ -1,7 +1,6 @@
-use bevy::prelude::*;
+use bevy::{platform::time::Instant, prelude::*};
 use interpolation::Ease;
 use interpolation::EaseFunction;
-use web_time::Instant;
 
 use crate::prelude::*;
 

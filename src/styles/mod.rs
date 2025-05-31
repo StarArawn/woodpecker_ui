@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_vello::text::VelloFont;
+use bevy_vello::prelude::VelloFont;
 pub use corner::Corner;
 pub use edge::Edge;
 pub use layout::*;
@@ -16,6 +16,20 @@ mod units;
 #[derive(Component, Reflect, Default, Debug, Clone, PartialEq)]
 #[reflect(Component)]
 pub struct WoodpeckerStyleProp(pub WoodpeckerStyle);
+
+/// Text wrapping mode
+#[derive(Debug, Eq, Default, PartialEq, Reflect, Clone, Copy)]
+pub enum TextWrap {
+    /// No wrapping
+    None,
+    /// Wraps at a glyph level
+    Glyph,
+    /// Wraps at the word level
+    Word,
+    #[default]
+    /// Wraps at the word level, or fallback to glyph level if a word can't fit on a line by itself
+    WordOrGlyph,
+}
 
 // A struct used to define the look of a widget
 ///
@@ -181,6 +195,8 @@ pub struct WoodpeckerStyle {
     ///
     /// Only applies to [`crate::prelude::WidgetRender::Text`]
     pub font_size: f32,
+    /// The text wrap mode used.
+    pub text_wrap: TextWrap,
     /// The layout method for children of this widget
     /// The line height for this widget, in pixels
     pub line_height: Option<f32>,
@@ -190,6 +206,32 @@ pub struct WoodpeckerStyle {
     /// Alignent for text rendering
     /// If none is set it uses right for RTL and left for LTR text.
     pub text_alignment: Option<TextAlign>,
+    /// Image Quality
+    pub image_quality: ImageQuality,
+    /// Z Index
+    pub z_index: Option<u32>,
+}
+
+/// Image Quality
+#[derive(Reflect, Debug, Default, Clone, PartialEq, Copy)]
+pub enum ImageQuality {
+    /// Nearest Neighbor Filtering
+    Low,
+    /// Bilinear Filtering
+    #[default]
+    Medium,
+    /// Bicubic Filtering
+    High,
+}
+
+impl Into<bevy_vello::vello::peniko::ImageQuality> for ImageQuality {
+    fn into(self) -> bevy_vello::vello::peniko::ImageQuality {
+        match self {
+            ImageQuality::Low => bevy_vello::vello::peniko::ImageQuality::Low,
+            ImageQuality::Medium => bevy_vello::vello::peniko::ImageQuality::Medium,
+            ImageQuality::High => bevy_vello::vello::peniko::ImageQuality::High,
+        }
+    }
 }
 
 impl Default for WoodpeckerStyle {
@@ -268,7 +310,10 @@ impl WoodpeckerStyle {
         line_height: None,
         opacity: 1.0,
         font: None,
+        text_wrap: TextWrap::WordOrGlyph,
         text_alignment: None,
+        image_quality: ImageQuality::Medium,
+        z_index: None,
     };
 
     /// Lerps between two styles.

@@ -4,11 +4,11 @@ use crate::{
     prelude::*,
 };
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::Pointer,
-    prelude::{ListenerInput, On},
-    PickableBundle,
-};
+// use bevy_mod_picking::{
+//     events::Pointer,
+//     prelude::{ListenerInput, On},
+//     PickableBundle,
+// };
 
 use super::ScrollContext;
 
@@ -18,6 +18,7 @@ use super::ScrollContext;
 #[auto_update(render)]
 #[props(ScrollBox, PassedChildren, WidgetLayout)]
 #[context(ScrollContext)]
+#[require(WoodpeckerStyle, WidgetChildren, PassedChildren)]
 pub struct ScrollBox {
     /// If true, always shows scrollbars even when there's nothing to scroll
     ///
@@ -32,8 +33,10 @@ pub struct ScrollBox {
     pub hide_horizontal: bool,
     /// If true, hides the vertical scrollbar
     pub hide_vertical: bool,
-    /// The thickness of the scrollbar
+    /// The thickness of the entire scrollbar in pixels
     pub scrollbar_thickness: Option<f32>,
+    /// The thickness of the thumb in pixels
+    pub thumb_thickness: Option<f32>,
     /// The step to scroll by when `ScrollUnit::Line`
     pub scroll_line: Option<f32>,
     /// The color of the scrollbar thumb
@@ -44,21 +47,6 @@ pub struct ScrollBox {
     pub track_color: Option<Color>,
     /// The styles of the scrollbar track
     pub track_styles: Option<WoodpeckerStyle>,
-}
-
-/// A bundle for convince when creating the widget.
-#[derive(Bundle, Default, Clone)]
-pub struct ScrollBoxBundle {
-    /// The scrollbox itself
-    pub scroll_box: ScrollBox,
-    /// Internal Styles
-    ///
-    /// Hint: To set the styles use fields in [`ScrollBox`]
-    pub styles: WoodpeckerStyle,
-    /// The internal children built by this widget.
-    pub internal_children: WidgetChildren,
-    /// The widgets you'd like to be scrollable.
-    pub children: PassedChildren,
 }
 
 pub fn render(
@@ -94,7 +82,7 @@ pub fn render(
     let hide_horizontal = scroll_box.hide_horizontal;
     let hide_vertical = scroll_box.hide_vertical;
     let scrollbar_thickness = scroll_box.scrollbar_thickness.unwrap_or(10.0);
-    let scroll_line = scroll_box.scroll_line.unwrap_or(128.0);
+    let scroll_line = scroll_box.scroll_line.unwrap_or(64.0);
     let thumb_color = scroll_box.thumb_color;
     let thumb_styles = scroll_box.thumb_styles;
     let track_color = scroll_box.track_color;
@@ -102,9 +90,6 @@ pub fn render(
 
     let scrollable_width = context.scrollable_width();
     let scrollable_height = context.scrollable_height();
-
-    let scroll_x = context.scroll_x();
-    let scroll_y = context.scroll_y();
 
     let hori_thickness = scrollbar_thickness;
     let vert_thickness = scrollbar_thickness;
@@ -142,67 +127,59 @@ pub fn render(
         ..Default::default()
     };
 
-    let scroll_content_bundle = ScrollContentBundle {
-        children: passed_children.0.clone(),
-        ..Default::default()
-    };
+    let scroll_content_bundle = (ScrollContent, passed_children.0.clone());
 
-    let mut vbox_children = WidgetChildren::default().with_child::<Clip>(ClipBundle {
-        children: WidgetChildren::default().with_child::<ScrollContent>(scroll_content_bundle),
-        ..Default::default()
-    });
+    let mut vbox_children = WidgetChildren::default().with_child::<Clip>((
+        Clip,
+        WidgetChildren::default().with_child::<ScrollContent>(scroll_content_bundle),
+    ));
 
     if !hide_horizontal {
-        vbox_children.add::<ScrollBar>(ScrollBarBundle {
-            scroll_bar: ScrollBar {
-                disabled: disable_horizontal,
-                horizontal: true,
-                thickness: hori_thickness,
-                thumb_color,
-                thumb_styles,
-                track_color,
-                track_styles,
-            },
-            ..Default::default()
+        vbox_children.add::<ScrollBar>(ScrollBar {
+            disabled: disable_horizontal,
+            horizontal: true,
+            thickness: hori_thickness,
+            thumb_thickness: scroll_box.thumb_thickness,
+            thumb_color,
+            thumb_styles,
+            track_color,
+            track_styles,
         });
     }
 
     let mut element_wrapper_children =
-        WidgetChildren::default().with_child::<Element>(ElementBundle {
-            styles: vbox_styles,
-            children: vbox_children,
-            ..Default::default()
-        });
+        WidgetChildren::default().with_child::<Element>((Element, vbox_styles, vbox_children));
 
     if !hide_vertical {
-        element_wrapper_children.add::<ScrollBar>(ScrollBarBundle {
-            scroll_bar: ScrollBar {
-                disabled: disable_vertical,
-                thickness: hori_thickness,
-                thumb_color,
-                thumb_styles,
-                track_color,
-                track_styles,
-                ..Default::default()
-            },
+        element_wrapper_children.add::<ScrollBar>(ScrollBar {
+            disabled: disable_vertical,
+            thickness: hori_thickness,
+            thumb_thickness: scroll_box.thumb_thickness,
+            thumb_color,
+            thumb_styles,
+            track_color,
+            track_styles,
             ..Default::default()
         });
     }
 
-    children.add::<Element>((
-        ElementBundle {
-            styles: hbox_styles,
-            children: element_wrapper_children,
-            ..Default::default()
-        },
-        PickableBundle::default(),
-        On::<Pointer<MouseWheelScroll>>::run(
-            move |mut event: ResMut<ListenerInput<Pointer<MouseWheelScroll>>>,
+    children
+        .add::<Element>((
+            Element,
+            hbox_styles,
+            element_wrapper_children,
+            Pickable::default(),
+        ))
+        .observe(
+            *current_widget,
+            move |mut trigger: Trigger<Pointer<MouseWheelScroll>>,
                   mut context_query: Query<&mut ScrollContext>| {
-                let x = event.scroll.x;
-                let y = event.scroll.y;
-                event.stop_propagation();
+                let x = trigger.scroll.x;
+                let y = trigger.scroll.y;
+                trigger.propagate(false);
                 if let Ok(mut context) = context_query.get_mut(context_entity) {
+                    let scroll_x = context.scroll_x();
+                    let scroll_y = context.scroll_y();
                     if !disable_horizontal {
                         context.set_scroll_x(scroll_x - x * scroll_line);
                     }
@@ -211,8 +188,7 @@ pub fn render(
                     }
                 }
             },
-        ),
-    ));
+        );
 
     children.apply(current_widget.as_parent());
 }
