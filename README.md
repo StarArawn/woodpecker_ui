@@ -16,7 +16,7 @@ Woodpecker UI is a Bevy ECS driven user interface crate. Its designed to be easy
   - Easy to use widget systems
   - Flexable UI rendering using [vello](https://github.com/linebender/bevy_vello)
   - [Taffy](https://github.com/DioxusLabs/taffy) layouting
-  - [Cosmic Text](https://github.com/pop-os/cosmic-text) for text layouting
+  - [Parley](https://github.com/linebender/parley) for text layouting and editing
   - A few helper widgets to get you started
 
 
@@ -85,7 +85,7 @@ fn startup(
 
 <details>
     <summary>Counter Example</summary>
-    
+
 ```rust
 use bevy::prelude::*;
 use woodpecker_ui::prelude::*;
