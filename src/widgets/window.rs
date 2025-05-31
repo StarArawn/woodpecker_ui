@@ -1,5 +1,9 @@
-use crate::prelude::*;
-use bevy::prelude::*;
+use crate::{picking_backend::compute_letterboxed_transform, prelude::*};
+use bevy::{
+    prelude::*,
+    window::{PrimaryWindow, SystemCursorIcon},
+    winit::cursor::CursorIcon,
+};
 // use bevy_mod_picking::{
 //     events::{Drag, Pointer},
 //     prelude::{Listener, On},
@@ -79,11 +83,12 @@ fn render(
         &mut WidgetChildren,
         &WidgetLayout,
         &PassedChildren,
+        Option<&TitleChildren>,
     )>,
     state_query: Query<&mut WindowState>,
     mut context_query: Query<&mut WindowingContext>,
 ) {
-    let Ok((window, mut styles, mut children, layout, passed_children)) =
+    let Ok((window, mut styles, mut children, layout, passed_children, title_children)) =
         query.get_mut(**current_widget)
     else {
         return;
@@ -116,7 +121,7 @@ fn render(
         position: WidgetPosition::Fixed,
         left: state.position.x.into(),
         top: state.position.y.into(),
-        z_index: Some(z_index as u32),
+        z_index: Some(WidgetZ::Global(z_index)),
         ..window.window_styles
     };
 
@@ -141,17 +146,21 @@ fn render(
                 width: layout.width().into(),
                 ..window.title_styles
             },
-            WidgetChildren::default().with_child::<Element>((
-                Element,
-                WoodpeckerStyle {
-                    font_size: 14.0,
-                    text_wrap: TextWrap::None,
-                    ..Default::default()
-                },
-                WidgetRender::Text {
-                    content: window.title.clone(),
-                },
-            )),
+            if let Some(title_children) = title_children.as_ref() {
+                title_children.0.clone()
+            } else {
+                WidgetChildren::default().with_child::<Element>((
+                    Element,
+                    WoodpeckerStyle {
+                        font_size: 14.0,
+                        text_wrap: TextWrap::None,
+                        ..Default::default()
+                    },
+                    WidgetRender::Text {
+                        content: window.title.clone(),
+                    },
+                ))
+            },
             WidgetRender::Quad,
             Pickable::default(),
         ))
@@ -168,17 +177,67 @@ fn render(
         )
         .observe(
             current_widget,
+            move |_trigger: Trigger<Pointer<Over>>,
+                  mut commands: Commands,
+                  entity: Single<Entity, With<PrimaryWindow>>| {
+                commands
+                    .entity(*entity)
+                    .insert(CursorIcon::from(SystemCursorIcon::Grab));
+            },
+        )
+        .observe(
+            current_widget,
+            move |_trigger: Trigger<Pointer<Out>>,
+                  mut commands: Commands,
+                  entity: Single<Entity, With<PrimaryWindow>>| {
+                commands
+                    .entity(*entity)
+                    .insert(CursorIcon::from(SystemCursorIcon::Default));
+            },
+        )
+        .observe(
+            current_widget,
+            move |_trigger: Trigger<Pointer<DragEnd>>,
+                  mut commands: Commands,
+                  entity: Single<Entity, With<PrimaryWindow>>| {
+                commands
+                    .entity(*entity)
+                    .insert(CursorIcon::from(SystemCursorIcon::Grab));
+            },
+        )
+        .observe(
+            current_widget,
             move |trigger: Trigger<Pointer<DragStart>>,
+                  mut commands: Commands,
                   mut state_query: Query<&mut WindowState>,
+                  window: Single<(Entity, &Window), With<PrimaryWindow>>,
+                  camera: Query<&Camera, With<WoodpeckerView>>,
                   mut context_query: Query<&mut WindowingContext>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
-                state.drag_offset = state.position - trigger.pointer_location.position;
+
+                let Some(camera) = camera.iter().next() else {
+                    return;
+                };
+
+                let (offset, size, _scale) = compute_letterboxed_transform(
+                    window.1.size(),
+                    camera.logical_target_size().unwrap(),
+                );
+
+                let cursor_pos_world = ((trigger.pointer_location.position - offset) / size)
+                    * camera.logical_target_size().unwrap();
+
+                state.drag_offset = state.position - cursor_pos_world;
 
                 let Ok(mut context) = context_query.get_mut(context_entity) else {
                     return;
                 };
+
+                commands
+                    .entity(window.0)
+                    .insert(CursorIcon::from(SystemCursorIcon::Grabbing));
 
                 context.shift_to_top(current_widget.entity());
             },
@@ -187,11 +246,26 @@ fn render(
             current_widget,
             move |trigger: Trigger<Pointer<Drag>>,
                   mut state_query: Query<&mut WindowState>,
+                  window: Single<(Entity, &Window), With<PrimaryWindow>>,
+                  camera: Query<&Camera, With<WoodpeckerView>>,
                   mut context_query: Query<&mut WindowingContext>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
-                state.position = trigger.pointer_location.position + state.drag_offset;
+
+                let Some(camera) = camera.iter().next() else {
+                    return;
+                };
+
+                let (offset, size, _scale) = compute_letterboxed_transform(
+                    window.1.size(),
+                    camera.logical_target_size().unwrap(),
+                );
+
+                let cursor_pos_world = ((trigger.pointer_location.position - offset) / size)
+                    * camera.logical_target_size().unwrap();
+
+                state.position = cursor_pos_world + state.drag_offset;
 
                 let Ok(mut context) = context_query.get_mut(context_entity) else {
                     return;

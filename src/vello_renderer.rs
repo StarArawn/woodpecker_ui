@@ -118,6 +118,23 @@ pub(crate) fn run(renderer_system_param: RenderSystemParam) {
     // Once tree is traversed we sort the commands
     render_commands.sort_unstable_by(|a, b| a.z.cmp(&b.z).then_with(|| a.order.cmp(&b.order)));
 
+    // DEBUG OUTPUT
+    // for command in render_commands.iter() {
+    //     let name = match command.widget_render {
+    //         WidgetRender::Quad => "Quad",
+    //         WidgetRender::Text { .. } => "Text",
+    //         WidgetRender::RichText { .. } => "RichText",
+    //         WidgetRender::Custom { .. } => "Custom",
+    //         WidgetRender::Layer => "Layer",
+    //         WidgetRender::PopLayer => "PopLayer",
+    //         WidgetRender::Image { .. } => "Image",
+    //         WidgetRender::RenderTarget { .. } => "RenderTarget",
+    //         WidgetRender::NinePatch { .. } => "NinePatch",
+    //         WidgetRender::Svg { .. } => "Svg",
+    //     };
+    //     info!("{}-z:{}-order:{}", name, command.z, command.order);
+    // }
+
     // Now we can render with vello
     for command in render_commands {
         // dbg!((command.widget_render.to_string(), command.z, command.order));
@@ -190,8 +207,16 @@ fn traverse_render_tree(
     }
 
     let z_index = styles.z_index;
-    let z = z_index.unwrap_or(parent_id);
-    let mut order = *order_counter;
+    let z = z_index
+        .map(|z| z.get_global())
+        .flatten()
+        .unwrap_or(parent_id);
+    let mut order = (*order_counter as i32
+        + styles
+            .z_index
+            .map(|z| z.get_relative())
+            .flatten()
+            .unwrap_or(0)) as u32;
     *order_counter += 1;
 
     let mut did_layer = false;
@@ -235,6 +260,7 @@ fn traverse_render_tree(
     let Some(children) = children.map(|c| c.iter().collect::<Vec<_>>()) else {
         if did_layer {
             let order = *order_counter;
+            *order_counter += 1;
             // vello_scene.pop_layer();
             render_commands.push(RenderCommand {
                 z,
@@ -275,6 +301,7 @@ fn traverse_render_tree(
     if did_layer {
         // vello_scene.pop_layer();
         let order = *order_counter;
+        *order_counter += 1;
         render_commands.push(RenderCommand {
             z,
             order,

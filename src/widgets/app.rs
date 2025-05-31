@@ -1,9 +1,9 @@
 use crate::{
     children::WidgetChildren,
     prelude::{Units, Widget, WoodpeckerStyle},
-    CurrentWidget,
+    CurrentWidget, WoodpeckerView,
 };
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::{prelude::*, render::camera::CameraProjection, window::PrimaryWindow};
 
 /// The Woodpecker UI App component
 #[derive(Component, Widget, Reflect, Default, Clone)]
@@ -36,19 +36,53 @@ pub fn update(
 pub fn render(
     entity: Res<CurrentWidget>,
     mut query: Query<(&mut WidgetChildren, &mut WoodpeckerStyle)>,
-    window_query: Query<&Window, With<PrimaryWindow>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
+    camera_query: Query<(&Camera, &Projection), With<WoodpeckerView>>,
+    images: Res<Assets<Image>>,
 ) {
-    let Some(window) = window_query.iter().next() else {
-        return;
-    };
+    let (camera, proj) = camera_query.single().unwrap();
 
     let Ok((mut children, mut styles)) = query.get_mut(**entity) else {
         return;
     };
 
+    let camera_size = match &camera.target {
+        bevy::render::camera::RenderTarget::Window(_) => primary_window.size(),
+        bevy::render::camera::RenderTarget::Image(image_render_target) => images
+            .get(&image_render_target.handle)
+            .unwrap()
+            .size()
+            .as_vec2(),
+        bevy::render::camera::RenderTarget::TextureView(_) => {
+            panic!("ManualTextureViewHandle not supported!")
+        }
+    };
+
+    let rect = match proj {
+        Projection::Orthographic(orthographic_projection) => {
+            let mut proj = orthographic_projection.clone();
+            match proj.scaling_mode {
+                bevy::render::camera::ScalingMode::WindowSize => Rect {
+                    min: Vec2::ZERO,
+                    max: camera_size,
+                },
+                bevy::render::camera::ScalingMode::AutoMin { .. }
+                | bevy::render::camera::ScalingMode::AutoMax { .. }
+                | bevy::render::camera::ScalingMode::FixedVertical { .. }
+                | bevy::render::camera::ScalingMode::FixedHorizontal { .. }
+                | bevy::render::camera::ScalingMode::Fixed { .. } => {
+                    proj.update(camera_size.x, camera_size.y);
+                    proj.area
+                }
+            }
+        }
+        _ => panic!("Perspective projection is Not supported!"),
+    };
     *styles = WoodpeckerStyle {
-        width: Units::Pixels(window.width()),
-        height: Units::Pixels(window.height()),
+        width: Units::Pixels(rect.size().x),
+        height: Units::Pixels(rect.size().y),
+        left: rect.min.x.into(),
+        top: rect.min.y.into(),
         ..*styles
     };
 

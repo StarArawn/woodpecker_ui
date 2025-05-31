@@ -39,10 +39,12 @@ pub struct WidgetChildren {
                     usize,
                     String,
                     ObserverList,
+                    Option<String>, // Child key
                 ) + Sync
                 + Send,
         >,
         ObserverList,
+        Option<String>, // Child key
     )>,
     // When a widget is processed onto a parent they get stored here and removed from the queue.
     children: Vec<(
@@ -56,19 +58,27 @@ pub struct WidgetChildren {
                     usize,
                     String,
                     ObserverList,
+                    Option<String>, // Child key
                 ) + Sync
                 + Send,
         >,
         ObserverList,
+        Option<String>, // Child key
     )>,
     /// A collection of observers attached to the parent widget not the children
     self_observers: ObserverList,
     /// Stores a list of previous children.
-    prev_children: Vec<String>,
+    prev_children: Vec<(String, Option<String>)>,
     /// Lets the system know who the parent is.
     /// We need this because childen can be passed around until they
     /// are committed to a parent.
     parent_widget: Option<ParentWidget>,
+}
+
+impl std::fmt::Debug for WidgetChildren {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WidgetChildren").finish()
+    }
 }
 
 impl PartialEq for WidgetChildren {
@@ -76,22 +86,22 @@ impl PartialEq for WidgetChildren {
         let queue = self
             .children_queue
             .iter()
-            .map(|(wn, _, _)| wn.clone())
+            .map(|(wn, _, _, child_key)| (wn.clone(), child_key.clone()))
             .collect::<Vec<_>>();
         let other_queue = other
             .children_queue
             .iter()
-            .map(|(wn, _, _)| wn.clone())
+            .map(|(wn, _, _, child_key)| (wn.clone(), child_key.clone()))
             .collect::<Vec<_>>();
-        let children: Vec<String> = self
+        let children = self
             .children
             .iter()
-            .map(|(wn, _, _)| wn.clone())
+            .map(|(wn, _, _, child_key)| (wn.clone(), child_key.clone()))
             .collect::<Vec<_>>();
         let other_children = other
             .children
             .iter()
-            .map(|(wn, _, _)| wn.clone())
+            .map(|(wn, _, _, child_key)| (wn.clone(), child_key.clone()))
             .collect::<Vec<_>>();
         queue == other_queue && children == other_children
     }
@@ -105,6 +115,19 @@ impl WidgetChildren {
     ) -> Self {
         self.add::<T>(bundle);
         self
+    }
+
+    /// Adds a key to the last child widget entity added
+    pub fn with_key(mut self, key: impl Into<String>) -> Self {
+        self.add_key(key);
+        self
+    }
+
+    /// Adds a key to the last child widget entity added
+    pub fn add_key(&mut self, key: impl Into<String>) {
+        if let Some((_, _, _, child_key)) = self.children_queue.last_mut() {
+            *child_key = Some(key.into());
+        }
     }
 
     /// Builder pattern for adding observers when you initially create a child.
@@ -142,7 +165,8 @@ impl WidgetChildren {
                       parent: ParentWidget,
                       index: usize,
                       widget_type: String,
-                      observer_list: ObserverList| {
+                      observer_list: ObserverList,
+                      child_key: Option<String>| {
                     let type_name_without_path =
                         widget_type.clone().split("::").last().unwrap().to_string();
                     let child_widget = widget_mapper.get_or_insert_entity_world(
@@ -150,7 +174,7 @@ impl WidgetChildren {
                         observer_cache,
                         widget_type,
                         parent,
-                        None,
+                        child_key,
                         index,
                     );
                     world
@@ -177,6 +201,7 @@ impl WidgetChildren {
                 },
             ),
             vec![],
+            None,
         ));
 
         self
@@ -191,7 +216,7 @@ impl WidgetChildren {
         observer: impl IntoObserverSystem<E, B, M>,
     ) -> &mut Self {
         let o = Arc::new(RwLock::new(Some(Observer::new(observer))));
-        if let Some((_, _, observers)) = self.children_queue.last_mut() {
+        if let Some((_, _, observers, _)) = self.children_queue.last_mut() {
             observers.push((
                 spawn_location,
                 Arc::new(move |world, _parent, target_entity| {
@@ -235,8 +260,15 @@ impl WidgetChildren {
 
     /// Lets you know if the children have changed between now and when they were last rendered.
     pub fn children_changed(&self) -> bool {
-        self.children.iter().map(|(n, _, _)| n).collect::<Vec<_>>()
-            != self.prev_children.iter().collect::<Vec<_>>()
+        self.children
+            .iter()
+            .map(|(n, _, _, child_key)| (n, child_key))
+            .collect::<Vec<_>>()
+            != self
+                .prev_children
+                .iter()
+                .map(|t| (&t.0, &t.1))
+                .collect::<Vec<_>>()
     }
 
     /// Attaches the children to a parent widget.
@@ -278,7 +310,9 @@ impl WidgetChildren {
                     // The widget mapper helps keep track of which entities go with which child.
                     // They are ensured to have the same entity id for a given child index and
                     // widget type name. The type name is passed in here from the children vec.
-                    for (i, (widget_type, child, observers)) in self.children.iter().enumerate() {
+                    for (i, (widget_type, child, observers, child_key)) in
+                        self.children.iter().enumerate()
+                    {
                         trace!("Adding as child: {}", widget_type);
                         child(
                             world,
@@ -288,6 +322,7 @@ impl WidgetChildren {
                             i,
                             widget_type.clone(),
                             observers.clone(),
+                            child_key.clone(),
                         );
                     }
                 },
@@ -303,7 +338,7 @@ impl WidgetChildren {
         self.prev_children = self
             .children
             .iter()
-            .map(|(n, _, _)| n.clone())
+            .map(|(n, _, _, child_key)| (n.clone(), child_key.clone()))
             .collect::<Vec<_>>()
     }
 }

@@ -6,6 +6,13 @@ use bevy::{
 };
 use bevy_vello::{prelude::VelloFont, vello::peniko::Brush};
 
+use crate::{
+    layout::{measure::LayoutMeasure, system::measure_text},
+    prelude::WidgetLayout,
+    styles::WoodpeckerStyle,
+    DefaultFont,
+};
+
 /// The text alignment of the font.
 #[derive(Debug, Clone, Copy, Default, Reflect, PartialEq)]
 pub enum TextAlign {
@@ -67,6 +74,22 @@ impl FontManager {
     /// Adds a font handle to the font manager to keep it alive.
     pub fn add(&mut self, handle: &Handle<VelloFont>) {
         self.fonts.insert(handle.clone());
+    }
+
+    /// Measures text for the given layout and font.
+    pub fn measure(
+        &mut self,
+        text: &str,
+        styles: &WoodpeckerStyle,
+        layout: &WidgetLayout,
+        default_font: &DefaultFont,
+    ) -> Option<Vec2> {
+        measure_text(text, styles, self, default_font, layout, Vec2::splat(1.0)).and_then(|m| {
+            match m {
+                LayoutMeasure::Fixed(fixed) => Some(fixed.size),
+                _ => None,
+            }
+        })
     }
 }
 

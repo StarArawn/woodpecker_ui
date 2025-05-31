@@ -1616,7 +1616,6 @@ dependencies = [
 [[package]]
 name = "bevy_vello"
 version = "0.8.0"
-source = "git+https://github.com/RobertBrewitz/bevy_vello?rev=fbf01ec#fbf01ec30a5b2c612ea1390ee563ea7b3547a08f"
 dependencies = [
  "bevy",
  "parley 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -15,8 +15,8 @@ metrics = []
 
 [dependencies]
 parley = { git = "https://github.com/linebender/parley", rev = "74a3499920675a63450727e44a75a57f76389e7a" }
-# bevy_vello = { path = "../bevy_vello", features = ["text", "default_font"] }
-bevy_vello = { git = "https://github.com/RobertBrewitz/bevy_vello", rev = "fbf01ec", features = ["text", "default_font"] }
+bevy_vello = { path = "../bevy_vello", features = ["text", "default_font"] }
+# bevy_vello = { git = "https://github.com/RobertBrewitz/bevy_vello", rev = "2e40cc6", features = ["text", "default_font"] }
 bevy-trait-query = "0.16"
 dioxus-devtools = { version = "0.7.0-alpha.0", optional = true }
 bytemuck = "1.23.0"

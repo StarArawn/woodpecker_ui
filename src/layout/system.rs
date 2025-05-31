@@ -304,8 +304,17 @@ fn traverse_layout_update(
 
         cache.insert(entity, layout);
         let mut layout = WidgetLayout((&layout).into());
-        layout.order = *order;
-        layout.z = styles.z_index.unwrap_or(parent_id);
+        layout.order = ((*order as i32)
+            + styles
+                .z_index
+                .map(|z| z.get_relative())
+                .flatten()
+                .unwrap_or(0)) as u32;
+        layout.z = styles
+            .z_index
+            .map(|z| z.get_global())
+            .flatten()
+            .unwrap_or(parent_id);
         *order += 1;
         commands.entity(entity).insert(layout);
 
@@ -359,6 +368,7 @@ fn traverse_upsert_node(
         } else {
             layout.get_layout(root_node)
         } {
+            let widget_layout = WidgetLayout(ReflectedLayout::from(parent_layout));
             match_render_size(
                 font_manager,
                 image_assets,
@@ -366,7 +376,7 @@ fn traverse_upsert_node(
                 default_font,
                 widget_render,
                 styles,
-                parent_layout,
+                &widget_layout,
                 camera_scale,
             )
         } else {
@@ -403,7 +413,7 @@ fn match_render_size(
     default_font: &DefaultFont,
     widget_render: &WidgetRender,
     styles: &WoodpeckerStyle,
-    parent_layout: &Layout,
+    parent_layout: &WidgetLayout,
     camera_scale: Vec2,
 ) -> Option<LayoutMeasure> {
     match widget_render {
@@ -440,12 +450,12 @@ fn match_render_size(
     }
 }
 
-fn measure_text(
+pub(crate) fn measure_text(
     text: &str,
     styles: &WoodpeckerStyle,
     font_manager: &mut FontManager,
     default_font: &DefaultFont,
-    parent_layout: &Layout,
+    parent_layout: &WidgetLayout,
     camera_scale: Vec2,
 ) -> Option<LayoutMeasure> {
     // Measure text
@@ -475,7 +485,7 @@ fn measure_text(
             crate::styles::TextWrap::WordOrGlyph => parley::OverflowWrap::Anywhere,
         },
     ));
-    layout_editor.set_width(Some(parent_layout.size.width * camera_scale.x));
+    layout_editor.set_width(Some(parent_layout.size.x * camera_scale.x));
     let alignment = match styles
         .text_alignment
         .unwrap_or(crate::font::TextAlign::Left)

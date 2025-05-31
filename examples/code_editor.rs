@@ -48,6 +48,7 @@ fn startup(
                                     text_highlighting: ApplyHighlighting::new(|txt| {
                                         Some(highlight("rust", txt, "dracula"))
                                     }),
+                                    ..default()
                                 },
                             )),
                         )),
@@ -93,9 +94,7 @@ fn startup(
                     ..Default::default()
                 },
                 WidgetRender::RichText {
-                    content: RichText::new()
-                        .with_color_text("Hello World! ", Srgba::BLUE.into())
-                        .with_color_text("I am Woodpecker UI!", Srgba::RED.into()),
+                    content: RichText::new().with_color_text("Hello World! ", Srgba::BLUE.into()).with_color_text("I am Woodpecker UI!", Srgba::RED.into()),
                 },
             )),
         ))

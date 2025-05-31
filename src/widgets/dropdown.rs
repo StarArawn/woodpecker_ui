@@ -216,7 +216,7 @@ fn render(
             } else {
                 WidgetDisplay::None
             },
-            z_index: Some(1000),
+            z_index: Some(WidgetZ::Global(1000)),
             ..dropdown.styles.list_area
         },
         list_children,

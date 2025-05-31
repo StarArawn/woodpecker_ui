@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use super::colors;
 
 /// A collection of styles for icon buttons.
-#[derive(Component, Clone, PartialEq)]
+#[derive(Component, Clone, Copy, PartialEq)]
 pub struct IconButtonStyles {
     /// Normal Styles
     pub normal: WoodpeckerStyle,
