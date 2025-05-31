@@ -233,7 +233,7 @@ impl WidgetRender {
                     true,
                 );
 
-                let mut styles = StyleSet::new(widget_style.font_size);
+                let mut styles = StyleSet::new(widget_style.font_size * camera_scale.x);
                 let color = widget_style.color.to_srgba();
                 styles.insert(parley::StyleProperty::Brush(Brush::Solid(
                     peniko::color::AlphaColor::new([
@@ -324,7 +324,7 @@ impl WidgetRender {
                         vello_scene
                             .draw_glyphs(font)
                             .hint(true)
-                            .font_size(font_size * camera_scale.x)
+                            .font_size(font_size)
                             .transform(glyph_xform)
                             .normalized_coords(run.normalized_coords())
                             .brush(&style.brush)
@@ -346,7 +346,8 @@ impl WidgetRender {
             }
             WidgetRender::Text { content } => {
                 // TODO: Cache this.
-                let mut layout_editor = parley::PlainEditor::new(widget_style.font_size);
+                let mut layout_editor =
+                    parley::PlainEditor::new(widget_style.font_size * camera_scale.x);
                 layout_editor.set_text(content);
                 let styles = layout_editor.edit_styles();
                 styles.insert(parley::StyleProperty::LineHeight(
@@ -418,7 +419,7 @@ impl WidgetRender {
                         vello_scene
                             .draw_glyphs(font)
                             .hint(true)
-                            .font_size(font_size * camera_scale.x)
+                            .font_size(font_size)
                             .transform(glyph_xform)
                             .normalized_coords(run.normalized_coords())
                             .brush(&Brush::Solid(vello::peniko::Color::new([
