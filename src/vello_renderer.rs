@@ -137,7 +137,6 @@ pub(crate) fn run(renderer_system_param: RenderSystemParam) {
 
     // Now we can render with vello
     for command in render_commands {
-        // dbg!((command.widget_render.to_string(), command.z, command.order));
         command.widget_render.render(
             &mut vello_scene,
             &command.layout,
@@ -211,12 +210,9 @@ fn traverse_render_tree(
         .map(|z| z.get_global())
         .flatten()
         .unwrap_or(parent_id);
-    let mut order = (*order_counter as i32
-        + styles
-            .z_index
-            .map(|z| z.get_relative())
-            .flatten()
-            .unwrap_or(0)) as u32;
+
+    let mut order =
+        (*order_counter as i32 + z_index.map(|z| z.get_relative()).flatten().unwrap_or(0)) as u32;
     *order_counter += 1;
 
     let mut did_layer = false;

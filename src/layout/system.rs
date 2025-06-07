@@ -244,6 +244,7 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
     else {
         return;
     };
+
     ui_layout.compute(root_node, Vec2::new(width, height));
 
     // TODO(PERF): Figure out how we can combine traversal and compute together..

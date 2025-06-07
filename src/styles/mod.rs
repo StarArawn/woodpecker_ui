@@ -210,6 +210,8 @@ pub struct WoodpeckerStyle {
     pub image_quality: ImageQuality,
     /// Z Index
     pub z_index: Option<WidgetZ>,
+    /// Cull mode
+    pub cull_mode: CullMode,
 }
 
 /// A z index which is either global or relative.
@@ -219,6 +221,16 @@ pub enum WidgetZ {
     Global(u32),
     /// Relative to the order of its sibilings.
     Relative(i32),
+}
+
+/// The widget cull mode.
+#[derive(Default, Reflect, Debug, Clone, PartialEq, Copy)]
+pub enum CullMode {
+    /// No Culling
+    None,
+    /// Cull if outside of viewport.
+    #[default]
+    Viewport,
 }
 
 impl WidgetZ {
@@ -341,6 +353,7 @@ impl WoodpeckerStyle {
         text_alignment: None,
         image_quality: ImageQuality::Medium,
         z_index: None,
+        cull_mode: CullMode::Viewport,
     };
 
     /// Lerps between two styles.

@@ -23,6 +23,7 @@ use crate::{
     image::ImageManager,
     metrics::WidgetMetrics,
     prelude::{RichText, WidgetLayout, WoodpeckerStyle},
+    styles::CullMode,
     svg::{SvgAsset, SvgManager},
     DefaultFont,
 };
@@ -162,6 +163,7 @@ impl WidgetRender {
             // Don't cull layers! They are important.
             && !matches!(self, WidgetRender::Layer)
             && !matches!(self, WidgetRender::PopLayer)
+            && matches!(widget_style.cull_mode, CullMode::Viewport)
         {
             return false;
         }

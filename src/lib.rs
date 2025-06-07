@@ -168,7 +168,7 @@ impl FromWorld for DefaultFont {
 }
 
 /// Previous resource
-#[derive(Resource)]
+#[derive(Component)]
 pub struct PreviousResource<T: Resource>(pub T);
 
 /// Wraps an entity and lets woodpecker know its a parent.

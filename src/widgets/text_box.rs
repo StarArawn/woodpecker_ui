@@ -62,7 +62,13 @@ impl Default for TextboxStyles {
                 ..shared
             },
             cursor: WoodpeckerStyle {
-                background_color: colors::PRIMARY,
+                background_color: Srgba::new(
+                    colors::PRIMARY.to_srgba().red,
+                    colors::PRIMARY.to_srgba().green,
+                    colors::PRIMARY.to_srgba().blue,
+                    0.8,
+                )
+                .into(),
                 position: WidgetPosition::Absolute,
                 top: 5.0.into(),
                 width: 2.0.into(),
@@ -161,6 +167,22 @@ pub struct TextBoxState {
     pub engine: parley::PlainEditor<Brush>,
     /// Indicates this is a multi-line text editor.
     pub multi_line: bool,
+    /// The font size
+    pub font_size: f32,
+}
+
+impl TextBoxState {
+    /// Reset's the cursor with the given value
+    pub fn reset_cursor(&mut self, font_manager: &mut FontManager, new_value: &str) {
+        self.engine.set_text(new_value);
+        self.engine
+            .refresh_layout(&mut font_manager.font_cx, &mut font_manager.layout_cx);
+        self.selections = self.engine.selection_geometry();
+        self.cursor = self
+            .engine
+            .cursor_geometry(self.font_size)
+            .unwrap_or_default();
+    }
 }
 
 // TODO: Remove once Parley is updated.
@@ -191,6 +213,7 @@ impl Default for TextBoxState {
             initial_value: String::new(),
             engine: parley::PlainEditor::new(0.0),
             multi_line: false,
+            font_size: 1.0,
         }
     }
 }
@@ -242,6 +265,7 @@ pub fn render(
             current_value: text_box.initial_value.clone(),
             engine: default_engine,
             multi_line: text_box.multi_line,
+            font_size: styles.normal.font_size,
             ..Default::default()
         },
     );
@@ -251,7 +275,9 @@ pub fn render(
     };
 
     if let Ok(layout) = widget_layout.get(current_widget.entity()) {
-        state.engine.set_width(Some(layout.size.x));
+        state.engine.set_width(Some(
+            layout.size.x - layout.padding.left.value_or(0.0) - layout.padding.right.value_or(0.0),
+        ));
     }
 
     if text_box.initial_value != state.initial_value {
@@ -671,14 +697,6 @@ pub fn render(
             } else {
                 TextWrap::None
             },
-            // Forces the text to appear ontop of the selection and
-            // cursor. We could render them first but text is expensive to change the order of
-            // as we need to recompute layouts. So to save on performance we want to only
-            // re-compute the text when it has actually changed.
-            // Since selection and cursor can not be rendered they force the text element to
-            // shift child locations which forces a full re-render.
-            // Shift it by 2 since we have two children after this.
-            z_index: Some(WidgetZ::Relative(2)),
             ..Default::default()
         },
         if let Some(text_highlight) = (text_box.text_highlighting.inner)(&state.current_value) {
@@ -702,6 +720,7 @@ pub fn render(
             Element,
             WoodpeckerStyle {
                 height: Units::Pixels(selections.iter().map(|s| s.0.height() as f32).sum()),
+                cull_mode: CullMode::None,
                 ..styles.cursor
             },
             WidgetRender::Custom {
@@ -730,7 +749,7 @@ pub fn render(
         ));
     }
 
-    if state.cursor_visible && state.focused {
+    if state.cursor_visible && state.focused && state.selections.is_empty() {
         clip_children.add::<Element>((Element, cursor_styles, WidgetRender::Quad));
     }
 

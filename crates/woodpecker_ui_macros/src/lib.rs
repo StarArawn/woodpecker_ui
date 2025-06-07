@@ -203,12 +203,12 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
             (
                 Some(quote! {
                     #(#resource_names_a: Res<#resource_type_names>,)*
-                    #(#resource_names_b: Option<Res<PreviousResource<#resource_type_names>>>,)*
+                    #(#resource_names_b: Query<&PreviousResource<#resource_type_names>>,)*
                 }),
                 Some(quote! {
                     #(
-                        commands.insert_resource(PreviousResource(#resource_names_a.clone()));
-                        if let Some(#resource_names_b) = #resource_names_b {
+                        commands.entity(previous_widget_entity).insert(PreviousResource(#resource_names_a.clone()));
+                        if let Ok(#resource_names_b) = #resource_names_b.get(previous_widget_entity) {
                             if &*#resource_names_a != &#resource_names_b.0 {
                                 return true;
                             }
@@ -372,8 +372,6 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
 
                 #hot_reload_diff
 
-                #resource_lookups
-
                 // Ignore no children
                 if let Ok(children) = child_query.get(**current_widget) {
                     if children.children_changed() {
@@ -396,6 +394,8 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
                 commands.entity(previous_widget_entity).insert((
                     #(#prop_names_a.clone(),)*
                 ));
+
+                #resource_lookups
 
                 #state_query_lookups
 

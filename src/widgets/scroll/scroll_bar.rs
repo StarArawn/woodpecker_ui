@@ -249,7 +249,7 @@ pub fn render(
         WidgetRender::Quad,
     )).observe(
         current_widget,move |
-            trigger: Trigger<Pointer<Click>>, 
+            trigger: Trigger<Pointer<Click>>,
             layout_query: Query<&WidgetLayout>,
             window: Single<&Window, With<PrimaryWindow>>,
             camera: Query<&Camera, With<WoodpeckerView>>,

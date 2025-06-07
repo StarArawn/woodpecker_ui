@@ -1,3 +1,10 @@
+use crate::{
+    context::WoodpeckerContext,
+    layout::system::WidgetLayout,
+    render::WidgetRender,
+    styles::{WidgetVisibility, WoodpeckerStyle},
+    WoodpeckerView,
+};
 use bevy::{
     input::mouse::MouseWheel,
     picking::{
@@ -9,19 +16,12 @@ use bevy::{
     window::PrimaryWindow,
 };
 
-use crate::{
-    context::WoodpeckerContext,
-    layout::system::WidgetLayout,
-    styles::{WidgetVisibility, WoodpeckerStyle},
-    WoodpeckerView,
-};
-
 pub(crate) fn system(
     context: Res<WoodpeckerContext>,
     pointers: Query<(&PointerId, &PointerLocation)>,
     cameras: Query<(Entity, &Camera, &GlobalTransform, &Projection), With<WoodpeckerView>>,
     primary_window: Single<(Entity, &Window), With<PrimaryWindow>>,
-    layout_query: Query<(&WidgetLayout, &WoodpeckerStyle)>,
+    layout_query: Query<(&WidgetLayout, &WoodpeckerStyle, &WidgetRender)>,
     child_query: Query<&Children>,
     pickable_query: Query<&Pickable>,
     mut output: EventWriter<PointerHits>,
@@ -51,6 +51,7 @@ pub(crate) fn system(
         // We need to walk the tree here because of visibility. If a parent is hidden it's children shouldn't be hit with clicks.
         let mut picks = vec![];
         process_entity(
+            None,
             context.get_root_widget(),
             cam_entity,
             cursor_pos_world,
@@ -72,6 +73,7 @@ pub(crate) fn system(
 }
 
 fn process_entity(
+    mut last_clip: Option<Entity>,
     entity: Entity,
     cam_entity: Entity,
     cursor_pos_world: Vec2,
@@ -81,16 +83,22 @@ fn process_entity(
     // It's only used for scalling the debug renderer back up to screenspace.
     scale: Vec2,
     #[cfg(feature = "debug-render")] gizmos: &mut Gizmos,
-    layout_query: &Query<(&WidgetLayout, &WoodpeckerStyle)>,
+    layout_query: &Query<(&WidgetLayout, &WoodpeckerStyle, &WidgetRender)>,
     child_query: &Query<&Children>,
     pickable_query: &Query<&Pickable>,
     pick_list: &mut Vec<(Entity, HitData)>,
     total: usize,
 ) {
-    if let Ok((layout, style)) = layout_query.get(entity) {
+    if let Ok((layout, style, render)) = layout_query.get(entity) {
         // Don't even process children if a parent is hidden.
         if matches!(style.visibility, WidgetVisibility::Hidden) || style.opacity < 0.001 {
             return;
+        }
+
+        let parent_data = last_clip.map(|e| layout_query.get(e).ok()).flatten();
+
+        if matches!(render, WidgetRender::Layer) {
+            last_clip = Some(entity);
         }
 
         if pickable_query.contains(entity) {
@@ -98,6 +106,16 @@ fn process_entity(
             let y = layout.location.y;
             let rect = Rect::new(x, y, x + layout.size.x, y + layout.size.y);
             if rect.contains(cursor_pos_world) {
+                // Check if we are in the bounds of the last clip.
+                if let Some((layout, _, _)) = parent_data {
+                    let x = layout.location.x;
+                    let y = layout.location.y;
+                    let rect = Rect::new(x, y, x + layout.size.x, y + layout.size.y);
+                    if !rect.contains(cursor_pos_world) {
+                        return;
+                    }
+                }
+
                 // Draw lines
                 let _ = screen_half_size;
                 #[cfg(feature = "debug-render")]
@@ -132,6 +150,7 @@ fn process_entity(
 
     for child in children {
         process_entity(
+            last_clip,
             *child,
             cam_entity,
             cursor_pos_world,
