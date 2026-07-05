@@ -57,7 +57,7 @@ fn render(
         ))
         .observe(
             *current_widget,
-            move |_: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
+            move |_: On<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                 if let Ok(mut state) = query.get_mut(state_entity) {
                     state.show_modal = true;
                 }
@@ -110,7 +110,7 @@ fn render(
                     ))
                     .with_observe(
                         *current_widget,
-                        move |_: Trigger<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
+                        move |_: On<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
                             if let Ok(mut state) = query.get_mut(state_entity) {
                                 state.show_modal = false;
                             }

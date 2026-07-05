@@ -23,8 +23,9 @@ pub(crate) fn render_group<F: FnMut(&mut Scene, &usvg::Node)>(
                         // support clip-path with a single path
                         let local_path = util::to_bez_path(clip_path);
                         scene.push_layer(
+                            Fill::NonZero,
                             BlendMode {
-                                mix: bevy_vello::vello::peniko::Mix::Clip,
+                                mix: bevy_vello::vello::peniko::Mix::Normal,
                                 compose: bevy_vello::vello::peniko::Compose::SrcOver,
                             },
                             1.0,

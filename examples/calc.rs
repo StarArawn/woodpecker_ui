@@ -72,7 +72,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
         ))
         .observe(
             root,
-            |_: Trigger<Pointer<Click>>, mut calc_output: ResMut<CalcOutput>| {
+            |_: On<Pointer<Click>>, mut calc_output: ResMut<CalcOutput>| {
                 calc_output.0 = "".into();
             },
         );
@@ -133,7 +133,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
             ))
             .observe(
                 root,
-                move |_: Trigger<Pointer<Click>>, mut calc_output: ResMut<CalcOutput>| {
+                move |_: On<Pointer<Click>>, mut calc_output: ResMut<CalcOutput>| {
                     if button == "=" {
                         if let Ok(result) = Context::<f64>::default().evaluate(&calc_output.0) {
                             calc_output.0 = result.to_string();

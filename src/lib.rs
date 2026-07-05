@@ -63,13 +63,14 @@
 //! ```
 use bevy::render::extract_resource::ExtractResourcePlugin;
 use bevy::{
-    asset::embedded_asset, prelude::*, reflect::GetTypeRegistration, render::view::RenderLayers,
+    asset::embedded_asset, camera::visibility::RenderLayers, prelude::*,
+    reflect::GetTypeRegistration,
 };
 // use bevy_mod_picking::{events::Pointer, prelude::EventListenerPlugin};
 use bevy_trait_query::RegisterExt;
-use bevy_vello::prelude::VelloFont;
+use bevy_vello::prelude::{VelloFont, UiVelloScene};
 use bevy_vello::render::VelloView;
-use bevy_vello::{vello::AaConfig, VelloPlugin, VelloSceneBundle};
+use bevy_vello::{vello::AaConfig, VelloPlugin};
 use context::{Widget, WoodpeckerContext};
 use convert_render_target::ConvertRenderTargetPlugin;
 use entity_mapping::WidgetMapper;
@@ -233,8 +234,6 @@ impl Plugin for WoodpeckerUIPlugin {
             .add_plugins(WoodpeckerUIWidgetPlugin)
             .add_plugins(ExtractResourcePlugin::<ImageManager>::default())
             .add_plugins(ConvertRenderTargetPlugin)
-            .add_event::<focus::WidgetFocus>()
-            .add_event::<focus::WidgetBlur>()
             .insert_resource(focus::CurrentFocus::new(Entity::PLACEHOLDER))
             .init_resource::<ObserverCache>()
             .init_resource::<FontManager>()
@@ -297,7 +296,7 @@ impl Plugin for WoodpeckerUIPlugin {
     }
 }
 
-fn has_root() -> impl Condition<(), ()> {
+fn has_root() -> impl SystemCondition<(), ()> {
     IntoSystem::into_system(|context: Res<WoodpeckerContext>| context.root_widget.is_some())
 }
 
@@ -308,10 +307,7 @@ fn startup(mut commands: Commands, render_settings: Res<RenderSettings>) {
             ..default()
         },
         Interaction::default(),
-        VelloSceneBundle {
-            transform: Transform::from_xyz(0.0, 0.0, f32::MAX),
-            ..Default::default()
-        },
+        UiVelloScene::default(),
         render_settings.layer.clone(),
     ));
 }

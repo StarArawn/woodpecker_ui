@@ -57,17 +57,14 @@ impl CurrentFocus {
                     if matches!(picking_interaction, PickingInteraction::Pressed) {
                         // Blur previously focused entity.
                         if current_focus.get() != entity {
-                            commands.trigger_targets(
-                                WidgetBlur {
+                            commands.trigger(WidgetBlur {
                                     target: current_focus.get(),
-                                },
-                                current_focus.get(),
-                            );
+                                });
                         }
                         // Focus new entity
                         *current_focus = CurrentFocus::new(entity);
                         commands
-                            .trigger_targets(WidgetFocus { target: entity }, current_focus.get());
+                            .trigger(WidgetFocus { target: entity });
                         none_selected = false;
                     }
                 }
@@ -78,12 +75,9 @@ impl CurrentFocus {
             if none_selected && pointer_query.iter().any(|press| press.is_primary_pressed()) {
                 // Blur if we have a focused entity because we had no "hits" this frame.
                 if current_focus.get() != Entity::PLACEHOLDER {
-                    commands.trigger_targets(
-                        WidgetBlur {
+                    commands.trigger(WidgetBlur {
                             target: current_focus.get(),
-                        },
-                        current_focus.get(),
-                    );
+                        });
                 }
                 // Remove current focus.
                 *current_focus = CurrentFocus::new(Entity::PLACEHOLDER);
@@ -94,16 +88,18 @@ impl CurrentFocus {
 
 /// A bevy_eventlistener Event that triggers when a widget has focus.
 /// Note: The widget must have the Focusable component tag.
-#[derive(Clone, PartialEq, Debug, Reflect, Event)]
+#[derive(Clone, PartialEq, Debug, Reflect, EntityEvent)]
 pub struct WidgetFocus {
     /// The target of this event
+    #[event_target]
     pub target: Entity,
 }
 
 /// A bevy_eventlistener Event that triggers when a widget has lost focus.
 /// Note: The widget must have the Focusable component tag.
-#[derive(Clone, PartialEq, Debug, Reflect, Event)]
+#[derive(Clone, PartialEq, Debug, Reflect, EntityEvent)]
 pub struct WidgetBlur {
     /// The target of this event
+    #[event_target]
     pub target: Entity,
 }

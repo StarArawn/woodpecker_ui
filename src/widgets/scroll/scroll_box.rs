@@ -172,7 +172,7 @@ pub fn render(
         ))
         .observe(
             *current_widget,
-            move |mut trigger: Trigger<Pointer<MouseWheelScroll>>,
+            move |mut trigger: On<Pointer<MouseWheelScroll>>,
                   mut context_query: Query<&mut ScrollContext>| {
                 let x = trigger.scroll.x;
                 let y = trigger.scroll.y;

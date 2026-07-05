@@ -133,7 +133,7 @@ fn render(
     *children = WidgetChildren::default()
         .with_observe(
             *current_widget,
-            move |_trigger: Trigger<Pointer<Click>>, mut state_query: Query<&mut DropdownState>| {
+            move |_trigger: On<Pointer<Click>>, mut state_query: Query<&mut DropdownState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
@@ -183,7 +183,7 @@ fn render(
             ))
             .observe(
                 *current_widget,
-                move |mut trigger: Trigger<Pointer<Click>>,
+                move |mut trigger: On<Pointer<Click>>,
                       mut commands: Commands,
                       mut state_query: Query<&mut DropdownState>,
                       dropdown_query: Query<&Dropdown>| {
@@ -196,15 +196,12 @@ fn render(
                     };
                     state.current_value.clone_from(&dropdown.list[i]);
                     state.is_open = false;
-                    commands.trigger_targets(
-                        Change {
+                    commands.trigger(Change {
                             target: dropdown_entity,
                             data: DropdownChanged {
                                 value: state.current_value.clone(),
                             },
-                        },
-                        dropdown_entity,
-                    );
+                        });
                 },
             );
     }

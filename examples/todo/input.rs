@@ -72,7 +72,7 @@ fn render(current_widget: Res<CurrentWidget>, mut query: Query<(&TodoInput, &mut
         ))
         .observe(
             current_widget,
-            move |trigger: Trigger<Change<TextChanged>>, mut query: Query<&mut TodoInput>| {
+            move |trigger: On<Change<TextChanged>>, mut query: Query<&mut TodoInput>| {
                 let Ok(mut input) = query.get_mut(*current_widget) else {
                     return;
                 };
@@ -106,7 +106,7 @@ fn render(current_widget: Res<CurrentWidget>, mut query: Query<(&TodoInput, &mut
         ))
         .observe(
             current_widget,
-            move |_trigger: Trigger<Pointer<Click>>,
+            move |_trigger: On<Pointer<Click>>,
                   mut data: ResMut<TodoListData>,
                   mut query: Query<&mut TodoInput>| {
                 let Ok(mut input) = query.get_mut(*current_widget) else {

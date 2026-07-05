@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use bevy::{
-    ecs::{change_detection::MaybeLocation, component::Tick},
+    ecs::change_detection::{MaybeLocation, Tick},
     prelude::*,
 };
 
@@ -256,7 +256,7 @@ fn render(
     *children = WidgetChildren::default()
         .with_observe(
             current_widget,
-            move |_: Trigger<Pointer<Click>>,
+            move |_: On<Pointer<Click>>,
                   mut commands: Commands,
                   mut state_query: Query<&mut ToggleState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
@@ -265,20 +265,17 @@ fn render(
 
                 state.is_checked = !state.is_checked;
 
-                commands.trigger_targets(
-                    Change {
+                commands.trigger(Change {
                         target: *current_widget,
                         data: ToggleChanged {
                             checked: state.is_checked,
                         },
-                    },
-                    *current_widget,
-                );
+                    });
             },
         )
         .with_observe(
             current_widget,
-            move |_: Trigger<Pointer<Over>>, mut state_query: Query<&mut ToggleState>| {
+            move |_: On<Pointer<Over>>, mut state_query: Query<&mut ToggleState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
@@ -288,7 +285,7 @@ fn render(
         )
         .with_observe(
             current_widget,
-            move |_: Trigger<Pointer<Out>>, mut state_query: Query<&mut ToggleState>| {
+            move |_: On<Pointer<Out>>, mut state_query: Query<&mut ToggleState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };

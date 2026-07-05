@@ -138,7 +138,7 @@ fn render(
     children
         .observe(
             current_widget,
-            move |_: Trigger<Pointer<Over>>, mut state_query: Query<&mut CheckboxState>| {
+            move |_: On<Pointer<Over>>, mut state_query: Query<&mut CheckboxState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
@@ -147,7 +147,7 @@ fn render(
         )
         .observe(
             current_widget,
-            move |_: Trigger<Pointer<Out>>, mut state_query: Query<&mut CheckboxState>| {
+            move |_: On<Pointer<Out>>, mut state_query: Query<&mut CheckboxState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
@@ -156,22 +156,19 @@ fn render(
         )
         .observe(
             current_widget,
-            move |trigger: Trigger<Pointer<Click>>,
+            move |_trigger: On<Pointer<Click>>,
                   mut commands: Commands,
                   mut state_query: Query<&mut CheckboxState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
                 state.is_checked = !state.is_checked;
-                commands.trigger_targets(
-                    Change {
+                commands.trigger(Change {
                         target: *current_widget,
                         data: CheckboxChanged {
                             checked: state.is_checked,
                         },
-                    },
-                    trigger.target,
-                );
+                    });
             },
         );
 

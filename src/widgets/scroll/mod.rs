@@ -148,7 +148,7 @@ pub struct ScrollContextProvider {
 /// Allows you to attach a tag to the scroll or windowing context.
 /// This is useful for querying a specific context for
 /// manual control.
-#[derive(Clone, Reflect)]
+#[derive(Clone)]
 pub struct TaggedContext {
     pub(crate) f: Arc<dyn Fn(EntityCommands<'_>) + 'static + Send + Sync>,
 }

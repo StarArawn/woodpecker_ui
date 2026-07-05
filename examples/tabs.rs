@@ -5,9 +5,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins((
-            bevy_inspector_egui::bevy_egui::EguiPlugin {
-                enable_multipass_for_primary_context: false,
-            },
+            bevy_inspector_egui::bevy_egui::EguiPlugin::default(),
             bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
         ))
         .add_plugins(WoodpeckerUIPlugin::default())

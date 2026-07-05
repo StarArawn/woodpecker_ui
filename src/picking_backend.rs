@@ -24,7 +24,7 @@ pub(crate) fn system(
     layout_query: Query<(&WidgetLayout, &WoodpeckerStyle)>,
     child_query: Query<&Children>,
     pickable_query: Query<&Pickable>,
-    mut output: EventWriter<PointerHits>,
+    mut output: MessageWriter<PointerHits>,
     #[cfg(feature = "debug-render")] mut gizmos: Gizmos,
 ) {
     let total = pickable_query.iter().count();
@@ -162,7 +162,7 @@ pub fn mouse_wheel_system(
     pointer_map: Res<PointerMap>,
     pointers: Query<&PointerLocation>,
     // Bevy Input
-    mut evr_scroll: EventReader<MouseWheel>,
+    mut evr_scroll: MessageReader<MouseWheel>,
 ) {
     let pointer_location = |pointer_id: PointerId| {
         pointer_map
@@ -185,15 +185,12 @@ pub fn mouse_wheel_system(
 
         for mwe in evr_scroll.read() {
             let scroll = Vec2::new(mwe.x, mwe.y);
-            commands.trigger_targets(
-                Pointer::new(
-                    pointer_id,
-                    location.clone(),
-                    hovered_entity,
-                    MouseWheelScroll { scroll },
-                ),
+            commands.trigger(Pointer::new(
+                pointer_id,
+                location.clone(),
+                MouseWheelScroll { scroll },
                 hovered_entity,
-            );
+            ));
         }
     }
 }

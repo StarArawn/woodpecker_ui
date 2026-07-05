@@ -7,7 +7,7 @@
 // Most of the functionality in those files that runs starts here in this file.
 
 use bevy::{
-    ecs::component::Tick,
+    ecs::change_detection::Tick,
     platform::collections::{HashMap, HashSet},
     prelude::*,
 };
@@ -180,7 +180,7 @@ fn run_update_system(
     // type we get a consistent "tick", meaning change detection
     // works as expected.
     let old_tick = update.get_last_run();
-    let should_update = update.run((), world);
+    let should_update = update.run_without_applying_deferred((), world).unwrap();
     // Apply commands and other things to world.
     // TODO: Do we actually care for update which honestly
     // should be readonly?
@@ -242,7 +242,7 @@ fn run_render_system(
     // Run the render function and apply changes to the bevy world.
     world.insert_resource(CurrentWidget(widget_entity));
     let old_tick = render.get_last_run();
-    render.run((), world);
+    render.run_without_applying_deferred((), world).unwrap();
     let new_tick = render.get_last_run();
     new_ticks.insert(widget_name.clone(), new_tick);
     render.set_last_run(old_tick);

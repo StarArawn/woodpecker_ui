@@ -11,7 +11,7 @@ use bevy::{
 };
 use bevy_vello::integrations::VectorLoaderError;
 
-#[derive(Default)]
+#[derive(Default, TypePath)]
 pub struct SvgLoader;
 
 /// An SVG asset which can be rendered in the UI.
@@ -42,15 +42,14 @@ impl AssetLoader for SvgLoader {
             let mut bytes = Vec::new();
             reader.read_to_end(&mut bytes).await?;
             let path = load_context.path().to_owned();
-            let ext =
-                path.extension()
-                    .and_then(std::ffi::OsStr::to_str)
-                    .ok_or(VectorLoaderError::Io(std::io::Error::new(
-                        std::io::ErrorKind::InvalidData,
-                        "Invalid file extension",
-                    )))?;
+            let ext = path
+                .get_extension()
+                .ok_or(VectorLoaderError::Io(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Invalid file extension",
+                )))?;
 
-            debug!("parsing {}...", load_context.path().display());
+            debug!("parsing {}...", load_context.path());
             match ext {
                 "svg" => {
                     let svg_str = std::str::from_utf8(&bytes)?;

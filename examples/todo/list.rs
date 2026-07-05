@@ -99,7 +99,7 @@ fn render(
                 ))
                 .with_observe(
                     *current_widget,
-                    move |_trigger: Trigger<Pointer<Click>>,
+                    move |_trigger: On<Pointer<Click>>,
                           mut todo_list_data: ResMut<TodoListData>| {
                         todo_list_data.remove(i);
                     },

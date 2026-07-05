@@ -1,4 +1,4 @@
-use bevy::{prelude::*, sprite::MeshMaterial2d};
+use bevy::{prelude::*, sprite_render::MeshMaterial2d};
 use woodpecker_ui::prelude::*;
 
 fn main() {
@@ -40,7 +40,7 @@ fn startup(
             })
             .with_observe(
                 CurrentWidget(root),
-                |trigger: Trigger<Change<SliderChanged>>,
+                |trigger: On<Change<SliderChanged>>,
                  mut material_assets: ResMut<Assets<ColorMaterial>>,
                  query: Query<&MeshMaterial2d<ColorMaterial>>| {
                     for material in query.iter() {

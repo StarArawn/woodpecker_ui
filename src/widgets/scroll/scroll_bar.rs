@@ -173,24 +173,24 @@ pub fn render(
                         WidgetRender::Quad,
                     ))
                     .with_observe(
-                        current_widget,|mut trigger: Trigger<Pointer<Click>>| {
+                        current_widget,|mut trigger: On<Pointer<Click>>| {
                         trigger.propagate(false);
                     })
                     .with_observe(
                         current_widget,
-                        |trigger: Trigger<Pointer<DragStart>>, mut commands: Commands| {
-                            commands.entity(trigger.target).insert(Pickable::IGNORE);
+                        |trigger: On<Pointer<DragStart>>, mut commands: Commands| {
+                            commands.entity(trigger.entity).insert(Pickable::IGNORE);
                         },
                     )
                     .with_observe(
                         current_widget,
-                        |trigger: Trigger<Pointer<DragEnd>>, mut commands: Commands| {
-                            commands.entity(trigger.target).insert(Pickable::default());
+                        |trigger: On<Pointer<DragEnd>>, mut commands: Commands| {
+                            commands.entity(trigger.entity).insert(Pickable::default());
                         },
                     )
                     .with_observe(
                         current_widget,
-                        move |trigger: Trigger<Pointer<Drag>>,
+                        move |trigger: On<Pointer<Drag>>,
                         layout_query: Query<&WidgetLayout>,
                         window: Single<&Window, With<PrimaryWindow>>,
                         camera: Query<&Camera, With<WoodpeckerView>>,
@@ -249,7 +249,7 @@ pub fn render(
         WidgetRender::Quad,
     )).observe(
         current_widget,move |
-            trigger: Trigger<Pointer<Click>>, 
+            trigger: On<Pointer<Click>>, 
             layout_query: Query<&WidgetLayout>,
             window: Single<&Window, With<PrimaryWindow>>,
             camera: Query<&Camera, With<WoodpeckerView>>,

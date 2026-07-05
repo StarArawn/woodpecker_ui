@@ -15,11 +15,11 @@ debug-render = []
 metrics = []
 
 [dependencies]
-parley = "0.4"
+parley = "0.7"
 # parley = { git = "https://github.com/linebender/parley", rev = "74a3499920675a63450727e44a75a57f76389e7a" }
 # bevy_vello = { path = "../bevy_vello", features = ["text", "default_font"] }
-bevy_vello = { version = "0.9", features = ["text", "default_font"] }
-bevy-trait-query = "0.16"
+bevy_vello = { git = "https://github.com/linebender/bevy_vello", branch = "nixon/bevy-0.19", features = ["text", "default_font"] }
+bevy-trait-query = "0.19"
 dioxus-devtools = { version = "0.7.0-alpha.0", optional = true }
 bytemuck = "1.23.0"
 image = "0.24"
@@ -40,18 +40,18 @@ ansi-parser = "0.9.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 arboard = "3.4"
-bevy = { version = "0.16", default-features = false, features = ["bevy_picking", "bevy_log"] }
+bevy = { version = "0.19", default-features = false, features = ["bevy_picking", "bevy_log"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-bevy = { version = "0.16", default-features = false, features = ["webgpu"] }
+bevy = { version = "0.19", default-features = false, features = ["webgpu"] }
 web-sys = { version = "0.3", features = ["Clipboard", "Navigator"] }
 wasm-bindgen-futures = "0.4"
 futures-channel = "0.3"
 
 [dev-dependencies]
 calc = { version = "0.4.0", default-features = false }
-bevy = { version = "0.16", features = ["jpeg", "bevy_dev_tools"] }
-bevy-inspector-egui = "0.31"
+bevy = { version = "0.19", features = ["jpeg", "bevy_dev_tools"] }
+bevy-inspector-egui = "0.37"
 
 # [patch.crates-io]
 # bevy_vello = { git = "https://github.com/linebender/bevy_vello", rev = "7fe648ccb9766ecf2ef469f08c9f21093c3544e6" }

@@ -193,19 +193,19 @@ fn render(
         ))
         .observe(
             *current_widget,
-            move |mut trigger: Trigger<Pointer<Over>>| {
+            move |mut trigger: On<Pointer<Over>>| {
                 trigger.propagate(false);
             },
         )
         .observe(
             *current_widget,
-            move |mut trigger: Trigger<Pointer<Out>>| {
+            move |mut trigger: On<Pointer<Out>>| {
                 trigger.propagate(false);
             },
         )
         .observe(
             *current_widget,
-            move |mut trigger: Trigger<Pointer<Click>>| {
+            move |mut trigger: On<Pointer<Click>>| {
                 trigger.propagate(false);
             },
         )

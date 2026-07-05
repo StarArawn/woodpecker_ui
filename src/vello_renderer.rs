@@ -9,7 +9,7 @@ use crate::{
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use bevy_trait_query::One;
-use bevy_vello::{prelude::VelloFont, VelloScene};
+use bevy_vello::prelude::{VelloFont, UiVelloScene};
 
 #[derive(SystemParam)]
 pub(crate) struct RenderSystemParam<'w, 's> {
@@ -31,7 +31,7 @@ pub(crate) struct RenderSystemParam<'w, 's> {
         (Without<StateMarker>, Without<PreviousWidget>),
     >,
     layout_query: Query<'w, 's, &'static WidgetLayout>,
-    vello_query: Query<'w, 's, &'static mut VelloScene>,
+    vello_query: Query<'w, 's, &'static mut UiVelloScene>,
     widget_render: Query<'w, 's, &'static WidgetRender>,
     context: Res<'w, WoodpeckerContext>,
     font_assets: Res<'w, Assets<VelloFont>>,
@@ -182,7 +182,7 @@ fn traverse_render_tree(
     render_targets: &mut RenderTargetImages,
     metrics: &mut WidgetMetrics,
     widget_render: &Query<&WidgetRender>,
-    vello_scene: &mut VelloScene,
+    vello_scene: &mut UiVelloScene,
     font_assets: &Assets<VelloFont>,
     image_assets: &mut Assets<Image>,
     svg_assets: &Assets<SvgAsset>,

@@ -346,7 +346,7 @@ The `auto_update` and `widget_systems` attributes are the only supported argumen
             let render = render.clone();
             quote! {
                 let hot_fn = dioxus_devtools::subsecond::HotFn::current(#render);
-                let new_ptr = hot_fn.ptr_address();
+                let new_ptr = hot_fn.ptr_address().0;
                 if new_ptr != *old_pointer {
                     *old_pointer = new_ptr;
                     return true;

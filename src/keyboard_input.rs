@@ -15,9 +15,10 @@ use crate::focus::CurrentFocus;
 /// An event that fires when a keyboard button is pressed.
 /// The event target is the currently focused entity.
 /// Note: This does not continously fire unless a button is released.
-#[derive(Clone, PartialEq, Debug, Reflect, Event)]
+#[derive(Clone, PartialEq, Debug, Reflect, EntityEvent)]
 pub struct WidgetKeyboardButtonEvent {
     /// The target of this event
+    #[event_target]
     pub target: Entity,
     /// The keyboard button pressed
     pub code: KeyCode,
@@ -25,9 +26,10 @@ pub struct WidgetKeyboardButtonEvent {
 
 /// An event that fires when a keyboard character is sent.
 /// The event target is the currently focused entity.
-#[derive(Clone, PartialEq, Debug, Reflect, Event)]
+#[derive(Clone, PartialEq, Debug, Reflect, EntityEvent)]
 pub struct WidgetKeyboardCharEvent {
     /// The target of this event
+    #[event_target]
     pub target: Entity,
     /// The char pressed
     /// Note this might be a series of chars such as a graphemes
@@ -37,9 +39,10 @@ pub struct WidgetKeyboardCharEvent {
 
 /// An event that fires when the user pastes(ctrl + v).
 /// The event target is the currently focused entity.
-#[derive(Clone, PartialEq, Debug, Reflect, Event)]
+#[derive(Clone, PartialEq, Debug, Reflect, EntityEvent)]
 pub struct WidgetPasteEvent {
     /// The target of this event
+    #[event_target]
     pub target: Entity,
     /// The char pressed
     /// Note this might be a series of chars such as a graphemes
@@ -74,13 +77,10 @@ pub(crate) fn read_paste_events(
             continue;
         };
         *time_since_last_paste = TimeSinceLastPaste::default();
-        commands.trigger_targets(
-            WidgetPasteEvent {
+        commands.trigger(WidgetPasteEvent {
                 target: event.target,
                 paste: smol_str::SmolStr::new(text.to_string()),
-            },
-            event.target,
-        );
+            });
         commands.entity(entity).despawn();
     }
 }
@@ -89,7 +89,7 @@ pub(crate) fn runner(
     mut commands: Commands,
     mut time_since_last_paste: Local<TimeSinceLastPaste>,
     mut ctrl_pressed: Local<bool>,
-    mut key_event: EventReader<KeyboardInput>,
+    mut key_event: MessageReader<KeyboardInput>,
     current_focus: Res<CurrentFocus>,
 ) {
     let mut v_pressed = false;
@@ -132,13 +132,10 @@ pub(crate) fn runner(
                         return;
                     };
                     *time_since_last_paste = TimeSinceLastPaste::default();
-                    commands.trigger_targets(
-                        WidgetPasteEvent {
+                    commands.trigger(WidgetPasteEvent {
                             target: current_focus.get(),
                             paste: smol_str::SmolStr::new(text),
-                        },
-                        current_focus.get(),
-                    );
+                        });
                     return;
                 }
 
@@ -176,34 +173,25 @@ pub(crate) fn runner(
             }
             match &event.logical_key {
                 Key::Character(c) => {
-                    commands.trigger_targets(
-                        WidgetKeyboardCharEvent {
+                    commands.trigger(WidgetKeyboardCharEvent {
                             target: current_focus.get(),
                             c: c.clone(),
-                        },
-                        current_focus.get(),
-                    );
+                        });
                 }
                 Key::Space => {
-                    commands.trigger_targets(
-                        WidgetKeyboardCharEvent {
+                    commands.trigger(WidgetKeyboardCharEvent {
                             target: current_focus.get(),
                             c: smol_str::SmolStr::new(" "),
-                        },
-                        current_focus.get(),
-                    );
+                        });
                 }
                 _ => {}
             }
 
             // Also send a button event.
-            commands.trigger_targets(
-                WidgetKeyboardButtonEvent {
+            commands.trigger(WidgetKeyboardButtonEvent {
                     target: current_focus.get(),
                     code: event.key_code,
-                },
-                current_focus.get(),
-            );
+                });
         }
     }
 }

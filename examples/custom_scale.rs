@@ -1,8 +1,9 @@
 use bevy::{
     asset::RenderAssetUsages,
+    camera::{visibility::RenderLayers, RenderTarget},
     image::ImageSampler,
     prelude::*,
-    render::{render_resource::*, view::RenderLayers},
+    render::render_resource::*,
     window::WindowResized,
 };
 use woodpecker_ui::prelude::*;
@@ -22,7 +23,7 @@ fn main() {
 }
 
 fn resize_window(
-    mut window_resize_events: EventReader<WindowResized>,
+    mut window_resize_events: MessageReader<WindowResized>,
     mut query: Query<&mut Transform, With<Mesh2d>>,
 ) {
     for event in window_resize_events.read() {
@@ -77,7 +78,7 @@ fn startup(
         },
         TextureDimension::D2,
         &[0, 0, 0, 0],
-        TextureFormat::bevy_default(),
+        TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::default(),
     );
     image.texture_descriptor.usage =
@@ -90,11 +91,11 @@ fn startup(
         Camera2d,
         Camera {
             order: -1,
-            target: image_handle.clone().into(),
             ..Default::default()
         },
+        RenderTarget::from(image_handle.clone()),
         Projection::Orthographic(OrthographicProjection {
-            scaling_mode: bevy::render::camera::ScalingMode::Fixed {
+            scaling_mode: bevy::camera::ScalingMode::Fixed {
                 width: 640.0,
                 height: 360.0,
             },

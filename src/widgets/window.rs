@@ -1,8 +1,7 @@
 use crate::{picking_backend::compute_letterboxed_transform, prelude::*};
 use bevy::{
     prelude::*,
-    window::{PrimaryWindow, SystemCursorIcon},
-    winit::cursor::CursorIcon,
+    window::{CursorIcon, PrimaryWindow, SystemCursorIcon},
 };
 // use bevy_mod_picking::{
 //     events::{Drag, Pointer},
@@ -130,7 +129,7 @@ fn render(
     children
         .observe(
             current_widget,
-            move |trigger: Trigger<WidgetFocus>,
+            move |trigger: On<WidgetFocus>,
                   mut context_query: Query<&mut WindowingContext>| {
                 let Ok(mut context) = context_query.get_mut(context_entity) else {
                     return;
@@ -166,7 +165,7 @@ fn render(
         ))
         .observe(
             current_widget,
-            move |_trigger: Trigger<Pointer<Pressed>>,
+            move |_trigger: On<Pointer<Press>>,
                   mut context_query: Query<&mut WindowingContext>| {
                 let Ok(mut context) = context_query.get_mut(context_entity) else {
                     return;
@@ -177,7 +176,7 @@ fn render(
         )
         .observe(
             current_widget,
-            move |_trigger: Trigger<Pointer<Over>>,
+            move |_trigger: On<Pointer<Over>>,
                   mut commands: Commands,
                   entity: Single<Entity, With<PrimaryWindow>>| {
                 commands
@@ -187,7 +186,7 @@ fn render(
         )
         .observe(
             current_widget,
-            move |_trigger: Trigger<Pointer<Out>>,
+            move |_trigger: On<Pointer<Out>>,
                   mut commands: Commands,
                   entity: Single<Entity, With<PrimaryWindow>>| {
                 commands
@@ -197,7 +196,7 @@ fn render(
         )
         .observe(
             current_widget,
-            move |_trigger: Trigger<Pointer<DragEnd>>,
+            move |_trigger: On<Pointer<DragEnd>>,
                   mut commands: Commands,
                   entity: Single<Entity, With<PrimaryWindow>>| {
                 commands
@@ -207,7 +206,7 @@ fn render(
         )
         .observe(
             current_widget,
-            move |trigger: Trigger<Pointer<DragStart>>,
+            move |trigger: On<Pointer<DragStart>>,
                   mut commands: Commands,
                   mut state_query: Query<&mut WindowState>,
                   window: Single<(Entity, &Window), With<PrimaryWindow>>,
@@ -244,7 +243,7 @@ fn render(
         )
         .observe(
             current_widget,
-            move |trigger: Trigger<Pointer<Drag>>,
+            move |trigger: On<Pointer<Drag>>,
                   mut state_query: Query<&mut WindowState>,
                   window: Single<(Entity, &Window), With<PrimaryWindow>>,
                   camera: Query<&Camera, With<WoodpeckerView>>,

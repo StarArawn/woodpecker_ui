@@ -1,4 +1,3 @@
-use crate::prelude::Change;
 use crate::WidgetRegisterExt;
 use bevy::prelude::*;
 
@@ -54,13 +53,7 @@ pub use windowing_context::{WindowingContext, WindowingContextProvider};
 pub(crate) struct WoodpeckerUIWidgetPlugin;
 impl Plugin for WoodpeckerUIWidgetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<Change<TextChanged>>()
-            .add_event::<Change<ToggleChanged>>()
-            .add_event::<Change<CheckboxChanged>>()
-            .add_event::<Change<SliderChanged>>()
-            .add_event::<Change<DropdownChanged>>()
-            .add_event::<Change<ColorPickerChanged>>()
-            .register_widget::<WoodpeckerApp>()
+        app.register_widget::<WoodpeckerApp>()
             .register_widget::<Element>()
             .register_widget::<WButton>()
             .register_widget::<Clip>()

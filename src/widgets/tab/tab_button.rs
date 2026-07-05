@@ -118,7 +118,7 @@ fn render(
         ))
         .observe(
             *current_widget,
-            move |_trigger: Trigger<Pointer<Click>>, mut context_query: Query<&mut TabContext>| {
+            move |_trigger: On<Pointer<Click>>, mut context_query: Query<&mut TabContext>| {
                 let Ok(mut context) = context_query.get_mut(context_entity) else {
                     return;
                 };

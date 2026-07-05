@@ -1,5 +1,9 @@
 use bevy::{
-    ecs::{query::QueryData, traversal::Traversal},
+    ecs::{
+        event::{PropagateEntityTrigger, SetEntityEventTarget},
+        query::QueryData,
+        traversal::Traversal,
+    },
     prelude::*,
 };
 // use bevy_mod_picking::prelude::*;
@@ -28,7 +32,7 @@ impl<E> Traversal<Change<E>> for ChangeTraversal
 where
     E: std::fmt::Debug + Clone + Reflect,
 {
-    fn traverse(item: Self::Item<'_>, _change: &Change<E>) -> Option<Entity> {
+    fn traverse(item: Self::Item<'_, '_>, _change: &Change<E>) -> Option<Entity> {
         // Send event to parent, if it has one.
         if let Some(child_of) = item.child_of {
             return Some(child_of.parent());
@@ -42,7 +46,23 @@ impl<E> Event for Change<E>
 where
     E: std::fmt::Debug + Clone + Reflect,
 {
-    type Traversal = ChangeTraversal;
+    type Trigger<'a> = PropagateEntityTrigger<true, Change<E>, ChangeTraversal>;
+}
 
-    const AUTO_PROPAGATE: bool = true;
+impl<E> EntityEvent for Change<E>
+where
+    E: std::fmt::Debug + Clone + Reflect,
+{
+    fn event_target(&self) -> Entity {
+        self.target
+    }
+}
+
+impl<E> SetEntityEventTarget for Change<E>
+where
+    E: std::fmt::Debug + Clone + Reflect,
+{
+    fn set_event_target(&mut self, entity: Entity) {
+        self.target = entity;
+    }
 }

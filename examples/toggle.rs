@@ -48,7 +48,7 @@ fn startup(
             .with_child::<Toggle>(Toggle)
             .with_observe(
                 CurrentWidget(root),
-                |trigger: Trigger<Change<ToggleChanged>>,
+                |trigger: On<Change<ToggleChanged>>,
                  material_list: Res<MaterialList>,
                  mut query: Query<&mut MeshMaterial2d<ColorMaterial>>| {
                     for mut material in query.iter_mut() {

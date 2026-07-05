@@ -56,8 +56,8 @@ fn focus_render(
             ))
             .observe(
                 *entity,
-                |trigger: Trigger<Pointer<Over>>, mut query: Query<&mut FocusWidget>| {
-                    let Ok(mut widget) = query.get_mut(trigger.target) else {
+                |trigger: On<Pointer<Over>>, mut query: Query<&mut FocusWidget>| {
+                    let Ok(mut widget) = query.get_mut(trigger.entity) else {
                         return;
                     };
 
@@ -68,8 +68,8 @@ fn focus_render(
             )
             .observe(
                 *entity,
-                |trigger: Trigger<Pointer<Out>>, mut query: Query<&mut FocusWidget>| {
-                    let Ok(mut widget) = query.get_mut(trigger.target) else {
+                |trigger: On<Pointer<Out>>, mut query: Query<&mut FocusWidget>| {
+                    let Ok(mut widget) = query.get_mut(trigger.entity) else {
                         return;
                     };
 
@@ -80,8 +80,8 @@ fn focus_render(
             )
             .observe(
                 *entity,
-                |trigger: Trigger<WidgetFocus>, mut query: Query<&mut FocusWidget>| {
-                    let Ok(mut widget) = query.get_mut(trigger.target()) else {
+                |trigger: On<WidgetFocus>, mut query: Query<&mut FocusWidget>| {
+                    let Ok(mut widget) = query.get_mut(trigger.target) else {
                         return;
                     };
                     widget.focused = true;
@@ -90,15 +90,15 @@ fn focus_render(
             )
             .observe(
                 *entity,
-                |trigger: Trigger<WidgetBlur>, mut query: Query<&mut FocusWidget>| {
-                    let Ok(mut widget) = query.get_mut(trigger.target()) else {
+                |trigger: On<WidgetBlur>, mut query: Query<&mut FocusWidget>| {
+                    let Ok(mut widget) = query.get_mut(trigger.target) else {
                         return;
                     };
                     widget.focused = false;
                     widget.hovered = false;
                 },
             )
-            .observe(*entity, |trigger: Trigger<WidgetKeyboardCharEvent>| {
+            .observe(*entity, |trigger: On<WidgetKeyboardCharEvent>| {
                 info!("Widget {} got key {}!", trigger.target, trigger.c)
             });
     }

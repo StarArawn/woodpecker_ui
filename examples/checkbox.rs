@@ -52,7 +52,7 @@ fn startup(
 }
 
 fn on_change(
-    trigger: Trigger<Change<CheckboxChanged>>,
+    trigger: On<Change<CheckboxChanged>>,
     material_list: Res<MaterialList>,
     mut query: Query<&mut MeshMaterial2d<ColorMaterial>>,
 ) {

@@ -130,7 +130,7 @@ fn render(
                     ))
                     .with_observe(
                         *current_widget,
-                        move |_trigger: Trigger<Pointer<Click>>,
+                        move |_trigger: On<Pointer<Click>>,
                               state_query: Query<&ColorPickerState>| {
                             let Ok(state) = state_query.get(state_entity) else {
                                 return;
@@ -191,7 +191,7 @@ fn render(
             ))
             .with_observe(
                 *current_widget,
-                move |trigger: Trigger<Pointer<Drag>>,
+                move |trigger: On<Pointer<Drag>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,
                       layout_query: Query<&WidgetLayout>| {
@@ -210,20 +210,17 @@ fn render(
                     state.current_color.hue = value.clamp(0.0, 1.0) * 365.0;
 
                     let color: Color = state.current_color.into();
-                    commands.trigger_targets(
-                        Change {
+                    commands.trigger(Change {
                             target: widget_entity,
                             data: ColorPickerChanged {
                                 color: color.to_srgba().into(),
                             },
-                        },
-                        widget_entity,
-                    );
+                        });
                 },
             )
             .with_observe(
                 *current_widget,
-                move |_trigger: Trigger<Pointer<DragEnd>>,
+                move |_trigger: On<Pointer<DragEnd>>,
                       mut query: Query<&mut ColorPickerState>| {
                     let Ok(mut state) = query.get_mut(state_entity) else {
                         return;
@@ -234,7 +231,7 @@ fn render(
             )
             .with_observe(
                 *current_widget,
-                move |trigger: Trigger<Pointer<Click>>,
+                move |trigger: On<Pointer<Click>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,
                       layout_query: Query<&WidgetLayout>| {
@@ -255,15 +252,12 @@ fn render(
                     let value = relative_x / (layout.size.x - 80.0);
                     state.current_color.hue = value.clamp(0.0, 1.0) * 365.0;
                     let color: Color = state.current_color.into();
-                    commands.trigger_targets(
-                        Change {
+                    commands.trigger(Change {
                             target: widget_entity,
                             data: ColorPickerChanged {
                                 color: color.to_srgba().into(),
                             },
-                        },
-                        widget_entity,
-                    );
+                        });
                 },
             )
             // Saturation
@@ -312,7 +306,7 @@ fn render(
             ))
             .with_observe(
                 *current_widget,
-                move |trigger: Trigger<Pointer<Drag>>,
+                move |trigger: On<Pointer<Drag>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,
                       layout_query: Query<&WidgetLayout>| {
@@ -331,20 +325,17 @@ fn render(
                     state.current_color.saturation = value.clamp(0.0, 1.0);
 
                     let color: Color = state.current_color.into();
-                    commands.trigger_targets(
-                        Change {
+                    commands.trigger(Change {
                             target: widget_entity,
                             data: ColorPickerChanged {
                                 color: color.to_srgba().into(),
                             },
-                        },
-                        widget_entity,
-                    );
+                        });
                 },
             )
             .with_observe(
                 *current_widget,
-                move |_trigger: Trigger<Pointer<DragEnd>>,
+                move |_trigger: On<Pointer<DragEnd>>,
                       mut query: Query<&mut ColorPickerState>| {
                     let Ok(mut state) = query.get_mut(state_entity) else {
                         return;
@@ -355,7 +346,7 @@ fn render(
             )
             .with_observe(
                 *current_widget,
-                move |trigger: Trigger<Pointer<Click>>,
+                move |trigger: On<Pointer<Click>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,
                       layout_query: Query<&WidgetLayout>| {
@@ -376,15 +367,12 @@ fn render(
                     let value = relative_x / (layout.size.x - 80.0);
                     state.current_color.saturation = value.clamp(0.0, 1.0);
                     let color: Color = state.current_color.into();
-                    commands.trigger_targets(
-                        Change {
+                    commands.trigger(Change {
                             target: widget_entity,
                             data: ColorPickerChanged {
                                 color: color.to_srgba().into(),
                             },
-                        },
-                        widget_entity,
-                    );
+                        });
                 },
             )
             // Value
@@ -433,7 +421,7 @@ fn render(
             ))
             .with_observe(
                 *current_widget,
-                move |trigger: Trigger<Pointer<Drag>>,
+                move |trigger: On<Pointer<Drag>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,
                       layout_query: Query<&WidgetLayout>| {
@@ -452,20 +440,17 @@ fn render(
                     state.current_color.value = value.clamp(0.0, 1.0);
 
                     let color: Color = state.current_color.into();
-                    commands.trigger_targets(
-                        Change {
+                    commands.trigger(Change {
                             target: widget_entity,
                             data: ColorPickerChanged {
                                 color: color.to_srgba().into(),
                             },
-                        },
-                        widget_entity,
-                    );
+                        });
                 },
             )
             .with_observe(
                 *current_widget,
-                move |_trigger: Trigger<Pointer<DragEnd>>,
+                move |_trigger: On<Pointer<DragEnd>>,
                       mut query: Query<&mut ColorPickerState>| {
                     let Ok(mut state) = query.get_mut(state_entity) else {
                         return;
@@ -476,7 +461,7 @@ fn render(
             )
             .with_observe(
                 *current_widget,
-                move |trigger: Trigger<Pointer<Click>>,
+                move |trigger: On<Pointer<Click>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,
                       layout_query: Query<&WidgetLayout>| {
@@ -497,15 +482,12 @@ fn render(
                     let value = relative_x / (layout.size.x - 80.0);
                     state.current_color.value = value.clamp(0.0, 1.0);
                     let color: Color = state.current_color.into();
-                    commands.trigger_targets(
-                        Change {
+                    commands.trigger(Change {
                             target: widget_entity,
                             data: ColorPickerChanged {
                                 color: color.to_srgba().into(),
                             },
-                        },
-                        widget_entity,
-                    );
+                        });
                 },
             ),
     ));
@@ -557,7 +539,7 @@ fn get_hue_gradient(color: Hsva) -> WidgetRender {
                 &rect,
             );
 
-            vello_scene.push_layer(peniko::Mix::Multiply, 0.75, kurbo::Affine::default(), &rect);
+            vello_scene.push_layer(peniko::Fill::NonZero, peniko::Mix::Multiply, 0.75, kurbo::Affine::default(), &rect);
 
             let color = parse_color("#818181").unwrap();
             vello_scene.stroke(
@@ -617,7 +599,7 @@ fn get_saturation_gradient(color: Hsva) -> WidgetRender {
                 &rect,
             );
 
-            vello_scene.push_layer(peniko::Mix::Multiply, 0.75, kurbo::Affine::default(), &rect);
+            vello_scene.push_layer(peniko::Fill::NonZero, peniko::Mix::Multiply, 0.75, kurbo::Affine::default(), &rect);
 
             let color = parse_color("#818181").unwrap();
             vello_scene.stroke(
@@ -676,7 +658,7 @@ fn get_value_gradient(color: Hsva) -> WidgetRender {
                 &rect,
             );
 
-            vello_scene.push_layer(peniko::Mix::Multiply, 0.75, kurbo::Affine::default(), &rect);
+            vello_scene.push_layer(peniko::Fill::NonZero, peniko::Mix::Multiply, 0.75, kurbo::Affine::default(), &rect);
 
             let color = parse_color("#818181").unwrap();
             vello_scene.stroke(

@@ -1,7 +1,7 @@
 use bevy::asset::RenderAssetUsages;
+use bevy::camera::{visibility::RenderLayers, RenderTarget};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
-use bevy::render::view::RenderLayers;
 use woodpecker_ui::prelude::*;
 
 fn main() {
@@ -76,10 +76,10 @@ fn startup(
         Camera3d::default(),
         Camera {
             order: -1,
-            target: image_handle.clone().into(),
             clear_color: Color::BLACK.into(),
             ..default()
         },
+        RenderTarget::from(image_handle.clone()),
         Transform::from_translation(Vec3::new(0.0, 0.0, 15.0)).looking_at(Vec3::ZERO, Vec3::Y),
         first_pass_layer,
     ));

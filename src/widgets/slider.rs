@@ -127,7 +127,7 @@ fn render(
     let current_widget = *current_widget;
     *children = WidgetChildren::default().with_observe(
         current_widget,
-        move |trigger: Trigger<Pointer<Click>>,
+        move |trigger: On<Pointer<Click>>,
               mut commands: Commands,
               layout_query: Query<&WidgetLayout>,
               mut state_query: Query<&mut SliderState>| {
@@ -141,13 +141,10 @@ fn render(
             state.value = (trigger.pointer_location.position.x - widget_layout.location.x)
                 / widget_layout.size.x;
             state.value = state.value.clamp(0.0, 1.0);
-            commands.trigger_targets(
-                Change {
+            commands.trigger(Change {
                     target: *current_widget,
                     data: SliderChanged { value: state.value },
-                },
-                *current_widget,
-            );
+                });
         },
     );
 
@@ -176,7 +173,7 @@ fn render(
         ))
         .observe(
             current_widget,
-            move |trigger: Trigger<Pointer<Drag>>,
+            move |trigger: On<Pointer<Drag>>,
                   mut commands: Commands,
                   layout_query: Query<&WidgetLayout>,
                   mut state_query: Query<&mut SliderState>| {
@@ -189,13 +186,10 @@ fn render(
                 state.value = (trigger.pointer_location.position.x - widget_layout.location.x)
                     / widget_layout.size.x;
                 state.value = state.value.clamp(0.0, 1.0);
-                commands.trigger_targets(
-                    Change {
+                commands.trigger(Change {
                         target: *current_widget,
                         data: SliderChanged { value: state.value },
-                    },
-                    *current_widget,
-                );
+                    });
             },
         );
 

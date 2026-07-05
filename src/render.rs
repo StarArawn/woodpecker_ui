@@ -5,14 +5,13 @@ use std::{
 
 use bevy::{asset::RenderAssetUsages, image::ImageSampler, prelude::*};
 use bevy_vello::{
-    prelude::VelloFont,
+    prelude::{VelloFont, UiVelloScene},
     vello::{
         self,
         kurbo::{self, Affine, RoundedRectRadii},
-        peniko::{self, Brush},
+        peniko::{self, Brush, ImageBrush, ImageData},
         wgpu::{TextureFormat, TextureUsages},
     },
-    VelloScene,
 };
 use image::GenericImage;
 use parley::StyleSet;
@@ -128,7 +127,7 @@ impl WidgetRender {
 
     pub(crate) fn render(
         &self,
-        vello_scene: &mut VelloScene,
+        vello_scene: &mut UiVelloScene,
         layout: &WidgetLayout,
         parent_layout: &WidgetLayout,
         default_font: &DefaultFont,
@@ -244,10 +243,12 @@ impl WidgetRender {
                     ]),
                 )));
                 styles.insert(parley::StyleProperty::LineHeight(
-                    widget_style
-                        .line_height
-                        .map(|lh| widget_style.font_size / lh)
-                        .unwrap_or(1.2),
+                    parley::LineHeight::FontSizeRelative(
+                        widget_style
+                            .line_height
+                            .map(|lh| widget_style.font_size / lh)
+                            .unwrap_or(1.2),
+                    ),
                 ));
                 styles.insert(parley::StyleProperty::FontStack(parley::FontStack::Single(
                     parley::FontFamily::Named(font_name),
@@ -270,8 +271,8 @@ impl WidgetRender {
                 {
                     crate::font::TextAlign::Left => parley::Alignment::Left,
                     crate::font::TextAlign::Right => parley::Alignment::Right,
-                    crate::font::TextAlign::Center => parley::Alignment::Middle,
-                    crate::font::TextAlign::Justified => parley::Alignment::Justified,
+                    crate::font::TextAlign::Center => parley::Alignment::Center,
+                    crate::font::TextAlign::Justified => parley::Alignment::Justify,
                     crate::font::TextAlign::End => parley::Alignment::End,
                 };
 
@@ -351,10 +352,12 @@ impl WidgetRender {
                 layout_editor.set_text(content);
                 let styles = layout_editor.edit_styles();
                 styles.insert(parley::StyleProperty::LineHeight(
-                    widget_style
-                        .line_height
-                        .map(|lh| widget_style.font_size / lh)
-                        .unwrap_or(1.2),
+                    parley::LineHeight::FontSizeRelative(
+                        widget_style
+                            .line_height
+                            .map(|lh| widget_style.font_size / lh)
+                            .unwrap_or(1.2),
+                    ),
                 ));
                 styles.insert(parley::StyleProperty::FontStack(parley::FontStack::Single(
                     parley::FontFamily::Named(
@@ -379,8 +382,8 @@ impl WidgetRender {
                 {
                     crate::font::TextAlign::Left => parley::Alignment::Left,
                     crate::font::TextAlign::Right => parley::Alignment::Right,
-                    crate::font::TextAlign::Center => parley::Alignment::Middle,
-                    crate::font::TextAlign::Justified => parley::Alignment::Justified,
+                    crate::font::TextAlign::Center => parley::Alignment::Center,
+                    crate::font::TextAlign::Justified => parley::Alignment::Justify,
                     crate::font::TextAlign::End => parley::Alignment::End,
                 };
                 layout_editor.set_alignment(alignment);
@@ -453,6 +456,7 @@ impl WidgetRender {
                     vello::peniko::Compose::SrcOver,
                 );
                 vello_scene.push_layer(
+                    peniko::Fill::NonZero,
                     mask_blend,
                     widget_style.opacity,
                     Affine::default(),
@@ -492,17 +496,17 @@ impl WidgetRender {
                     .images
                     .entry(image_handle.into())
                     .or_insert_with(move || {
-                        let mut image = peniko::Image::new(
-                            image.data.clone().unwrap().into(), // TODO: Don't unwrap here.
-                            peniko::ImageFormat::Rgba8,
-                            image.size().x,
-                            image.size().y,
-                        );
-                        image.quality = image_quality;
-                        image
+                        let image_data = ImageData {
+                            data: image.data.clone().unwrap().into(), // TODO: Don't unwrap here.
+                            format: peniko::ImageFormat::Rgba8,
+                            alpha_type: peniko::ImageAlphaType::Alpha,
+                            width: image.size().x,
+                            height: image.size().y,
+                        };
+                        ImageBrush::new(image_data).with_quality(image_quality)
                     });
 
-                vello_scene.draw_image(vello_image, transform);
+                vello_scene.draw_image(&*vello_image, transform);
             }
             WidgetRender::Svg {
                 handle,
@@ -599,13 +603,14 @@ impl WidgetRender {
                         let sub_section_data =
                             subsection_image_data(&mut image, texture_rect_floor);
                         let image_quality = widget_style.image_quality.into();
-                        let mut vello_image = peniko::Image::new(
-                            sub_section_data.into(),
-                            peniko::ImageFormat::Rgba8,
-                            texture_rect_floor.size().x as u32,
-                            texture_rect_floor.size().y as u32,
-                        );
-                        vello_image.quality = image_quality;
+                        let image_data = ImageData {
+                            data: sub_section_data.into(),
+                            format: peniko::ImageFormat::Rgba8,
+                            alpha_type: peniko::ImageAlphaType::Alpha,
+                            width: texture_rect_floor.size().x as u32,
+                            height: texture_rect_floor.size().y as u32,
+                        };
+                        let vello_image = ImageBrush::new(image_data).with_quality(image_quality);
                         image_manager.nine_patch_slices.insert(key, vello_image);
                     }
 
@@ -666,14 +671,16 @@ impl WidgetRender {
                         .images
                         .insert(handle.clone(), conv_image_handle);
                     let data: Vec<u8> = vec![];
-                    let mut image = peniko::Image::new(
-                        data.into(),
-                        peniko::ImageFormat::Rgba8,
-                        image_texture_descriptor.size.width,
-                        image_texture_descriptor.size.height,
-                    );
-                    image.quality = widget_style.image_quality.into();
-                    render_targets.vello_images.insert(handle.clone(), image);
+                    let image_data = ImageData {
+                        data: data.into(),
+                        format: peniko::ImageFormat::Rgba8,
+                        alpha_type: peniko::ImageAlphaType::Alpha,
+                        width: image_texture_descriptor.size.width,
+                        height: image_texture_descriptor.size.height,
+                    };
+                    let vello_image =
+                        ImageBrush::new(image_data).with_quality(widget_style.image_quality.into());
+                    render_targets.vello_images.insert(handle.clone(), vello_image);
                 }
                 let vello_image = render_targets.vello_images.get(handle).unwrap();
                 vello_scene.draw_image(vello_image, transform);
@@ -697,7 +704,7 @@ pub(crate) fn fit_image(size_to_fit: Vec2, container_size: Vec2) -> f32 {
 /// A custom widget vello renderer.
 #[derive(Clone)]
 pub struct WidgetRenderCustom {
-    inner: Arc<dyn Fn(&mut VelloScene, &WidgetLayout, &WoodpeckerStyle, f32) + Send + Sync>,
+    inner: Arc<dyn Fn(&mut UiVelloScene, &WidgetLayout, &WoodpeckerStyle, f32) + Send + Sync>,
 }
 
 impl Default for WidgetRenderCustom {
@@ -716,7 +723,7 @@ impl WidgetRenderCustom {
     /// Create a new custom widget render.
     pub fn new<F>(render: F) -> Self
     where
-        F: Fn(&mut VelloScene, &WidgetLayout, &WoodpeckerStyle, f32) + Send + Sync + 'static,
+        F: Fn(&mut UiVelloScene, &WidgetLayout, &WoodpeckerStyle, f32) + Send + Sync + 'static,
     {
         Self {
             inner: Arc::new(render),
@@ -725,7 +732,7 @@ impl WidgetRenderCustom {
 
     pub(crate) fn render(
         &self,
-        vello_scene: &mut VelloScene,
+        vello_scene: &mut UiVelloScene,
         layout: &WidgetLayout,
         styles: &WoodpeckerStyle,
         dpi: f32,

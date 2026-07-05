@@ -39,7 +39,7 @@ fn startup(
             },))
             .with_observe(
                 CurrentWidget(root),
-                |trigger: Trigger<Change<ColorPickerChanged>>,
+                |trigger: On<Change<ColorPickerChanged>>,
                  mut material_assets: ResMut<Assets<ColorMaterial>>,
                  query: Query<&MeshMaterial2d<ColorMaterial>>| {
                     for material in query.iter() {

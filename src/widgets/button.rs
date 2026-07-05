@@ -74,7 +74,7 @@ pub fn render(
     }
 
     commands.entity(**current_widget).observe(
-        move |_: Trigger<Pointer<Over>>, mut state_query: Query<&mut WButtonState>| {
+        move |_: On<Pointer<Over>>, mut state_query: Query<&mut WButtonState>| {
             let Ok(mut state) = state_query.get_mut(state_entity) else {
                 return;
             };
@@ -82,7 +82,7 @@ pub fn render(
         },
     );
     commands.entity(**current_widget).observe(
-        move |_: Trigger<Pointer<Out>>, mut state_query: Query<&mut WButtonState>| {
+        move |_: On<Pointer<Out>>, mut state_query: Query<&mut WButtonState>| {
             let Ok(mut state) = state_query.get_mut(state_entity) else {
                 return;
             };
