@@ -1,15 +1,15 @@
 use bevy::prelude::*;
 use woodpecker_ui::prelude::*;
 
-#[derive(Component, Clone, Default, Debug, Copy, PartialEq)]
+#[derive(Component, Clone, Default, Debug, Copy, PartialEq, Reflect)]
+#[reflect(Component, DiffableProp, PartialEq)]
 pub struct MyWidgetState {
     show_modal: bool,
 }
 
 #[derive(Widget, Component, Clone, Default, Reflect, Copy, PartialEq)]
+#[reflect(Component, DiffableProp, PartialEq)]
 #[auto_update(render)]
-#[props(MyWidget)]
-#[state(MyWidgetState)]
 #[require(WoodpeckerStyle, WidgetChildren)]
 struct MyWidget {
     depth: usize,
@@ -145,10 +145,10 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
 
     let number_of_modals = 3;
 
-    let root = commands
-        .spawn((
-            WoodpeckerApp,
-            WidgetChildren::default().with_child::<MyWidget>((
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands.entity(*root_widget).insert(
+        WidgetChildren::default()
+            .with_child::<MyWidget>((
                 WoodpeckerStyle {
                     width: Units::Percentage(100.0),
                     justify_content: Some(WidgetAlignContent::Center),
@@ -158,8 +158,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                     depth: number_of_modals,
                     total: number_of_modals,
                 },
-            )),
-        ))
-        .id();
-    ui_context.set_root_widget(root);
+            ))
+            .with_child::<OverlayRootWidget>(OverlayRootWidget),
+    );
 }

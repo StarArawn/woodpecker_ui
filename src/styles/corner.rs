@@ -44,11 +44,13 @@ impl Corner {
     /// * `bottom`: The value of the bottom corners
     ///
     /// ```
+    /// use woodpecker_ui::prelude::Corner;
+    ///
     /// // Creates a `Corner` with only the top corners rounded
-    /// let corner_radius = Corner::vertical(10.0, 0.0);
+    /// let corner_radius = Corner::vertical(10.0.into(), 0.0.into());
     ///
     /// // Creates a `Corner` with only the bottom corners rounded
-    /// let corner_radius = Corner::vertical(0.0, 10.0);
+    /// let corner_radius = Corner::vertical(0.0.into(), 10.0.into());
     /// ```
     pub fn vertical(top: Units, bottom: Units) -> Self {
         Self {
@@ -67,11 +69,13 @@ impl Corner {
     /// * `right`: The value of the right corners
     ///
     /// ```
+    /// use woodpecker_ui::prelude::Corner;
+    ///
     /// // Creates a `Corner` with only the left corners rounded
-    /// let corner_radius = Corner::horizontal(10.0, 0.0);
+    /// let corner_radius = Corner::horizontal(10.0.into(), 0.0.into());
     ///
     /// // Creates a `Corner` with only the right corners rounded
-    /// let corner_radius = Corner::horizontal(0.0, 10.0);
+    /// let corner_radius = Corner::horizontal(0.0.into(), 10.0.into());
     /// ```
     pub fn horizontal(left: Units, right: Units) -> Self {
         Self {

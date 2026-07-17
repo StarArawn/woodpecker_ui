@@ -84,10 +84,11 @@ fn startup(
         first_pass_layer,
     ));
 
-    let root = commands
-        .spawn((
-            WoodpeckerApp,
-            WidgetChildren::default().with_child::<WoodpeckerWindow>((
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands.entity(*root_widget).insert(
+        WidgetChildren::default()
+            .with_child::<OverlayRootWidget>(OverlayRootWidget)
+            .with_child::<WoodpeckerWindow>((
                 WoodpeckerWindow {
                     title: "Render Target Viewport".into(),
                     initial_position: Vec2::new(10.0, 10.0),
@@ -99,7 +100,7 @@ fn startup(
                         align_items: Some(WidgetAlignItems::Center),
                         flex_direction: WidgetFlexDirection::Column,
                         padding: Edge::all(10.0),
-                        width: Units::Percentage(100.0).into(),
+                        width: Units::Percentage(100.0),
                         ..Default::default()
                     },
                     WidgetChildren::default().with_child::<Element>((
@@ -116,9 +117,7 @@ fn startup(
                     )),
                 ))),
             )),
-        ))
-        .id();
-    ui_context.set_root_widget(root);
+    );
 }
 
 /// Rotates the inner cube (first pass)

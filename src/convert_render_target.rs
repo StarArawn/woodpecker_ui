@@ -32,7 +32,9 @@ impl Plugin for ConvertRenderTargetPlugin {
             Render,
             (
                 prepare_bind_groups.in_set(RenderSystems::Queue),
-                render.in_set(RenderSystems::Queue).after(prepare_bind_groups),
+                render
+                    .in_set(RenderSystems::Queue)
+                    .after(prepare_bind_groups),
                 override_images.in_set(RenderSystems::Queue).after(render),
             ),
         );
@@ -131,8 +133,14 @@ fn prepare_bind_groups(
             continue;
         };
 
-        if !pipeline.pipeline.contains_key(&org_image.texture_descriptor.format) {
-            let Some(shader) = render_target_images.shaders.get(&org_image.texture_descriptor.format) else {
+        if !pipeline
+            .pipeline
+            .contains_key(&org_image.texture_descriptor.format)
+        {
+            let Some(shader) = render_target_images
+                .shaders
+                .get(&org_image.texture_descriptor.format)
+            else {
                 continue;
             };
 
@@ -186,7 +194,10 @@ fn prepare_bind_groups(
         }
 
         // Create bind groups
-        let (_, bg_layout) = pipeline.pipeline.get(&org_image.texture_descriptor.format).unwrap();
+        let (_, bg_layout) = pipeline
+            .pipeline
+            .get(&org_image.texture_descriptor.format)
+            .unwrap();
         bind_groups.bind_group.insert(
             render_target.clone(),
             render_device.create_bind_group(
@@ -226,7 +237,8 @@ fn render(
             continue;
         };
 
-        let Some((pipeline, _)) = pipeline.pipeline.get(&gpu_image.texture_descriptor.format) else {
+        let Some((pipeline, _)) = pipeline.pipeline.get(&gpu_image.texture_descriptor.format)
+        else {
             continue;
         };
 

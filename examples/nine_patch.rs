@@ -62,7 +62,7 @@ fn startup(
 
     let mut children = WidgetChildren::default();
     let mut position = Vec2::ZERO;
-    for (size, scale_mode) in cases {
+    for (index, (size, scale_mode)) in cases.into_iter().enumerate() {
         children.add::<Element>((
             Element,
             WoodpeckerStyle {
@@ -80,9 +80,10 @@ fn startup(
                 scale_mode,
             },
         ));
+        children.add_key(format!("case{index}"));
         position.x += size.x + 25.0;
     }
 
-    let root = commands.spawn((WoodpeckerApp, children)).id();
-    ui_context.set_root_widget(root);
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands.entity(*root_widget).insert(children);
 }

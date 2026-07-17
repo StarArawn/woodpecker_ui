@@ -37,18 +37,16 @@ fn startup(
         Transform::default().with_scale(Vec3::splat(128.)),
     ));
 
-    let root = commands.spawn_empty().id();
-    commands.entity(root).insert((
-        WoodpeckerApp,
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands.entity(*root_widget).insert((
         WoodpeckerStyle {
             padding: Edge::all(10.0),
             ..default()
         },
         WidgetChildren::default()
             .with_child::<Checkbox>(Checkbox)
-            .with_observe(CurrentWidget(root), on_change),
+            .with_observe(root_widget, on_change),
     ));
-    ui_context.set_root_widget(root);
 }
 
 fn on_change(

@@ -43,16 +43,4 @@ impl ObserverCache {
             }
         }
     }
-
-    pub fn despawn_for_widget(&mut self, world: &mut World, widget_entity: Entity) {
-        let Some(entities) = self.observer_entities.get(&widget_entity) else {
-            return;
-        };
-
-        for (_target, ob_entity) in entities.iter() {
-            world.despawn(*ob_entity);
-        }
-
-        self.observer_entities.remove(&widget_entity);
-    }
 }

@@ -4,7 +4,7 @@ use bevy::{
     image::ImageSampler,
     prelude::*,
     render::render_resource::*,
-    window::WindowResized,
+    window::{PrimaryWindow, WindowResized},
 };
 use woodpecker_ui::prelude::*;
 
@@ -16,6 +16,7 @@ fn main() {
                 layer: RenderLayers::layer(2),
                 ..Default::default()
             },
+            ..Default::default()
         })
         .add_systems(Startup, startup)
         .add_systems(Update, resize_window)
@@ -38,42 +39,18 @@ fn resize_window(
     }
 }
 
-/// Computes how to scale and position a virtual resolution (e.g. 320x180)
-/// into a real screen (e.g. 1920x1080) with proper letterboxing or pillarboxing.
-///
-/// Returns:
-/// - `offset`: top-left corner of the scaled virtual area in screen space
-/// - `size`: size of the scaled virtual area
-/// - `scale`: uniform scale factor
-pub fn compute_letterboxed_transform(
-    screen_resolution: Vec2,
-    target_resolution: Vec2,
-) -> (Vec2, Vec2, f32) {
-    // Compute uniform scale factor to fit whole target into screen
-    let scale_x = screen_resolution.x / target_resolution.x;
-    let scale_y = screen_resolution.y / target_resolution.y;
-    let scale = scale_x.min(scale_y);
-
-    // Scaled size of the virtual content
-    let scaled_size = target_resolution * scale;
-
-    // Centered offset (top-left corner)
-    let offset = (screen_resolution - scaled_size) / 2.0;
-
-    (offset, scaled_size, scale)
-}
-
 fn startup(
     mut commands: Commands,
     mut ui_context: ResMut<WoodpeckerContext>,
     mut images: ResMut<Assets<Image>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    primary_window: Single<&Window, With<PrimaryWindow>>,
 ) {
     let mut image = Image::new_fill(
         Extent3d {
-            width: 640.0 as u32,
-            height: 360.0 as u32,
+            width: 640,
+            height: 360,
             depth_or_array_layers: 1,
         },
         TextureDimension::D2,
@@ -107,14 +84,16 @@ fn startup(
 
     commands.spawn(Camera2d);
 
+    let (_offset, size, _scale) =
+        compute_letterboxed_transform(primary_window.size(), Vec2::new(640.0, 360.0));
+
     commands.spawn((
         Mesh2d(meshes.add(Rectangle::new(1.0, 1.0))),
         MeshMaterial2d(materials.add(ColorMaterial {
             texture: Some(image_handle),
             ..default()
         })),
-        Transform::from_xyz(320.0, -140.0, 0.0)
-            .with_scale(Vec2::new(640.0 * 2.0, 360.0 * 2.0).extend(1.0)),
+        Transform::from_xyz(0.0, 0.0, 0.0).with_scale(size.extend(1.0)),
     ));
 
     let lorem_ipsum = r#"
@@ -129,10 +108,10 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras sed tellus neque. 
  Vestibulum rutrum imperdiet nisl, et consequat massa porttitor vel. Ut velit justo, vehicula a nulla eu, auctor eleifend metus. Ut egestas malesuada metus, sit amet pretium nunc commodo ac. Pellentesque gravida, nisl in faucibus volutpat, libero turpis mattis orci, vitae tincidunt ligula ligula ut tortor. Maecenas vehicula lobortis odio in molestie. Curabitur dictum elit sed arcu dictum, ut semper nunc cursus. Donec semper felis non nisl tincidunt elementum.
     "#.to_string();
 
-    let root = commands
-        .spawn((
-            WoodpeckerApp,
-            WidgetChildren::default().with_child::<Modal>((
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands.entity(*root_widget).insert(
+        WidgetChildren::default()
+            .with_child::<Modal>((
                 Modal {
                     visible: true,
                     title: "Scrolling example".into(),
@@ -163,8 +142,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras sed tellus neque. 
                         )),
                     )),
                 ),
-            )),
-        ))
-        .id();
-    ui_context.set_root_widget(root);
+            ))
+            .with_child::<OverlayRootWidget>(OverlayRootWidget),
+    );
 }

@@ -1,9 +1,7 @@
 use bevy::prelude::*;
 use woodpecker_ui::prelude::*;
 
-// We can derive widget here and pass in our systems
-// passing in the widget_systems is optional and if we don't pass
-// them in we need to call `app.add_widget_systems`!
+// Passing `widget_systems` here is optional; without it, call `app.add_widget_systems` instead.
 #[derive(Component, Widget, Reflect, Clone)]
 #[widget_systems(foo_update, foo_render)]
 pub struct FooWidget;
@@ -13,11 +11,7 @@ fn foo_update(entity: Res<CurrentWidget>, query: Query<Entity, Changed<FooWidget
 }
 
 fn foo_render(mut commands: Commands, entity: Res<CurrentWidget>) {
-    // Handled creating children from bevy bundles.
-    // Note: The order of the children is important!
-    // You can think of this similar to entity "commands".
-    // The actual entities are managed by Woodpecker to make sure the proper
-    // hiarchy is setup. It also handles reactivity correctly as well.
+    // Order of the children is important; Woodpecker manages the actual entities.
     let mut foo_children = WidgetChildren::default();
 
     // Although not required for this exmaple..
@@ -25,15 +19,13 @@ fn foo_render(mut commands: Commands, entity: Res<CurrentWidget>) {
     let mut bar_children = WidgetChildren::default();
     bar_children.add::<BazWidget>(BazWidget { value: 3.1459 });
 
-    // Now we can create children of "Foo"
     foo_children.add::<BarWidget>(BarWidgetBundle {
         bar_widget: BarWidget,
         children: bar_children,
     });
 
-    // We tell the widget system runner that the children should be processed at this widget.
+    // Tells the widget system runner the children should be processed at this widget.
     foo_children.apply(entity.as_parent());
-    // Don't forget to add to the entity as a component!
     commands.entity(**entity).insert(foo_children);
 }
 
@@ -73,10 +65,10 @@ fn baz_update(entity: Res<CurrentWidget>, query: Query<Entity, Changed<BazWidget
 }
 
 fn baz_render(entity: Res<CurrentWidget>, query: Query<&BazWidget>) {
-    let Ok(baz) = query.get(**entity) else {
+    let Ok(widget) = query.get(**entity) else {
         return;
     };
-    info!("I am baz! {:?} my value is {:?}", entity, baz.value);
+    info!("I am baz! {:?} my value is {:?}", entity, widget.value);
 }
 
 fn main() {

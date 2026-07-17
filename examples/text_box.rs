@@ -12,11 +12,8 @@ fn main() {
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     commands.spawn((Camera2d, WoodpeckerView));
 
-    let root = commands
-        .spawn((
-            WoodpeckerApp,
-            WidgetChildren::default().with_child::<TextBox>(TextBox::default()),
-        ))
-        .id();
-    ui_context.set_root_widget(root);
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands
+        .entity(*root_widget)
+        .insert(WidgetChildren::default().with_child::<TextBox>(TextBox::default()));
 }

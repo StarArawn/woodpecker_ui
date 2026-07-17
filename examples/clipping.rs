@@ -12,10 +12,9 @@ fn main() {
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     commands.spawn((Camera2d, WoodpeckerView));
 
-    let root = commands
-        .spawn((
-            WoodpeckerApp,
-            WidgetChildren::default().with_child::<Clip>((
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands.entity(*root_widget).insert(
+        WidgetChildren::default().with_child::<Clip>((
                 Clip,
                 WoodpeckerStyle {
                     width: 150.0.into(),
@@ -54,7 +53,5 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                     WidgetRender::Quad
                 )),
             )),
-        ))
-        .id();
-    ui_context.set_root_widget(root);
+    );
 }

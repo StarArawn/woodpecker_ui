@@ -10,10 +10,9 @@ use super::ScrollContext;
 /// the scroll box wraps so that we can correctly calculate the amount of
 /// scroll necessary.
 #[derive(Component, Widget, Reflect, Default, PartialEq, Eq, Clone)]
+#[reflect(Component, DiffableProp, PartialEq)]
 #[auto_update(render)]
-#[props(ScrollContent, WidgetLayout)]
-#[context(ScrollContext)]
-#[require(WoodpeckerStyle, WoodpeckerStyleProp, WidgetChildren)]
+#[require(WoodpeckerStyle, WoodpeckerStyleProp, WidgetChildren, WatchLayout)]
 pub struct ScrollContent;
 
 pub fn render(
@@ -39,7 +38,9 @@ pub fn render(
         return;
     };
 
-    if *prev_layout != *layout {
+    // Ignore a degenerate `(0, 0)` layout (e.g. under a `display: None` ancestor) so it
+    // doesn't get learned as the content size, which would cause a flicker when unhidden.
+    if *prev_layout != *layout && layout.size != Vec2::ZERO {
         context.content_width = layout.width();
         context.content_height = layout.content_height();
     }

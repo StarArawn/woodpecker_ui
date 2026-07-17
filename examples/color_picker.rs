@@ -25,9 +25,8 @@ fn startup(
         MeshMaterial2d(material_red),
         Transform::from_xyz(0.0, 0.0, 0.0),
     ));
-    let root = commands.spawn_empty().id();
-    commands.entity(root).insert((
-        WoodpeckerApp,
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands.entity(*root_widget).insert((
         WoodpeckerStyle {
             align_items: Some(WidgetAlignItems::Center),
             padding: Edge::all(0.0).left(50.0),
@@ -38,7 +37,7 @@ fn startup(
                 initial_color: color,
             },))
             .with_observe(
-                CurrentWidget(root),
+                root_widget,
                 |trigger: On<Change<ColorPickerChanged>>,
                  mut material_assets: ResMut<Assets<ColorMaterial>>,
                  query: Query<&MeshMaterial2d<ColorMaterial>>| {
@@ -48,5 +47,4 @@ fn startup(
                 },
             ),
     ));
-    ui_context.set_root_widget(root);
 }

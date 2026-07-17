@@ -20,10 +20,10 @@ fn startup(
     let font = asset_server.load("Outfit/static/Outfit-Regular.ttf");
     font_manager.add(&font);
 
-    let root = commands
-        .spawn((
-            WoodpeckerApp,
-            WidgetChildren::default().with_child::<Modal>((
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands.entity(*root_widget).insert(
+        WidgetChildren::default()
+            .with_child::<Modal>((
                 Modal {
                     visible: true,
                     title: "Code Editor example".into(),
@@ -54,10 +54,9 @@ fn startup(
                         )),
                     )),
                 ),
-            )),
-        ))
-        .id();
-    ui_context.set_root_widget(root);
+            ))
+            .with_child::<OverlayRootWidget>(OverlayRootWidget),
+    );
 }
 
 pub const CODE_BLOCK: &str = r#"use bevy::prelude::*;

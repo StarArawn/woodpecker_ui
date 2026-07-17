@@ -1,15 +1,21 @@
 use bevy::prelude::*;
 use bevy_vello::prelude::VelloFont;
+pub use box_shadow::WidgetBoxShadow;
 pub use corner::Corner;
 pub use edge::Edge;
+pub use grid::{GridTemplate, GridTrackSize, WidgetGridAutoFlow, WidgetGridPlacement};
 pub use layout::*;
+pub use stacking_tier::StackingTier;
 pub use units::Units;
 
 use crate::font::TextAlign;
 
+mod box_shadow;
 mod corner;
 mod edge;
+mod grid;
 mod layout;
+mod stacking_tier;
 mod units;
 
 /// A struct used to pass styles into a widget.
@@ -31,9 +37,12 @@ pub enum TextWrap {
     WordOrGlyph,
 }
 
-// A struct used to define the look of a widget
+/// A struct used to define the look of a widget.
 ///
 /// All fields are `pub`, so you can simply define your styles.
+// Deliberately NOT `DiffableProp`: some widgets (`Checkbox`, `Toggle`, `TextBox`) compute
+// their own style inside `render()`, and making this reflectively diffable would create a
+// one-frame "echo" re-render every time that computed style changes.
 #[derive(Component, Reflect, Debug, Clone, PartialEq, Copy)]
 #[reflect(Component)]
 pub struct WoodpeckerStyle {
@@ -58,29 +67,18 @@ pub struct WoodpeckerStyle {
     pub display: WidgetDisplay,
     /// Show or hide an element without changing layout
     pub visibility: WidgetVisibility,
-    /// How children overflowing their container should affect layout
+    /// How children overflowing their container should affect layout.
     ///
-    /// In CSS the primary effect of this property is to control whether contents of a parent container that overflow that container should
-    /// be displayed anyway, be clipped, or trigger the container to become a scroll container. However it also has secondary effects on layout,
-    /// the main ones being:
-    ///
-    ///   - The automatic minimum size Flexbox/CSS Grid items with non-`Visible` overflow is `0` rather than being content based
-    ///   - `Overflow::Scroll` nodes have space in the layout reserved for a scrollbar (width controlled by the `scrollbar_width` property)
-    ///
-    /// In Taffy, we only implement the layout related secondary effects as we are not concerned with drawing/painting. The amount of space reserved for
-    /// a scrollbar is controlled by the `scrollbar_width` property. If this is `0` then `Scroll` behaves identically to `Hidden`.
+    /// Only the layout-related secondary effects are implemented (not drawing/painting):
+    /// non-`Visible` overflow gives Flexbox/Grid items a `0` automatic minimum size, and
+    /// `Overflow::Scroll` reserves scrollbar space per `scrollbar_width`.
     ///
     /// <https://developer.mozilla.org/en-US/docs/Web/CSS/overflow>
     pub overflow: WidgetOverflow,
-    /// The positioning strategy for this item.
-    ///
-    /// This controls both how the origin is determined for the [`WoodpeckerStyle::position`] field,
-    /// and whether or not the item will be controlled by flexbox's layout algorithm.
-    ///
-    /// WARNING: this enum follows the behavior of [CSS's `position` property](https://developer.mozilla.org/en-US/docs/Web/CSS/position),
-    /// which can be unintuitive.
-    ///
-    /// [`WidgetPosition::Relative`] is the default value, in contrast to the default behavior in CSS.
+    /// The positioning strategy for this item, controlling both origin and whether it's
+    /// controlled by flexbox's layout algorithm. Follows [CSS's `position`
+    /// property](https://developer.mozilla.org/en-US/docs/Web/CSS/position), except
+    /// [`WidgetPosition::Relative`] is the default here (unlike CSS).
     pub position: WidgetPosition,
     /// Position Left
     pub left: Units,
@@ -132,15 +130,9 @@ pub struct WoodpeckerStyle {
     pub justify_content: Option<WidgetJustifyContent>,
     /// How large should the gaps between items in a grid or flex container be?
     pub gap: (Units, Units),
-    /// The direction of the flexbox layout main axis.
-    ///
-    /// There are always two perpendicular layout axes: main (or primary) and cross (or secondary).
-    /// Adding items will cause them to be positioned adjacent to each other along the main axis.
-    /// By varying this value throughout your tree, you can create complex axis-aligned layouts.
-    ///
-    /// Items are always aligned relative to the cross axis, and justified relative to the main axis.
-    ///
-    /// The default behavior is [`FlexDirection::Row`].
+    /// The direction of the flexbox layout main axis. Items are aligned relative to the
+    /// cross axis and justified relative to the main axis. Defaults to
+    /// [`FlexDirection::Row`].
     ///
     /// [Specification](https://www.w3.org/TR/css-flexbox-1/#flex-direction-property)
     pub flex_direction: WidgetFlexDirection,
@@ -160,7 +152,12 @@ pub struct WoodpeckerStyle {
     ///
     /// 1.0 is the default value, and this value must be positive.
     pub flex_shrink: f32,
-    // TODO: Add grid support..
+    /// This item's (start, end) placement along the grid row axis, when its parent's
+    /// `display` is [`WidgetDisplay::Grid`]. Ignored otherwise.
+    pub grid_row: (WidgetGridPlacement, WidgetGridPlacement),
+    /// This item's (start, end) placement along the grid column axis, when its parent's
+    /// `display` is [`WidgetDisplay::Grid`]. Ignored otherwise.
+    pub grid_column: (WidgetGridPlacement, WidgetGridPlacement),
     /************************ Rendering ************************/
     /// The background color of this widget
     ///
@@ -210,6 +207,10 @@ pub struct WoodpeckerStyle {
     pub image_quality: ImageQuality,
     /// Z Index
     pub z_index: Option<WidgetZ>,
+    /// A drop shadow rendered behind this widget's quad.
+    ///
+    /// Only applies to widgets with [`crate::prelude::WidgetRender::Quad`]
+    pub box_shadow: Option<WidgetBoxShadow>,
 }
 
 /// A z index which is either global or relative.
@@ -251,9 +252,9 @@ pub enum ImageQuality {
     High,
 }
 
-impl Into<bevy_vello::vello::peniko::ImageQuality> for ImageQuality {
-    fn into(self) -> bevy_vello::vello::peniko::ImageQuality {
-        match self {
+impl From<ImageQuality> for bevy_vello::vello::peniko::ImageQuality {
+    fn from(val: ImageQuality) -> Self {
+        match val {
             ImageQuality::Low => bevy_vello::vello::peniko::ImageQuality::Low,
             ImageQuality::Medium => bevy_vello::vello::peniko::ImageQuality::Medium,
             ImageQuality::High => bevy_vello::vello::peniko::ImageQuality::High,
@@ -308,6 +309,8 @@ impl WoodpeckerStyle {
         flex_basis: Units::Auto,
         flex_grow: 0.0,
         flex_shrink: 1.0,
+        grid_row: (WidgetGridPlacement::Auto, WidgetGridPlacement::Auto),
+        grid_column: (WidgetGridPlacement::Auto, WidgetGridPlacement::Auto),
         background_color: Color::Srgba(Srgba {
             red: 0.0,
             green: 0.0,
@@ -341,6 +344,7 @@ impl WoodpeckerStyle {
         text_alignment: None,
         image_quality: ImageQuality::Medium,
         z_index: None,
+        box_shadow: None,
     };
 
     /// Lerps between two styles.
@@ -449,6 +453,14 @@ impl From<WoodpeckerStyle> for taffy::Style {
             flex_basis: val.flex_basis.into(),
             flex_grow: val.flex_grow,
             flex_shrink: val.flex_shrink,
+            grid_row: taffy::Line {
+                start: val.grid_row.0.into(),
+                end: val.grid_row.1.into(),
+            },
+            grid_column: taffy::Line {
+                start: val.grid_column.0.into(),
+                end: val.grid_column.1.into(),
+            },
             ..Default::default()
         }
     }
@@ -480,13 +492,6 @@ fn lerp_units(prop_a: Units, prop_b: Units, x: f32) -> Units {
         }
     }
 }
-
-// fn lerp_ang(a: f32, b: f32, x: f32) -> f32 {
-//     let ang = ((((a - b) % std::f32::consts::TAU) + std::f32::consts::PI * 3.)
-//         % std::f32::consts::TAU)
-//         - std::f32::consts::PI;
-//     ang * x + b
-// }
 
 fn rgb_to_hsv(from: Srgba) -> Vec3 {
     // xyz <-> hsv

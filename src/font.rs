@@ -34,7 +34,12 @@ pub enum TextAlign {
 #[derive(Resource)]
 pub struct FontManager {
     font_data: HashMap<AssetId<VelloFont>, Vec<u8>>,
-    vello_to_family: HashMap<AssetId<VelloFont>, String>,
+    // `pub(crate)` (rather than private) solely so layout system tests can register a
+    // placeholder family without needing a real font asset loaded through `load_fonts` --
+    // parley falls back to a system font if the named family isn't actually registered via
+    // `font_cx.collection.register_fonts`, which is fine for testing that measurements
+    // respond to wrap width, not for testing any specific font's metrics.
+    pub(crate) vello_to_family: HashMap<AssetId<VelloFont>, String>,
     fonts: HashSet<Handle<VelloFont>>,
     /// The parley font context for parley shaping/etc..
     pub font_cx: parley::FontContext,
@@ -81,11 +86,18 @@ impl FontManager {
         layout: &WidgetLayout,
         default_font: &DefaultFont,
     ) -> Option<Vec2> {
-        measure_text(text, styles, self, default_font, layout, Vec2::splat(1.0)).and_then(|m| {
-            match m {
-                LayoutMeasure::Fixed(fixed) => Some(fixed.size),
-                _ => None,
-            }
+        measure_text(
+            text,
+            styles,
+            self,
+            default_font,
+            layout,
+            Vec2::splat(1.0),
+            false,
+        )
+        .and_then(|m| match m {
+            LayoutMeasure::Fixed(fixed) => Some(fixed.size),
+            _ => None,
         })
     }
 }

@@ -13,12 +13,14 @@ default = []
 hotreload = ["dioxus-devtools", "woodpecker_ui_macros/hotreload"]
 debug-render = []
 metrics = []
+gamepad-nav = ["bevy/gamepad"]
+devtools = []
 
 [dependencies]
 parley = "0.7"
 # parley = { git = "https://github.com/linebender/parley", rev = "74a3499920675a63450727e44a75a57f76389e7a" }
-# bevy_vello = { path = "../bevy_vello", features = ["text", "default_font"] }
-bevy_vello = { git = "https://github.com/linebender/bevy_vello", branch = "nixon/bevy-0.19", features = ["text", "default_font"] }
+bevy_vello = { path = "../bevy_vello_bevy19", features = ["text", "default_font"] }
+# bevy_vello = { git = "https://github.com/linebender/bevy_vello", branch = "nixon/bevy-0.19", features = ["text", "default_font"] }
 bevy-trait-query = "0.19"
 dioxus-devtools = { version = "0.7.0-alpha.0", optional = true }
 bytemuck = "1.23.0"
@@ -40,17 +42,17 @@ ansi-parser = "0.9.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 arboard = "3.4"
-bevy = { version = "0.19", default-features = false, features = ["bevy_picking", "bevy_log"] }
+bevy = { version = "0.19", default-features = false, features = ["bevy_picking", "bevy_log", "reflect_auto_register"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-bevy = { version = "0.19", default-features = false, features = ["webgpu"] }
+bevy = { version = "0.19", default-features = false, features = ["webgpu", "reflect_auto_register"] }
 web-sys = { version = "0.3", features = ["Clipboard", "Navigator"] }
 wasm-bindgen-futures = "0.4"
 futures-channel = "0.3"
 
 [dev-dependencies]
 calc = { version = "0.4.0", default-features = false }
-bevy = { version = "0.19", features = ["jpeg", "bevy_dev_tools"] }
+bevy = { version = "0.19", features = ["jpeg", "bevy_dev_tools", "reflect_auto_register"] }
 bevy-inspector-egui = "0.37"
 
 # [patch.crates-io]
@@ -59,6 +61,18 @@ bevy-inspector-egui = "0.37"
 [[example]]
 name = "todo"
 path = "examples/todo/todo.rs"
+
+[[example]]
+name = "dashboard"
+path = "examples/dashboard/dashboard.rs"
+
+[[example]]
+name = "game_ui"
+path = "examples/game_ui/game_ui.rs"
+
+[[example]]
+name = "editor"
+path = "examples/editor/editor.rs"
 
 [profile]
 

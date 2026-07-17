@@ -9,6 +9,7 @@ fn main() {
                 layer: RenderLayers::layer(1),
                 ..Default::default()
             },
+            ..Default::default()
         })
         .add_systems(Startup, startup)
         .add_systems(Update, flip_render_layers)
@@ -49,23 +50,20 @@ fn startup(
     let font = asset_server.load("Outfit/static/Outfit-Regular.ttf");
     font_manager.add(&font);
 
-    let root = commands
-        .spawn((
-            WoodpeckerApp,
-            WidgetChildren::default().with_child::<Element>((
-                Element,
-                WoodpeckerStyle {
-                    font_size: 50.0,
-                    color: Srgba::RED.into(),
-                    margin: Edge::all(10.0),
-                    font: Some(font.id()),
-                    ..Default::default()
-                },
-                WidgetRender::Text {
-                    content: "Space to change Camera RenderLayer. WoodPecker is on layer 1".into(),
-                },
-            )),
-        ))
-        .id();
-    ui_context.set_root_widget(root);
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands
+        .entity(*root_widget)
+        .insert(WidgetChildren::default().with_child::<Element>((
+            Element,
+            WoodpeckerStyle {
+                font_size: 50.0,
+                color: Srgba::RED.into(),
+                margin: Edge::all(10.0),
+                font: Some(font.id()),
+                ..Default::default()
+            },
+            WidgetRender::Text {
+                content: "Space to change Camera RenderLayer. WoodPecker is on layer 1".into(),
+            },
+        )));
 }

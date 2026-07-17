@@ -4,10 +4,6 @@ use woodpecker_ui::prelude::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins((
-            bevy_inspector_egui::bevy_egui::EguiPlugin::default(),
-            bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
-        ))
         .add_plugins(WoodpeckerUIPlugin::default())
         .add_systems(Startup, startup)
         .run();
@@ -40,10 +36,10 @@ fn startup(
             tab_button: TabButton {
                 index: i,
                 title: format!("Tab {}", i + 1),
-                ..Default::default()
             },
             ..Default::default()
         });
+        tab_buttons.add_key(format!("tab-{i}"));
         tab_content.add::<TabContent>(TabContentBundle {
             tab_content: TabContent { index: i },
             children: PassedChildren(
@@ -73,16 +69,17 @@ fn startup(
             ),
             ..Default::default()
         });
+        tab_content.add_key(format!("tab-{i}"));
     }
 
     tab_buttons.add::<TabButton>(TabButtonBundle {
         tab_button: TabButton {
             index: 2,
             title: format!("Tab {}", 3),
-            ..Default::default()
         },
         ..Default::default()
     });
+    tab_buttons.add_key("tab-2");
     tab_content.add::<TabContent>(TabContentBundle {
         tab_content: TabContent { index: 2 },
         children: PassedChildren(WidgetChildren::default().with_child::<Element>((
@@ -100,33 +97,45 @@ fn startup(
         ))),
         ..Default::default()
     });
+    tab_content.add_key("tab-2");
 
-    let root = commands
-        .spawn((
-            WoodpeckerApp,
-            WoodpeckerStyle {
-                align_items: Some(WidgetAlignItems::Center),
-                justify_content: Some(WidgetAlignContent::Center),
-                ..Default::default()
-            },
-            WidgetChildren::default().with_child::<TabContextProvider>((
-                TabContextProviderBundle {
-                    children: PassedChildren(
-                        WidgetChildren::default()
-                            .with_child::<Element>((
-                                Element,
-                                WoodpeckerStyle {
-                                    flex_direction: WidgetFlexDirection::Row,
-                                    ..Default::default()
-                                },
-                                tab_buttons,
-                            ))
-                            .with_child::<Element>((Element, tab_content)),
-                    ),
-                    ..Default::default()
-                },
-            )),
-        ))
-        .id();
-    ui_context.set_root_widget(root);
+    let tab_context_provider =
+        WidgetChildren::default().with_child::<TabContextProvider>((TabContextProviderBundle {
+            children: PassedChildren(
+                WidgetChildren::default()
+                    .with_child::<Element>((
+                        Element,
+                        WoodpeckerStyle {
+                            flex_direction: WidgetFlexDirection::Row,
+                            ..Default::default()
+                        },
+                        tab_buttons,
+                    ))
+                    .with_key("tab-buttons-row")
+                    .with_child::<Element>((Element, tab_content))
+                    .with_key("tab-content"),
+            ),
+            ..Default::default()
+        },));
+
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands.entity(*root_widget).insert(
+        WidgetChildren::default()
+            .with_child::<OverlayRootWidget>(OverlayRootWidget)
+            .with_child::<WindowingContextProvider>(
+                WidgetChildren::default().with_child::<WoodpeckerWindow>((
+                    WoodpeckerWindow {
+                        title: "Tabs".into(),
+                        initial_position: Vec2::new(200.0, 200.0),
+                        window_styles: WoodpeckerStyle {
+                            width: 400.0.into(),
+                            height: 400.0.into(),
+                            ..WoodpeckerWindow::default().window_styles
+                        },
+                        ..Default::default()
+                    },
+                    PassedChildren(tab_context_provider),
+                )),
+            ),
+    );
 }

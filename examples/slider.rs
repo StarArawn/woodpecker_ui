@@ -25,9 +25,8 @@ fn startup(
         Transform::from_xyz(0.0, 0.0, 0.0),
     ));
 
-    let root = commands.spawn_empty().id();
-    commands.entity(root).insert((
-        WoodpeckerApp,
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands.entity(*root_widget).insert((
         WoodpeckerStyle {
             padding: Edge::all(10.0),
             ..default()
@@ -39,7 +38,7 @@ fn startup(
                 value: 0.5,
             })
             .with_observe(
-                CurrentWidget(root),
+                root_widget,
                 |trigger: On<Change<SliderChanged>>,
                  mut material_assets: ResMut<Assets<ColorMaterial>>,
                  query: Query<&MeshMaterial2d<ColorMaterial>>| {
@@ -53,5 +52,4 @@ fn startup(
                 },
             ),
     ));
-    ui_context.set_root_widget(root);
 }

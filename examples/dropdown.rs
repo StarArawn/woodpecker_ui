@@ -40,9 +40,8 @@ fn startup(
         Transform::from_xyz(0.0, 0.0, 0.0),
     ));
 
-    let root = commands.spawn_empty().id();
-    commands.entity(root).insert((
-        WoodpeckerApp,
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands.entity(*root_widget).insert((
         WoodpeckerStyle {
             padding: Edge::all(10.0),
             ..default()
@@ -51,10 +50,9 @@ fn startup(
             .with_child::<Dropdown>(Dropdown {
                 list: vec!["Red".into(), "Green".into(), "Blue".into()],
                 current_value: "Red".into(),
-                ..Default::default()
             })
             .with_observe(
-                CurrentWidget(root),
+                root_widget,
                 |trigger: On<Change<DropdownChanged>>,
                  material_list: Res<MaterialList>,
                  mut query: Query<&mut MeshMaterial2d<ColorMaterial>>| {
@@ -67,7 +65,7 @@ fn startup(
                         }
                     }
                 },
-            ),
+            )
+            .with_child::<OverlayRootWidget>(OverlayRootWidget),
     ));
-    ui_context.set_root_widget(root);
 }

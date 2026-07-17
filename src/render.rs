@@ -5,7 +5,7 @@ use std::{
 
 use bevy::{asset::RenderAssetUsages, image::ImageSampler, prelude::*};
 use bevy_vello::{
-    prelude::{VelloFont, UiVelloScene},
+    prelude::{UiVelloScene, VelloFont},
     vello::{
         self,
         kurbo::{self, Affine, RoundedRectRadii},
@@ -129,7 +129,6 @@ impl WidgetRender {
         &self,
         vello_scene: &mut UiVelloScene,
         layout: &WidgetLayout,
-        parent_layout: &WidgetLayout,
         default_font: &DefaultFont,
         _font_assets: &Assets<VelloFont>,
         image_assets: &mut Assets<Image>,
@@ -167,6 +166,33 @@ impl WidgetRender {
 
         match self {
             WidgetRender::Quad => {
+                let opacity = widget_style.opacity.clamp(0.0, 1.0);
+                if let Some(box_shadow) = widget_style.box_shadow {
+                    let shadow_color = box_shadow.color.to_srgba();
+                    let shadow_brush = peniko::Color::new([
+                        shadow_color.red,
+                        shadow_color.green,
+                        shadow_color.blue,
+                        shadow_color.alpha * opacity,
+                    ]);
+                    let spread = box_shadow.spread as f64;
+                    let shadow_rect = kurbo::Rect::new(
+                        location_x as f64 + box_shadow.x_offset as f64 - spread,
+                        location_y as f64 + box_shadow.y_offset as f64 - spread,
+                        location_x as f64 + size_x as f64 + box_shadow.x_offset as f64 + spread,
+                        location_y as f64 + size_y as f64 + box_shadow.y_offset as f64 + spread,
+                    );
+                    let shadow_radius = widget_style.border_radius.top_left.value_or(0.0) as f64;
+                    let shadow_std_dev = box_shadow.blur_radius as f64 / 2.0;
+                    vello_scene.draw_blurred_rounded_rect(
+                        Affine::default(),
+                        shadow_rect,
+                        shadow_brush,
+                        shadow_radius,
+                        shadow_std_dev,
+                    );
+                }
+
                 let border_left = layout.border.left.value_or(0.0) as f64;
                 let border_top = layout.border.top.value_or(0.0) as f64;
                 let border_right = layout.border.right.value_or(0.0) as f64;
@@ -174,51 +200,147 @@ impl WidgetRender {
 
                 let color = widget_style.background_color.to_srgba();
                 let border_color = widget_style.border_color.to_srgba();
-                let rect = kurbo::RoundedRect::new(
+
+                let radii = RoundedRectRadii::new(
+                    widget_style.border_radius.top_left.value_or(0.0) as f64,
+                    widget_style.border_radius.top_right.value_or(0.0) as f64,
+                    widget_style.border_radius.bottom_right.value_or(0.0) as f64,
+                    widget_style.border_radius.bottom_left.value_or(0.0) as f64,
+                );
+
+                let outer_rect = kurbo::RoundedRect::new(
                     location_x as f64,
                     location_y as f64,
                     location_x as f64 + size_x as f64,
                     location_y as f64 + size_y as f64,
-                    RoundedRectRadii::new(
-                        widget_style.border_radius.top_left.value_or(0.0) as f64,
-                        widget_style.border_radius.top_right.value_or(0.0) as f64,
-                        widget_style.border_radius.bottom_right.value_or(0.0) as f64,
-                        widget_style.border_radius.bottom_left.value_or(0.0) as f64,
-                    ),
+                    radii,
                 );
 
-                vello_scene.fill(
-                    peniko::Fill::NonZero,
-                    kurbo::Affine::default(),
-                    peniko::Color::new([
-                        border_color.red,
-                        border_color.green,
-                        border_color.blue,
-                        border_color.alpha,
-                    ]),
-                    None,
-                    &rect,
-                );
+                let border_color_brush = peniko::Color::new([
+                    border_color.red,
+                    border_color.green,
+                    border_color.blue,
+                    border_color.alpha * opacity,
+                ]);
+                let background_brush = peniko::Color::new([
+                    color.red,
+                    color.green,
+                    color.blue,
+                    color.alpha * opacity,
+                ]);
 
-                let rect = kurbo::RoundedRect::new(
-                    location_x as f64 + border_left,
-                    location_y as f64 + border_top,
-                    location_x as f64 + (size_x as f64 - border_right),
-                    location_y as f64 + (size_y as f64 - border_bottom),
-                    RoundedRectRadii::new(
-                        widget_style.border_radius.top_left.value_or(0.0) as f64,
-                        widget_style.border_radius.top_right.value_or(0.0) as f64,
-                        widget_style.border_radius.bottom_right.value_or(0.0) as f64,
-                        widget_style.border_radius.bottom_left.value_or(0.0) as f64,
-                    ),
-                );
-                vello_scene.fill(
-                    peniko::Fill::NonZero,
-                    kurbo::Affine::default(),
-                    peniko::Color::new([color.red, color.green, color.blue, color.alpha]),
-                    None,
-                    &rect,
-                );
+                // Background is always filled directly in its own color (never relying on
+                // it to opaquely cover a border-colored rect underneath) so a transparent
+                // background stays transparent.
+                if border_left == border_top
+                    && border_top == border_right
+                    && border_right == border_bottom
+                {
+                    // Uniform border width: fill the outer rect, then stroke a rect inset by
+                    // half the border width so the stroke's outer edge lines up with the
+                    // outer rect's edge. A single stroked path avoids the corner seams that
+                    // the even-odd ring-path approach below produces at rounded corners.
+                    vello_scene.fill(
+                        peniko::Fill::NonZero,
+                        kurbo::Affine::default(),
+                        background_brush,
+                        None,
+                        &outer_rect,
+                    );
+                    if border_left > 0.0 {
+                        let inset = border_left / 2.0;
+                        let stroke_rect = kurbo::RoundedRect::new(
+                            location_x as f64 + inset,
+                            location_y as f64 + inset,
+                            location_x as f64 + size_x as f64 - inset,
+                            location_y as f64 + size_y as f64 - inset,
+                            radii,
+                        );
+                        vello_scene.stroke(
+                            &kurbo::Stroke::new(border_left),
+                            kurbo::Affine::default(),
+                            border_color_brush,
+                            None,
+                            &stroke_rect,
+                        );
+                    }
+                } else {
+                    // Asymmetric per-side border widths can't be expressed as a single
+                    // stroked path, so fall back to filling the ring between outer and
+                    // inner rects instead.
+                    let inner_radii = RoundedRectRadii::new(
+                        (widget_style.border_radius.top_left.value_or(0.0) as f64
+                            - border_top.max(border_left))
+                        .max(0.0),
+                        (widget_style.border_radius.top_right.value_or(0.0) as f64
+                            - border_top.max(border_right))
+                        .max(0.0),
+                        (widget_style.border_radius.bottom_right.value_or(0.0) as f64
+                            - border_bottom.max(border_right))
+                        .max(0.0),
+                        (widget_style.border_radius.bottom_left.value_or(0.0) as f64
+                            - border_bottom.max(border_left))
+                        .max(0.0),
+                    );
+                    let inner_rect = kurbo::RoundedRect::new(
+                        location_x as f64 + border_left,
+                        location_y as f64 + border_top,
+                        location_x as f64 + (size_x as f64 - border_right),
+                        location_y as f64 + (size_y as f64 - border_bottom),
+                        inner_radii,
+                    );
+                    vello_scene.fill(
+                        peniko::Fill::NonZero,
+                        kurbo::Affine::default(),
+                        background_brush,
+                        None,
+                        &inner_rect,
+                    );
+                    if border_left > 0.0
+                        || border_top > 0.0
+                        || border_right > 0.0
+                        || border_bottom > 0.0
+                    {
+                        let border_blend = vello::peniko::BlendMode::new(
+                            vello::peniko::Mix::Normal,
+                            vello::peniko::Compose::SrcOver,
+                        );
+                        vello_scene.push_layer(
+                            peniko::Fill::NonZero,
+                            border_blend,
+                            1.0,
+                            kurbo::Affine::default(),
+                            &outer_rect,
+                        );
+                        vello_scene.fill(
+                            peniko::Fill::NonZero,
+                            kurbo::Affine::default(),
+                            border_color_brush,
+                            None,
+                            &outer_rect,
+                        );
+                        let erase_blend = vello::peniko::BlendMode::new(
+                            vello::peniko::Mix::Normal,
+                            vello::peniko::Compose::DestOut,
+                        );
+                        vello_scene.push_layer(
+                            peniko::Fill::NonZero,
+                            erase_blend,
+                            1.0,
+                            kurbo::Affine::default(),
+                            &inner_rect,
+                        );
+                        vello_scene.fill(
+                            peniko::Fill::NonZero,
+                            kurbo::Affine::default(),
+                            peniko::Color::new([1.0, 1.0, 1.0, 1.0]),
+                            None,
+                            &inner_rect,
+                        );
+                        vello_scene.pop_layer();
+                        vello_scene.pop_layer();
+                    }
+                }
                 metrics.increase_quad_counts();
             }
             WidgetRender::RichText { content } => {
@@ -232,6 +354,7 @@ impl WidgetRender {
                     true,
                 );
 
+                let opacity = widget_style.opacity.clamp(0.0, 1.0);
                 let mut styles = StyleSet::new(widget_style.font_size * camera_scale.x);
                 let color = widget_style.color.to_srgba();
                 styles.insert(parley::StyleProperty::Brush(Brush::Solid(
@@ -239,7 +362,7 @@ impl WidgetRender {
                         color.red,
                         color.green,
                         color.blue,
-                        color.alpha,
+                        color.alpha * opacity,
                     ]),
                 )));
                 styles.insert(parley::StyleProperty::LineHeight(
@@ -280,19 +403,22 @@ impl WidgetRender {
                     let color = color_text.color.to_srgba();
                     builder.push(
                         parley::StyleProperty::Brush(Brush::Solid(peniko::color::AlphaColor::new(
-                            [color.red, color.green, color.blue, color.alpha],
+                            [color.red, color.green, color.blue, color.alpha * opacity],
                         ))),
                         color_text.range.clone(),
                     );
                 }
 
+                // Deliberately `size_x` (this text element's own committed width, computed
+                // above from the `layout` parameter before it's shadowed below), not
+                // `parent_layout.size.x` (its parent's *outer*, padding-inclusive width) --
+                // alignment/wrapping must be computed against the box this text actually
+                // occupies. Using the parent's outer width instead over-widens the alignment
+                // box by the parent's padding, which visibly shifts `Center`/`Right`/`End`
+                // aligned text off-center (e.g. a `width: 100%` label inside a padded button).
                 let mut layout = builder.build(&content.text);
-                layout.break_all_lines(Some(parent_layout.size.x * camera_scale.x));
-                layout.align(
-                    Some(parent_layout.size.x * camera_scale.x),
-                    alignment,
-                    parley::AlignmentOptions::default(),
-                );
+                layout.break_all_lines(Some(size_x));
+                layout.align(Some(size_x), alignment, parley::AlignmentOptions::default());
 
                 for line in layout.lines() {
                     for item in line.items() {
@@ -375,7 +501,10 @@ impl WidgetRender {
                         crate::styles::TextWrap::WordOrGlyph => parley::OverflowWrap::Anywhere,
                     },
                 ));
-                layout_editor.set_width(Some(parent_layout.size.x * camera_scale.x));
+                // Deliberately `size_x` (this text element's own committed width), not
+                // `parent_layout.size.x` (its parent's *outer*, padding-inclusive width) --
+                // see the matching comment in the `RichText` arm above for why.
+                layout_editor.set_width(Some(size_x));
                 let alignment = match widget_style
                     .text_alignment
                     .unwrap_or(crate::font::TextAlign::Left)
@@ -418,6 +547,7 @@ impl WidgetRender {
                         );
 
                         let color = widget_style.color.to_srgba();
+                        let opacity = widget_style.opacity.clamp(0.0, 1.0);
 
                         vello_scene
                             .draw_glyphs(font)
@@ -429,7 +559,7 @@ impl WidgetRender {
                                 color.red,
                                 color.green,
                                 color.blue,
-                                color.alpha,
+                                color.alpha * opacity,
                             ])))
                             .draw(
                                 vello::peniko::Fill::NonZero,
@@ -532,7 +662,28 @@ impl WidgetRender {
                     return did_layer;
                 };
 
-                vello_scene.append(&svg_scene, Some(transform));
+                if widget_style.opacity < 1.0 {
+                    let mask_blend = vello::peniko::BlendMode::new(
+                        vello::peniko::Mix::Normal,
+                        vello::peniko::Compose::SrcOver,
+                    );
+                    vello_scene.push_layer(
+                        peniko::Fill::NonZero,
+                        mask_blend,
+                        widget_style.opacity.max(0.0),
+                        Affine::default(),
+                        &kurbo::Rect::new(
+                            location_x as f64,
+                            location_y as f64,
+                            location_x as f64 + size_x as f64,
+                            location_y as f64 + size_y as f64,
+                        ),
+                    );
+                    vello_scene.append(&svg_scene, Some(transform));
+                    vello_scene.pop_layer();
+                } else {
+                    vello_scene.append(&svg_scene, Some(transform));
+                }
             }
             WidgetRender::NinePatch { handle, scale_mode } => {
                 let Some(image) = image_assets.get(handle) else {
@@ -680,7 +831,9 @@ impl WidgetRender {
                     };
                     let vello_image =
                         ImageBrush::new(image_data).with_quality(widget_style.image_quality.into());
-                    render_targets.vello_images.insert(handle.clone(), vello_image);
+                    render_targets
+                        .vello_images
+                        .insert(handle.clone(), vello_image);
                 }
                 let vello_image = render_targets.vello_images.get(handle).unwrap();
                 vello_scene.draw_image(vello_image, transform);

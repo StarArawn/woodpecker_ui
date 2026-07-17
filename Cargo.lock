@@ -2002,7 +2002,6 @@ dependencies = [
 [[package]]
 name = "bevy_vello"
 version = "0.13.1"
-source = "git+https://github.com/linebender/bevy_vello?branch=nixon%2Fbevy-0.19#3fd3c6c5478d35c9729df6dba810a8c51c04e720"
 dependencies = [
  "bevy",
  "parley 0.7.0",

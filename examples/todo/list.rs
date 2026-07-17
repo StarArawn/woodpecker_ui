@@ -46,7 +46,8 @@ fn render(
 
     let mut todo_children = WidgetChildren::default();
 
-    for (i, todo) in todo_list_data.iter().enumerate() {
+    for todo in todo_list_data.iter() {
+        let todo_to_remove = todo.clone();
         todo_children.add::<Element>((
             Element,
             WoodpeckerStyle {
@@ -101,11 +102,15 @@ fn render(
                     *current_widget,
                     move |_trigger: On<Pointer<Click>>,
                           mut todo_list_data: ResMut<TodoListData>| {
-                        todo_list_data.remove(i);
+                        if let Some(pos) = todo_list_data.iter().position(|t| t == &todo_to_remove)
+                        {
+                            todo_list_data.remove(pos);
+                        }
                     },
                 ),
             WidgetRender::Quad,
         ));
+        todo_children.add_key(todo.clone());
     }
 
     children.add::<Element>((

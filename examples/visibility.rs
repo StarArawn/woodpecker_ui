@@ -13,9 +13,10 @@ fn main() {
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     commands.spawn((Camera2d, WoodpeckerView));
 
-    let root = commands
-        .spawn((
-            WoodpeckerApp,
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands
+        .entity(*root_widget)
+        .insert(
             WidgetChildren::default().with_child::<MyWidget>(MyWidgetBundle {
                 styles: WoodpeckerStyle {
                     display: WidgetDisplay::Flex,
@@ -25,12 +26,11 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                 my_widget: MyWidget,
                 ..default()
             }),
-        ))
-        .id();
-    ui_context.set_root_widget(root);
+        );
 }
 
-#[derive(Component, Clone, Default, Debug, Copy, PartialEq)]
+#[derive(Component, Clone, Default, Debug, Copy, PartialEq, Reflect)]
+#[reflect(Component, DiffableProp, PartialEq)]
 pub struct MyWidgetState {
     text: WidgetVisibility,
     image: WidgetVisibility,
@@ -41,9 +41,8 @@ pub struct MyWidgetState {
 }
 
 #[derive(Widget, Component, Clone, Default, Reflect, Copy, PartialEq)]
+#[reflect(Component, DiffableProp, PartialEq)]
 #[auto_update(render)]
-#[props(MyWidget)]
-#[state(MyWidgetState)]
 struct MyWidget;
 
 #[derive(Bundle, Default, Clone)]
@@ -96,6 +95,7 @@ fn render(
                 },
             )),
         ))
+        .with_key("text_button")
         .with_observe(
             *current_widget,
             move |_trigger: On<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
@@ -121,6 +121,7 @@ fn render(
                 },
             )),
         ))
+        .with_key("image_button")
         .with_observe(
             *current_widget,
             move |_trigger: On<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
@@ -146,6 +147,7 @@ fn render(
                 },
             )),
         ))
+        .with_key("quad_button")
         .with_observe(
             *current_widget,
             move |_trigger: On<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
@@ -171,6 +173,7 @@ fn render(
                 },
             )),
         ))
+        .with_key("svg_button")
         .with_observe(
             *current_widget,
             move |_trigger: On<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
@@ -196,6 +199,7 @@ fn render(
                 },
             )),
         ))
+        .with_key("nine_patch_button")
         .with_observe(
             *current_widget,
             move |_trigger: On<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
@@ -221,6 +225,7 @@ fn render(
                 },
             )),
         ))
+        .with_key("layer_button")
         .with_observe(
             *current_widget,
             move |_trigger: On<Pointer<Click>>, mut query: Query<&mut MyWidgetState>| {
@@ -234,18 +239,20 @@ fn render(
             },
         );
 
+    widget_children.add::<Element>((
+        Element,
+        WoodpeckerStyle {
+            margin: Edge::all(10.0),
+            display: WidgetDisplay::Flex,
+            gap: (Units::Pixels(5.), Units::Pixels(5.)),
+            width: Units::Pixels(100.),
+            ..default()
+        },
+        buttons,
+    ));
+    widget_children.add_key("buttons");
+
     widget_children
-        .add::<Element>((
-            Element,
-            WoodpeckerStyle {
-                margin: Edge::all(10.0),
-                display: WidgetDisplay::Flex,
-                gap: (Units::Pixels(5.), Units::Pixels(5.)),
-                width: Units::Pixels(100.),
-                ..default()
-            },
-            buttons,
-        ))
         .add::<Element>((
             Element,
             WoodpeckerStyle {
@@ -262,7 +269,10 @@ fn render(
         ))
         .observe(*current_widget, |_trigger: On<Pointer<Click>>| {
             info!("Clicked!");
-        })
+        });
+    widget_children.add_key("text");
+
+    widget_children
         .add::<Element>((
             Element,
             WoodpeckerStyle {
@@ -277,7 +287,10 @@ fn render(
         ))
         .observe(*current_widget, |_trigger: On<Pointer<Click>>| {
             info!("Clicked!");
-        })
+        });
+    widget_children.add_key("image");
+
+    widget_children
         .add::<Element>((
             Element,
             WoodpeckerStyle {
@@ -291,7 +304,10 @@ fn render(
         ))
         .observe(*current_widget, |_trigger: On<Pointer<Click>>| {
             info!("Clicked!");
-        })
+        });
+    widget_children.add_key("quad");
+
+    widget_children
         .add::<Element>((
             Element,
             WoodpeckerStyle {
@@ -307,7 +323,10 @@ fn render(
         ))
         .observe(*current_widget, |_trigger: On<Pointer<Click>>| {
             info!("Clicked!");
-        })
+        });
+    widget_children.add_key("svg");
+
+    widget_children
         .add::<Element>((
             Element,
             WoodpeckerStyle {
@@ -328,7 +347,10 @@ fn render(
         ))
         .observe(*current_widget, |_trigger: On<Pointer<Click>>| {
             info!("Clicked!");
-        })
+        });
+    widget_children.add_key("nine_patch");
+
+    widget_children
         .add::<Element>((
             Element,
             WoodpeckerStyle {
@@ -354,6 +376,7 @@ fn render(
         .observe(*current_widget, |_trigger: On<Pointer<Click>>| {
             info!("Clicked!");
         });
+    widget_children.add_key("layer");
 
     widget_children.apply(current_widget.as_parent());
 }

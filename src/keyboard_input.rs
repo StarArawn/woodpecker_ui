@@ -8,7 +8,6 @@ use bevy::{
     prelude::*,
     reflect::Reflect,
 };
-// use bevy_mod_picking::prelude::EntityEvent;
 
 use crate::focus::CurrentFocus;
 
@@ -78,9 +77,9 @@ pub(crate) fn read_paste_events(
         };
         *time_since_last_paste = TimeSinceLastPaste::default();
         commands.trigger(WidgetPasteEvent {
-                target: event.target,
-                paste: smol_str::SmolStr::new(text.to_string()),
-            });
+            target: event.target,
+            paste: smol_str::SmolStr::new(text.to_string()),
+        });
         commands.entity(entity).despawn();
     }
 }
@@ -133,9 +132,9 @@ pub(crate) fn runner(
                     };
                     *time_since_last_paste = TimeSinceLastPaste::default();
                     commands.trigger(WidgetPasteEvent {
-                            target: current_focus.get(),
-                            paste: smol_str::SmolStr::new(text),
-                        });
+                        target: current_focus.get(),
+                        paste: smol_str::SmolStr::new(text),
+                    });
                     return;
                 }
 
@@ -174,24 +173,24 @@ pub(crate) fn runner(
             match &event.logical_key {
                 Key::Character(c) => {
                     commands.trigger(WidgetKeyboardCharEvent {
-                            target: current_focus.get(),
-                            c: c.clone(),
-                        });
+                        target: current_focus.get(),
+                        c: c.clone(),
+                    });
                 }
                 Key::Space => {
                     commands.trigger(WidgetKeyboardCharEvent {
-                            target: current_focus.get(),
-                            c: smol_str::SmolStr::new(" "),
-                        });
+                        target: current_focus.get(),
+                        c: smol_str::SmolStr::new(" "),
+                    });
                 }
                 _ => {}
             }
 
             // Also send a button event.
             commands.trigger(WidgetKeyboardButtonEvent {
-                    target: current_focus.get(),
-                    code: event.key_code,
-                });
+                target: current_focus.get(),
+                code: event.key_code,
+            });
         }
     }
 }

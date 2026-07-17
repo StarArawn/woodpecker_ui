@@ -5,9 +5,8 @@ use super::TabContext;
 
 /// A tab with content
 #[derive(Widget, Component, Default, Clone, PartialEq, Reflect)]
+#[reflect(Component, DiffableProp, PartialEq)]
 #[auto_update(render)]
-#[props(TabContent)]
-#[context(TabContext)]
 pub struct TabContent {
     /// Tab index(should match tab button index)
     pub index: usize,
@@ -49,23 +48,28 @@ fn render(
         return;
     };
 
-    *styles = WoodpeckerStyle {
-        display: if context.current_index == tab.index {
-            WidgetDisplay::Flex
-        } else {
-            WidgetDisplay::None
-        },
-        width: Units::Percentage(100.0),
-        height: Units::Percentage(100.0),
-        ..Default::default()
+    // Mutate in place rather than replacing the whole struct so caller-provided
+    // `TabContentBundle::internal_styles` customization isn't discarded each render.
+    styles.display = if context.current_index == tab.index {
+        WidgetDisplay::Flex
+    } else {
+        WidgetDisplay::None
     };
+    if styles.width == Units::Auto {
+        styles.width = Units::Percentage(100.0);
+    }
+    if styles.height == Units::Auto {
+        styles.height = Units::Percentage(100.0);
+    }
 
     *children = WidgetChildren::default().with_child::<Element>((
         Element,
         WoodpeckerStyle {
-            background_color: colors::BACKGROUND,
+            // Deliberately transparent -- not this widget's place to paint an opaque
+            // backdrop over a caller's content.
             width: Units::Percentage(100.0),
             height: Units::Percentage(100.0),
+            flex_direction: WidgetFlexDirection::Column,
             ..Default::default()
         },
         passed_children.0.clone(),

@@ -5,12 +5,6 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WoodpeckerUIPlugin::default())
-        // .add_plugins((
-        //     bevy_inspector_egui::bevy_egui::EguiPlugin {
-        //         enable_multipass_for_primary_context: false,
-        //     },
-        //     bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
-        // ))
         .add_systems(Startup, startup)
         .run();
 }
@@ -22,10 +16,11 @@ fn startup(
 ) {
     commands.spawn((Camera2d, WoodpeckerView));
 
-    let root = commands
-        .spawn((
-            WoodpeckerApp,
-            WidgetChildren::default().with_child::<WindowingContextProvider>(
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands.entity(*root_widget).insert(
+        WidgetChildren::default()
+            .with_child::<OverlayRootWidget>(OverlayRootWidget)
+            .with_child::<WindowingContextProvider>(
                 WidgetChildren::default()
                     .with_child::<WoodpeckerWindow>((
                         WoodpeckerWindow {
@@ -44,7 +39,7 @@ fn startup(
                                 align_items: Some(WidgetAlignItems::Center),
                                 flex_direction: WidgetFlexDirection::Column,
                                 padding: Edge::all(10.0),
-                                width: Units::Percentage(100.0).into(),
+                                width: Units::Percentage(100.0),
                                 ..Default::default()
                             },
                             WidgetChildren::default().with_child::<Element>((
@@ -61,6 +56,7 @@ fn startup(
                             )),
                         ))),
                     ))
+                    .with_key("image-window")
                     .with_child::<WoodpeckerWindow>((
                         WoodpeckerWindow {
                             title: "2nd window".into(),
@@ -78,7 +74,7 @@ fn startup(
                                 align_items: Some(WidgetAlignItems::Center),
                                 flex_direction: WidgetFlexDirection::Column,
                                 padding: Edge::all(10.0),
-                                width: Units::Percentage(100.0).into(),
+                                width: Units::Percentage(100.0),
                                 ..Default::default()
                             },
                             WidgetChildren::default().with_child::<Element>((
@@ -94,9 +90,8 @@ fn startup(
                                 },
                             )),
                         ))),
-                    )),
+                    ))
+                    .with_key("svg-window"),
             ),
-        ))
-        .id();
-    ui_context.set_root_widget(root);
+    );
 }

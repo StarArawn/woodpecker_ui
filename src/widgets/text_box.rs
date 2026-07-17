@@ -9,7 +9,6 @@ use web_time::Instant;
 
 use crate::{
     keyboard_input::{WidgetKeyboardButtonEvent, WidgetPasteEvent},
-    picking_backend::compute_letterboxed_transform,
     prelude::*,
     DefaultFont,
 };
@@ -18,7 +17,7 @@ use bevy::{
     window::{CursorIcon, PrimaryWindow, SystemCursorIcon},
 };
 
-use super::{colors, Clip, Element};
+use super::{Clip, Element};
 
 /// A textbox change event.
 #[derive(Debug, Clone, Reflect)]
@@ -28,7 +27,8 @@ pub struct TextChanged {
 }
 
 /// A collection of textbox styles.
-#[derive(Component, Clone, PartialEq)]
+#[derive(Component, Clone, PartialEq, Reflect)]
+#[reflect(Component, DiffableProp, PartialEq)]
 pub struct TextboxStyles {
     /// Normal styles
     pub normal: WoodpeckerStyle,
@@ -36,36 +36,43 @@ pub struct TextboxStyles {
     pub hovered: WoodpeckerStyle,
     /// Focused styles
     pub focused: WoodpeckerStyle,
-    /// Cursor styles
+    /// Cursor styles -- `top`/`height` are ignored (`render()` computes both dynamically
+    /// every frame from the live cursor/layout geometry, matching the actual text and
+    /// textbox size); set `background_color`/`width`/`position` here.
     pub cursor: WoodpeckerStyle,
 }
 
 impl Default for TextboxStyles {
     fn default() -> Self {
+        Self::from_theme(&Theme::default())
+    }
+}
+
+impl ThemedStyle for TextboxStyles {
+    fn from_theme(theme: &Theme) -> Self {
         let shared = WoodpeckerStyle {
-            background_color: colors::DARK_BACKGROUND,
+            background_color: theme.dark_background,
+            color: theme.text,
             width: Units::Percentage(100.0),
-            height: 26.0.into(),
-            border_color: colors::BACKGROUND_LIGHT,
-            border: Edge::new(0.0, 0.0, 0.0, 2.0),
-            padding: Edge::new(0.0, 5.0, 0.0, 5.0),
-            margin: Edge::new(0.0, 0.0, 0.0, 2.0),
-            font_size: 14.0,
+            height: theme.control_height.into(),
+            border_color: theme.border,
+            border: Edge::all(1.0),
+            border_radius: Corner::all(theme.control_radius),
+            padding: Edge::new(0.0, 10.0, 0.0, 10.0),
+            font_size: theme.font_size,
             ..Default::default()
         };
         Self {
             normal: WoodpeckerStyle { ..shared },
             hovered: WoodpeckerStyle { ..shared },
             focused: WoodpeckerStyle {
-                border_color: colors::PRIMARY,
+                border_color: theme.primary,
                 ..shared
             },
             cursor: WoodpeckerStyle {
-                background_color: colors::PRIMARY,
+                background_color: theme.primary,
                 position: WidgetPosition::Absolute,
-                top: 5.0.into(),
                 width: 2.0.into(),
-                height: (shared.height.value_or(26.0) - 10.0).into(),
                 ..Default::default()
             },
         }
@@ -91,10 +98,9 @@ impl Default for TabMode {
 
 /// The Woodpecker UI Button
 #[derive(Component, Reflect, Default, PartialEq, Widget, Clone)]
+#[reflect(Component, DiffableProp, PartialEq, Clone)]
 #[auto_update(render)]
-#[props(TextBox, TextboxStyles, WidgetLayout)]
-#[state(TextBoxState)]
-#[require(WidgetRender = WidgetRender::Quad, WidgetChildren, WoodpeckerStyle, TextboxStyles, Pickable, Focusable)]
+#[require(WidgetRender = WidgetRender::Quad, WidgetChildren, WoodpeckerStyle, TextboxStyles, Pickable, Focusable, WatchLayout)]
 pub struct TextBox {
     /// An initial value
     pub initial_value: String,
@@ -194,6 +200,57 @@ impl Default for TextBoxState {
     }
 }
 
+/// `TextBoxState` holds a `parley::PlainEditor`, which can't derive `Reflect`, so it can
+/// never be a generic [`crate::diffable_prop::DiffableProp`] -- this mirrors the fields its
+/// hand-rolled `PartialEq` compares, snapshotted separately so `crate::diffing` can still
+/// detect state changes.
+#[derive(Component, Default, PartialEq, Clone)]
+pub(crate) struct PreviousTextBoxStateSnapshot {
+    hovering: bool,
+    focused: bool,
+    cursor: parley::BoundingBox,
+    selections: Vec<(parley::BoundingBox, usize)>,
+    cursor_visible: bool,
+    current_value: String,
+}
+
+impl From<&TextBoxState> for PreviousTextBoxStateSnapshot {
+    fn from(state: &TextBoxState) -> Self {
+        Self {
+            hovering: state.hovering,
+            focused: state.focused,
+            cursor: state.cursor,
+            selections: state.selections.clone(),
+            cursor_visible: state.cursor_visible,
+            current_value: state.current_value.clone(),
+        }
+    }
+}
+
+pub(crate) fn diff_text_box_state(world: &mut World, entity: Entity) -> bool {
+    let Some(hook_helper) = world.get_resource::<HookHelper>() else {
+        return false;
+    };
+    let Some(state_entity) = hook_helper.get_state::<TextBoxState>(CurrentWidget(entity)) else {
+        return false;
+    };
+    let Some(state) = world.get::<TextBoxState>(state_entity) else {
+        return false;
+    };
+    let snapshot = PreviousTextBoxStateSnapshot::from(state);
+
+    let changed = match world.get::<PreviousTextBoxStateSnapshot>(entity) {
+        Some(previous) => *previous != snapshot,
+        None => true,
+    };
+
+    if changed {
+        world.entity_mut(entity).insert(snapshot);
+    }
+
+    changed
+}
+
 pub fn render(
     mut commands: Commands,
     current_widget: Res<CurrentWidget>,
@@ -215,16 +272,27 @@ pub fn render(
 
     let tab_mode = text_box.tab_mode;
 
+    let alignment = match styles.normal.text_alignment.unwrap_or(TextAlign::Left) {
+        TextAlign::Left => parley::Alignment::Left,
+        TextAlign::Right => parley::Alignment::Right,
+        TextAlign::Center => parley::Alignment::Center,
+        TextAlign::Justified => parley::Alignment::Justify,
+        TextAlign::End => parley::Alignment::End,
+    };
+
     let mut default_engine = parley::PlainEditor::new(styles.normal.font_size);
     default_engine.set_text(&text_box.initial_value);
+    default_engine.set_alignment(alignment);
     let text_styles = default_engine.edit_styles();
-    text_styles.insert(StyleProperty::LineHeight(parley::LineHeight::FontSizeRelative(
-        styles
-            .normal
-            .line_height
-            .map(|lh| styles.normal.font_size / lh)
-            .unwrap_or(1.2),
-    )));
+    text_styles.insert(StyleProperty::LineHeight(
+        parley::LineHeight::FontSizeRelative(
+            styles
+                .normal
+                .line_height
+                .map(|lh| styles.normal.font_size / lh)
+                .unwrap_or(1.2),
+        ),
+    ));
     text_styles.insert(StyleProperty::FontStack(parley::FontStack::Single(
         FontFamily::Named(
             font_manager
@@ -249,9 +317,15 @@ pub fn render(
         return;
     };
 
+    // Falls back to `font_size` before the first layout pass -- irrelevant in practice, since
+    // the cursor this seeds `cursor_styles` for is only ever rendered while focused, by which
+    // point at least one layout has already run.
+    let mut widget_height = styles.normal.font_size;
     if let Ok(layout) = widget_layout.get(current_widget.entity()) {
         state.engine.set_width(Some(layout.size.x));
+        widget_height = layout.size.y;
     }
+    state.engine.set_alignment(alignment);
 
     if text_box.initial_value != state.initial_value {
         state.initial_value = text_box.initial_value.clone();
@@ -297,16 +371,23 @@ pub fn render(
         };
     }
 
+    // The cursor's own height comes from parley's cursor geometry (derived from the actual
+    // font/line-height), not a caller-provided style value -- so it's always right for
+    // whatever font size a `TextboxStyles` sets, not just whatever value a caller happened to
+    // pre-compute `styles.cursor.height` from. The vertical-centering offset for single-line
+    // boxes is measured against `widget_height`, the box's *actual resolved* layout height
+    // (works for any `height` unit -- `Pixels`, `Percentage`, `Auto`), not a static guess.
+    let cursor_height = state.cursor.height() as f32;
     let cursor_styles = WoodpeckerStyle {
         top: (state.cursor.y0 as f32
             + if text_box.multi_line {
                 2.0
             } else {
-                (styles.normal.height.value_or(styles.normal.font_size) - styles.normal.font_size)
-                    / 2.0
+                (widget_height - cursor_height) / 2.0
             })
         .into(),
         left: (state.cursor.x0 as f32).into(),
+        height: cursor_height.into(),
         ..styles.cursor
     };
 
@@ -334,6 +415,18 @@ pub fn render(
                     return;
                 }
 
+                // Keyboard events are routed to whatever entity the *global* `CurrentFocus`
+                // resource points at, independent of this box's own `state.focused` and of
+                // the Alt guards on Press/Over/DragStart/Drag below -- a `Focusable` widget
+                // can still be focused by an Alt-held click (the global focus system doesn't
+                // check Alt), so blocking edits has to happen here too, not just at the
+                // mouse-driven entry points.
+                if keyboard_input.pressed(KeyCode::AltLeft)
+                    || keyboard_input.pressed(KeyCode::AltRight)
+                {
+                    return;
+                }
+
                 let mut driver = font_manager.driver(&mut state.engine);
                 driver.insert_or_replace_selection(&trigger.c);
 
@@ -345,11 +438,11 @@ pub fn render(
                 state.current_value = state.engine.text().to_string();
 
                 commands.trigger(Change {
-                        target: *current_widget,
-                        data: TextChanged {
-                            value: state.current_value.clone(),
-                        },
-                    });
+                    target: *current_widget,
+                    data: TextChanged {
+                        value: state.current_value.clone(),
+                    },
+                });
             },
         )
         .with_observe(
@@ -360,8 +453,7 @@ pub fn render(
                   style_query: Query<&WoodpeckerStyle>,
                   mut font_manager: ResMut<FontManager>,
                   widget_layout: Query<&WidgetLayout>,
-                  window: Single<(Entity, &Window), With<PrimaryWindow>>,
-                  camera: Query<&Camera, With<WoodpeckerView>>,
+                  pointer_world: PointerWorldPosition,
                   mut state_query: Query<&mut TextBoxState>| {
                 let Ok(styles) = style_query.get(trigger.entity) else {
                     return;
@@ -373,27 +465,30 @@ pub fn render(
                     return;
                 };
 
-                if !state.focused && !state.multi_line {
+                if !mouse_input.just_pressed(MouseButton::Left) {
                     return;
                 }
 
-                if !mouse_input.just_pressed(MouseButton::Left) {
+                // Lets a caller layer its own Alt-drag interaction (e.g. `NumberInput`'s
+                // scrub-to-adjust) directly onto a `TextBox` without it also moving the
+                // cursor/selection underneath -- both would otherwise fire for the same
+                // gesture, and a value change mid-drag forces `TextBox`'s own `set_text`
+                // reset, which doesn't know to carry forward a selection endpoint this
+                // handler had just set from mouse coordinates that may be far outside the
+                // reformatted text's new bounds.
+                if keyboard_input.pressed(KeyCode::AltLeft)
+                    || keyboard_input.pressed(KeyCode::AltRight)
+                {
                     return;
                 }
 
                 let mut driver = font_manager.driver(&mut state.engine);
 
-                let Some(camera) = camera.iter().next() else {
+                let Some(cursor_pos_world) =
+                    pointer_world.convert(trigger.pointer_location.position)
+                else {
                     return;
                 };
-
-                let (offset, size, _scale) = compute_letterboxed_transform(
-                    window.1.size(),
-                    camera.logical_target_size().unwrap(),
-                );
-
-                let cursor_pos_world = ((trigger.pointer_location.position - offset) / size)
-                    * camera.logical_target_size().unwrap();
 
                 if keyboard_input.pressed(KeyCode::ShiftLeft) {
                     driver.extend_selection_to_point(
@@ -426,12 +521,19 @@ pub fn render(
         .with_observe(
             current_widget,
             move |trigger: On<Pointer<DragStart>>,
+                  keyboard_input: Res<ButtonInput<KeyCode>>,
                   style_query: Query<&WoodpeckerStyle>,
                   mut font_manager: ResMut<FontManager>,
                   widget_layout: Query<&WidgetLayout>,
-                  window: Single<(Entity, &Window), With<PrimaryWindow>>,
-                  camera: Query<&Camera, With<WoodpeckerView>>,
+                  pointer_world: PointerWorldPosition,
                   mut state_query: Query<&mut TextBoxState>| {
+                // See the matching check in the `Pointer<Press>` handler above.
+                if keyboard_input.pressed(KeyCode::AltLeft)
+                    || keyboard_input.pressed(KeyCode::AltRight)
+                {
+                    return;
+                }
+
                 let Ok(styles) = style_query.get(trigger.entity) else {
                     return;
                 };
@@ -442,21 +544,11 @@ pub fn render(
                     return;
                 };
 
-                if !state.focused && !state.multi_line {
-                    return;
-                }
-
-                let Some(camera) = camera.iter().next() else {
+                let Some(cursor_pos_world) =
+                    pointer_world.convert(trigger.pointer_location.position)
+                else {
                     return;
                 };
-
-                let (offset, size, _scale) = compute_letterboxed_transform(
-                    window.1.size(),
-                    camera.logical_target_size().unwrap(),
-                );
-
-                let cursor_pos_world = ((trigger.pointer_location.position - offset) / size)
-                    * camera.logical_target_size().unwrap();
                 let mut driver = font_manager.driver(&mut state.engine);
 
                 let start_point = bevy::prelude::Vec2::new(
@@ -478,12 +570,19 @@ pub fn render(
         .with_observe(
             current_widget,
             move |trigger: On<Pointer<Drag>>,
+                  keyboard_input: Res<ButtonInput<KeyCode>>,
                   style_query: Query<&WoodpeckerStyle>,
                   mut font_manager: ResMut<FontManager>,
                   widget_layout: Query<&WidgetLayout>,
-                  window: Single<(Entity, &Window), With<PrimaryWindow>>,
-                  camera: Query<&Camera, With<WoodpeckerView>>,
+                  pointer_world: PointerWorldPosition,
                   mut state_query: Query<&mut TextBoxState>| {
+                // See the matching check in the `Pointer<Press>` handler above.
+                if keyboard_input.pressed(KeyCode::AltLeft)
+                    || keyboard_input.pressed(KeyCode::AltRight)
+                {
+                    return;
+                }
+
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
@@ -494,22 +593,13 @@ pub fn render(
                     return;
                 };
 
-                if !state.focused && !state.multi_line {
-                    return;
-                }
                 let mut driver = font_manager.driver(&mut state.engine);
 
-                let Some(camera) = camera.iter().next() else {
+                let Some(cursor_pos_world) =
+                    pointer_world.convert(trigger.pointer_location.position)
+                else {
                     return;
                 };
-
-                let (offset, size, _scale) = compute_letterboxed_transform(
-                    window.1.size(),
-                    camera.logical_target_size().unwrap(),
-                );
-
-                let cursor_pos_world = ((trigger.pointer_location.position - offset) / size)
-                    * camera.logical_target_size().unwrap();
 
                 let final_point = bevy::prelude::Vec2::new(
                     cursor_pos_world.x
@@ -531,9 +621,21 @@ pub fn render(
         .with_observe(
             current_widget,
             move |_trigger: On<Pointer<Over>>,
+                  keyboard_input: Res<ButtonInput<KeyCode>>,
                   mut commands: Commands,
                   mut state_query: Query<&mut TextBoxState>,
                   camera_query: Query<Entity, With<PrimaryWindow>>| {
+                // While Alt is held, stay visually "not editable" -- no hover highlight, no
+                // text-cursor icon -- rather than implying a click here would let you type.
+                // Matches the same guard on Press/DragStart/Drag, and lets a caller layering
+                // its own Alt interaction (e.g. `NumberInput`'s scrub-to-adjust) own the
+                // cursor icon instead via its own `Pointer<Over>` on this same entity.
+                if keyboard_input.pressed(KeyCode::AltLeft)
+                    || keyboard_input.pressed(KeyCode::AltRight)
+                {
+                    return;
+                }
+
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
@@ -602,10 +704,18 @@ pub fn render(
         .with_observe(
             current_widget,
             move |trigger: On<WidgetPasteEvent>,
+                  keyboard_input: Res<ButtonInput<KeyCode>>,
                   mut commands: Commands,
                   style_query: Query<&WoodpeckerStyle>,
                   mut state_query: Query<&mut TextBoxState>,
                   mut font_manager: ResMut<FontManager>| {
+                // See the matching check in the `WidgetKeyboardCharEvent` handler above.
+                if keyboard_input.pressed(KeyCode::AltLeft)
+                    || keyboard_input.pressed(KeyCode::AltRight)
+                {
+                    return;
+                }
+
                 let Ok(styles) = style_query.get(trigger.target) else {
                     return;
                 };
@@ -624,11 +734,11 @@ pub fn render(
                 state.current_value = state.engine.text().to_string();
 
                 commands.trigger(Change {
-                        target: *current_widget,
-                        data: TextChanged {
-                            value: state.current_value.clone(),
-                        },
-                    });
+                    target: *current_widget,
+                    data: TextChanged {
+                        value: state.current_value.clone(),
+                    },
+                });
             },
         )
         .with_observe(
@@ -659,18 +769,14 @@ pub fn render(
         WoodpeckerStyle {
             font_size: style.font_size,
             color: style.color,
+            text_alignment: style.text_alignment,
             text_wrap: if text_box.multi_line {
                 TextWrap::WordOrGlyph
             } else {
                 TextWrap::None
             },
-            // Forces the text to appear ontop of the selection and
-            // cursor. We could render them first but text is expensive to change the order of
-            // as we need to recompute layouts. So to save on performance we want to only
-            // re-compute the text when it has actually changed.
-            // Since selection and cursor can not be rendered they force the text element to
-            // shift child locations which forces a full re-render.
-            // Shift it by 2 since we have two children after this.
+            // Keeps text above selection/cursor without reordering children, which would
+            // force an expensive text layout recompute.
             z_index: Some(WidgetZ::Relative(2)),
             ..Default::default()
         },
@@ -684,6 +790,7 @@ pub fn render(
             }
         },
     ));
+    clip_children.add_key("text");
 
     if !state.selections.is_empty() {
         let selections = state.selections.clone();
@@ -715,16 +822,23 @@ pub fn render(
                                 color.alpha,
                             ])),
                             None,
-                            &Rect::new(selection.0.x0, selection.0.y0, selection.0.x1, selection.0.y1),
+                            &Rect::new(
+                                selection.0.x0,
+                                selection.0.y0,
+                                selection.0.x1,
+                                selection.0.y1,
+                            ),
                         );
                     }
                 }),
             },
         ));
+        clip_children.add_key("selection");
     }
 
     if state.cursor_visible && state.focused {
         clip_children.add::<Element>((Element, cursor_styles, WidgetRender::Quad));
+        clip_children.add_key("cursor");
     }
 
     let mut clip_styles = WoodpeckerStyle {
@@ -733,6 +847,8 @@ pub fn render(
     };
 
     if !text_box.multi_line {
+        // Stretch to the full box height so `align_items: Center` below has room to center in.
+        clip_styles.height = Units::Percentage(100.0);
         clip_styles.align_items = Some(WidgetAlignItems::Center);
     }
 
@@ -775,7 +891,22 @@ pub fn textbox_handle_keyboard_events(
     state_entity: Entity,
     tab_mode: TabMode,
 ) {
+    // See the matching check in the `WidgetKeyboardCharEvent` handler above -- covers every
+    // branch below (Tab, Enter, arrows, backspace, copy, delete) in one place.
+    if keyboard_input.pressed(KeyCode::AltLeft) || keyboard_input.pressed(KeyCode::AltRight) {
+        return;
+    }
+
     if trigger.code == KeyCode::Tab {
+        // Shift+Tab is reserved for moving focus back out, even from a multi-line box --
+        // see `tab_focus::tab_navigate`'s matching exemption. Without this, both systems
+        // would react to the same Shift+Tab keypress: this would insert a tab/spaces *and*
+        // `tab_navigate` would also move focus away.
+        if keyboard_input.pressed(KeyCode::ShiftLeft) || keyboard_input.pressed(KeyCode::ShiftRight)
+        {
+            return;
+        }
+
         let Ok(styles) = style_query.get(trigger.target) else {
             return;
         };
@@ -794,9 +925,7 @@ pub fn textbox_handle_keyboard_events(
             }
             TabMode::Space(spaces) => {
                 driver.insert_or_replace_selection(
-                    &std::iter::repeat(' ')
-                        .take(spaces as usize)
-                        .collect::<String>(),
+                    &std::iter::repeat_n(' ', spaces as usize).collect::<String>(),
                 );
             }
         }
@@ -807,11 +936,11 @@ pub fn textbox_handle_keyboard_events(
             .unwrap_or_default();
         state.current_value = state.engine.text().to_string();
         commands.trigger(Change {
-                target: trigger.target,
-                data: TextChanged {
-                    value: state.current_value.clone(),
-                },
-            });
+            target: trigger.target,
+            data: TextChanged {
+                value: state.current_value.clone(),
+            },
+        });
     }
 
     if trigger.code == KeyCode::Enter {
@@ -833,11 +962,11 @@ pub fn textbox_handle_keyboard_events(
             .unwrap_or_default();
         state.current_value = state.engine.text().to_string();
         commands.trigger(Change {
-                target: trigger.target,
-                data: TextChanged {
-                    value: state.current_value.clone(),
-                },
-            });
+            target: trigger.target,
+            data: TextChanged {
+                value: state.current_value.clone(),
+            },
+        });
     }
 
     if trigger.code == KeyCode::ArrowDown {
@@ -970,11 +1099,11 @@ pub fn textbox_handle_keyboard_events(
         state.selections = state.engine.selection_geometry();
         state.current_value = state.engine.text().to_string();
         commands.trigger(Change {
-                target: trigger.target,
-                data: TextChanged {
-                    value: state.current_value.clone(),
-                },
-            });
+            target: trigger.target,
+            data: TextChanged {
+                value: state.current_value.clone(),
+            },
+        });
     }
     if (keyboard_input.pressed(KeyCode::SuperLeft) || keyboard_input.pressed(KeyCode::ControlLeft))
         && keyboard_input.just_pressed(KeyCode::KeyC)
@@ -1034,11 +1163,11 @@ pub fn textbox_handle_keyboard_events(
             state.selections = state.engine.selection_geometry();
             state.current_value = state.engine.text().to_string();
             commands.trigger(Change {
-                    target: trigger.target,
-                    data: TextChanged {
-                        value: state.current_value.clone(),
-                    },
-                });
+                target: trigger.target,
+                data: TextChanged {
+                    value: state.current_value.clone(),
+                },
+            });
         }
     }
 }
