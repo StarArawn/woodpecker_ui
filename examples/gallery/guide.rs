@@ -195,6 +195,88 @@ up (a theme override, a scroll container) shares state with descendants without 
 through every widget in between. `use_own_context` is the same idea but never inherits from an
 ancestor -- always finds-or-creates directly on the current widget -- for state that's private
 bookkeeping rather than something meant to be shared.
+
+## Reacting to one specific change: use_effect
+
+A render can be triggered by all sorts of unrelated things -- a sibling's context changed, an
+ancestor re-declared this widget's bundle. `use_effect` reports whether *one particular*
+dependency changed since the last time it was called, so a render system can run a side effect
+(fire an event, kick off an animation) only when that specific thing changed, not on every
+unrelated render.
+
+```rust
+fn render(
+    current_widget: Res<CurrentWidget>,
+    mut commands: Commands,
+    mut hooks: ResMut<HookHelper>,
+    widget: Query<&MyWidget>,
+    effect_query: Query<&EffectDep<bool>>,
+) {
+    let Ok(widget) = widget.get(**current_widget) else {
+        return;
+    };
+    if hooks.use_effect(&mut commands, *current_widget, &effect_query, widget.open) {
+        commands.trigger(Change { target: *current_widget, data: OpenChanged(widget.open) });
+    }
+}
+```
+
+Needs a `Query<&EffectDep<T>>` alongside your own state query -- `HookHelper` has no way to read
+a component's value back on its own, the same reason `use_state` needs a `Query<&MyState>` too.
+
+## Remembering the last value: use_previous
+
+`use_previous` returns whatever value you passed in *last* render (`None` on the first call) --
+useful for detecting a transition, like "just became visible", rather than only ever seeing the
+current state.
+
+```rust
+let was_open = hooks.use_previous(&mut commands, *current_widget, &previous_query, widget.open);
+let just_opened = was_open == Some(false) && widget.open;
+```
+
+## Caching an expensive computation: use_memo
+
+`use_memo` recomputes a derived value only when its dependency changes, returning the cached
+value otherwise -- for something too expensive to rebuild on every render the way a widget's
+children normally are.
+
+```rust
+let sorted: Vec<String> = hooks.use_memo(
+    &mut commands,
+    *current_widget,
+    &memo_query,
+    widget.items.clone(),
+    |items| {
+        let mut sorted = items.clone();
+        sorted.sort();
+        sorted
+    },
+);
+```
+
+## Timers, intervals, and debouncing
+
+Three more hooks cover the "do something after time passes" family, each keyed off a `Duration`
+you supply (usually `Res<Time>::elapsed()`):
+
+- `use_timer` fires `true` exactly once, on the first render at or past a given duration since
+  it was first called -- a one-shot timeout (an auto-dismissing toast, say).
+- `use_interval` fires `true` repeatedly, once per duration, resetting each time it fires -- a
+  repeating tick.
+- `use_debounce` returns `Some(value)` once `value` has stopped changing for a given duration,
+  `None` while it's still settling -- useful for search-as-you-type or a resize in progress.
+
+```rust
+if hooks.use_timer(&mut commands, *current_widget, &timer_query, Duration::from_secs(4), time.elapsed()) {
+    commands.trigger(Change { target: *current_widget, data: Dismissed });
+}
+```
+
+All three keep the widget re-rendering every frame for as long as they're pending (a timer not
+yet fired, an interval that never truly settles, a value still within its debounce window) --
+you don't need to do anything extra to make that happen, unlike a plain `use_state` value that
+only changes when someone else mutates it.
 "#;
 
 const EVENTS_AND_OBSERVERS: &str = r#"

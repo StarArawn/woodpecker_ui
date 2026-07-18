@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_trait_query::One;
 
@@ -128,6 +130,187 @@ impl HookHelper {
         self.traverse_find_context_entity(&type_name, current_widget)
     }
 
+    /// Reports whether `dep` differs from the last time `use_effect` was called for this
+    /// widget (`true` on the very first call too, since there's nothing to compare against
+    /// yet). A render can be triggered by any number of unrelated prop/context/state changes;
+    /// this lets it run a side effect only when *this specific* dependency was part of the
+    /// reason, mirroring a dependency-array `useEffect`. The caller needs a
+    /// `Query<&EffectDep<T>>` alongside their own state query, the same way `use_state` needs
+    /// a `Query<&MyState>` -- `HookHelper` alone has no way to read a component's value back.
+    pub fn use_effect<T: Clone + PartialEq + Send + Sync + 'static>(
+        &mut self,
+        commands: &mut Commands,
+        current_widget: CurrentWidget,
+        query: &Query<&EffectDep<T>>,
+        dep: T,
+    ) -> bool {
+        let entity = self.use_state(commands, current_widget, EffectDep(dep.clone()));
+        match query.get(entity) {
+            Ok(EffectDep(previous)) if *previous == dep => false,
+            _ => {
+                commands.entity(entity).insert(EffectDep(dep));
+                true
+            }
+        }
+    }
+
+    /// Returns the value `current` held the *last* time this was called for this widget --
+    /// `None` on the first call, when there's nothing to compare against yet. Useful for
+    /// detecting a transition (e.g. "just became visible") rather than only the current value.
+    pub fn use_previous<T: Clone + Send + Sync + 'static>(
+        &mut self,
+        commands: &mut Commands,
+        current_widget: CurrentWidget,
+        query: &Query<&Previous<T>>,
+        current: T,
+    ) -> Option<T> {
+        let entity = self.use_state(commands, current_widget, Previous(current.clone()));
+        let previous = query.get(entity).ok().map(|p| p.0.clone());
+        commands.entity(entity).insert(Previous(current));
+        previous
+    }
+
+    /// Returns a cached value, recomputing via `compute` only when `dep` differs from the last
+    /// time this was called for this widget (or on the very first call) -- for a derived value
+    /// that's expensive to build and shouldn't be rebuilt on every render, only when the input
+    /// it's actually derived from changes. The caller needs a `Query<&Memo<D, T>>` alongside
+    /// their own state query.
+    pub fn use_memo<D: Clone + PartialEq + Send + Sync + 'static, T: Clone + Send + Sync + 'static>(
+        &mut self,
+        commands: &mut Commands,
+        current_widget: CurrentWidget,
+        query: &Query<&Memo<D, T>>,
+        dep: D,
+        compute: impl FnOnce(&D) -> T,
+    ) -> T {
+        if let Some(entity) = self.get_state::<Memo<D, T>>(current_widget) {
+            if let Ok(memo) = query.get(entity) {
+                if memo.dep == dep {
+                    return memo.value.clone();
+                }
+            }
+        }
+        let value = compute(&dep);
+        let entity = self.use_state(
+            commands,
+            current_widget,
+            Memo {
+                dep: dep.clone(),
+                value: value.clone(),
+            },
+        );
+        commands.entity(entity).insert(Memo {
+            dep,
+            value: value.clone(),
+        });
+        value
+    }
+
+    /// Reports `true` exactly once, on the first render where at least `duration` has passed
+    /// since this widget's first call to `use_timer` -- a one-shot `setTimeout`. Reports
+    /// `false` on every call before and after that (it never fires twice). While pending, this
+    /// widget is kept dirty every frame (see `crate::diffing::diff_pending_timers`) so it
+    /// re-renders on its own even if nothing else about it changes -- `now` still needs to
+    /// come from somewhere real, usually `Res<Time>::elapsed()`.
+    pub fn use_timer(
+        &mut self,
+        commands: &mut Commands,
+        current_widget: CurrentWidget,
+        query: &Query<&TimerState>,
+        duration: Duration,
+        now: Duration,
+    ) -> bool {
+        let entity = self.use_state(
+            commands,
+            current_widget,
+            TimerState {
+                started_at: now,
+                fired: false,
+            },
+        );
+        let already_fired = query.get(entity).is_ok_and(|state| state.fired);
+        if already_fired {
+            commands.entity(entity).remove::<NeedsContinuedRender>();
+            return false;
+        }
+        let started_at = query.get(entity).map(|state| state.started_at).unwrap_or(now);
+        if now.saturating_sub(started_at) >= duration {
+            commands.entity(entity).insert(TimerState {
+                started_at,
+                fired: true,
+            });
+            commands.entity(entity).remove::<NeedsContinuedRender>();
+            true
+        } else {
+            commands.entity(entity).insert(NeedsContinuedRender);
+            false
+        }
+    }
+
+    /// Reports `true` on every render where at least `duration` has passed since the last time
+    /// it reported `true` for this widget (`false` on the very first call, which just starts
+    /// the countdown) -- a repeating `setInterval`. Like `use_timer`, this keeps the widget
+    /// dirty every frame for as long as it's in use, since an interval never truly settles.
+    pub fn use_interval(
+        &mut self,
+        commands: &mut Commands,
+        current_widget: CurrentWidget,
+        query: &Query<&IntervalState>,
+        duration: Duration,
+        now: Duration,
+    ) -> bool {
+        let entity = self.use_state(commands, current_widget, IntervalState { last_tick: now });
+        commands.entity(entity).insert(NeedsContinuedRender);
+        match query.get(entity) {
+            Ok(state) if now.saturating_sub(state.last_tick) >= duration => {
+                commands.entity(entity).insert(IntervalState { last_tick: now });
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// Returns `Some(value)` once `value` has been unchanged for at least `delay`, `None`
+    /// while it's still within that window (including the first time it's ever seen) -- lets a
+    /// render system react to a rapidly-changing input (search-as-you-type, a resize in
+    /// progress) only once it settles, instead of on every intermediate change. Like
+    /// `use_timer`, keeps the widget dirty every frame while a value is still settling.
+    pub fn use_debounce<T: Clone + PartialEq + Send + Sync + 'static>(
+        &mut self,
+        commands: &mut Commands,
+        current_widget: CurrentWidget,
+        query: &Query<&DebounceState<T>>,
+        value: T,
+        delay: Duration,
+        now: Duration,
+    ) -> Option<T> {
+        let entity = self.use_state(
+            commands,
+            current_widget,
+            DebounceState {
+                value: value.clone(),
+                changed_at: now,
+            },
+        );
+        let changed_at = match query.get(entity) {
+            Ok(state) if state.value == value => state.changed_at,
+            _ => {
+                commands.entity(entity).insert(DebounceState {
+                    value: value.clone(),
+                    changed_at: now,
+                });
+                now
+            }
+        };
+        if now.saturating_sub(changed_at) >= delay {
+            commands.entity(entity).remove::<NeedsContinuedRender>();
+            Some(value)
+        } else {
+            commands.entity(entity).insert(NeedsContinuedRender);
+            None
+        }
+    }
+
     /// Returns every context entity visible to `current_widget` -- its own provided
     /// contexts plus any provided by an ancestor, nearest provider winning. Used by the
     /// reflection-based diffing in `crate::diffing` to discover re-render dependencies.
@@ -227,9 +410,74 @@ impl HookHelper {
     }
 }
 
+/// Returns `true` if any of `entity`'s own `use_state` entities still needs continued
+/// rendering (see [`NeedsContinuedRender`]) -- a pending `use_timer`, a `use_interval` (which
+/// never truly settles), or a `use_debounce` value still within its settling window. Mirrors
+/// the role `diff_spring`/`diff_transition`'s own settled-state checks play in
+/// [`crate::diffing::diff_widget_entity`].
+pub(crate) fn diff_pending_timers(world: &mut World, entity: Entity) -> bool {
+    let Some(hook_helper) = world.get_resource::<HookHelper>() else {
+        return false;
+    };
+    hook_helper
+        .own_state_entities(entity)
+        .into_iter()
+        .any(|state_entity| world.get::<NeedsContinuedRender>(state_entity).is_some())
+}
+
 /// A tag component used to mark previous widget entities.
 #[derive(Component)]
 pub struct PreviousWidget;
+
+/// Bookkeeping component for [`HookHelper::use_effect`] -- the last-seen value of its
+/// dependency, stored on the widget's own `use_state` entity purely so `use_effect` can
+/// compare against it on the next call. Deliberately doesn't derive `Reflect`/`DiffableProp`:
+/// it never needs to trigger a re-render by itself -- the caller's own props/state already do
+/// that, and `use_effect` only reports, within a render that's already happening, whether this
+/// specific dependency was part of the reason.
+#[derive(Component, Clone)]
+pub struct EffectDep<T>(pub T);
+
+/// Bookkeeping component for [`HookHelper::use_previous`] -- see [`EffectDep`]'s doc comment
+/// for why this doesn't derive `Reflect`/`DiffableProp`.
+#[derive(Component, Clone)]
+pub struct Previous<T>(pub T);
+
+/// Bookkeeping component for [`HookHelper::use_memo`] -- see [`EffectDep`]'s doc comment for
+/// why this doesn't derive `Reflect`/`DiffableProp`.
+#[derive(Component, Clone)]
+pub struct Memo<D, T> {
+    dep: D,
+    value: T,
+}
+
+/// Present on a state entity for exactly as long as one of `use_timer`/`use_interval`/
+/// `use_debounce` still needs its owning widget to keep re-rendering every frame (a pending
+/// timer, a repeating interval, or a value still settling) -- checked by
+/// [`crate::diffing::diff_pending_timers`], the same role `Spring`/`Transition`'s own
+/// settled-state checks play for those primitives.
+#[derive(Component)]
+pub(crate) struct NeedsContinuedRender;
+
+/// Bookkeeping component for [`HookHelper::use_timer`].
+#[derive(Component, Clone, Copy)]
+pub struct TimerState {
+    started_at: Duration,
+    fired: bool,
+}
+
+/// Bookkeeping component for [`HookHelper::use_interval`].
+#[derive(Component, Clone, Copy)]
+pub struct IntervalState {
+    last_tick: Duration,
+}
+
+/// Bookkeeping component for [`HookHelper::use_debounce`].
+#[derive(Component, Clone)]
+pub struct DebounceState<T> {
+    value: T,
+    changed_at: Duration,
+}
 
 #[cfg(test)]
 mod tests {
@@ -352,6 +600,271 @@ mod tests {
         assert_ne!(
             found_via_use_own_context, parent_context,
             "use_own_context must never adopt an ancestor's context of the same type"
+        );
+    }
+
+    #[test]
+    fn use_effect_reports_changed_on_first_call_then_only_when_the_dependency_differs() {
+        let mut app = App::new();
+        app.register_widget::<TestWidget>();
+        app.init_resource::<HookHelper>();
+        let widget = app.world_mut().spawn(TestWidget).id();
+
+        let call = |app: &mut App, dep: u32| {
+            app.world_mut()
+                .run_system_once(
+                    move |mut hooks: ResMut<HookHelper>,
+                          mut commands: Commands,
+                          query: Query<&EffectDep<u32>>| {
+                        hooks.use_effect(&mut commands, CurrentWidget(widget), &query, dep)
+                    },
+                )
+                .unwrap()
+        };
+
+        assert!(call(&mut app, 1), "the first call must always report changed");
+        assert!(
+            !call(&mut app, 1),
+            "an unchanged dependency must not report changed again"
+        );
+        assert!(call(&mut app, 2), "a changed dependency must report changed");
+        assert!(
+            !call(&mut app, 2),
+            "must settle again once the new value has been observed once"
+        );
+    }
+
+    #[test]
+    fn use_previous_returns_none_on_first_call_then_the_prior_value() {
+        let mut app = App::new();
+        app.register_widget::<TestWidget>();
+        app.init_resource::<HookHelper>();
+        let widget = app.world_mut().spawn(TestWidget).id();
+
+        let call = |app: &mut App, current: u32| {
+            app.world_mut()
+                .run_system_once(
+                    move |mut hooks: ResMut<HookHelper>,
+                          mut commands: Commands,
+                          query: Query<&Previous<u32>>| {
+                        hooks.use_previous(&mut commands, CurrentWidget(widget), &query, current)
+                    },
+                )
+                .unwrap()
+        };
+
+        assert_eq!(
+            call(&mut app, 1),
+            None,
+            "nothing to compare against on the first call"
+        );
+        assert_eq!(
+            call(&mut app, 2),
+            Some(1),
+            "must return what was passed in last time, not the current value"
+        );
+        assert_eq!(call(&mut app, 3), Some(2));
+    }
+
+    #[test]
+    fn use_memo_only_recomputes_when_the_dependency_changes() {
+        let mut app = App::new();
+        app.register_widget::<TestWidget>();
+        app.init_resource::<HookHelper>();
+        let widget = app.world_mut().spawn(TestWidget).id();
+        let compute_calls = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
+
+        let call = |app: &mut App, dep: u32| {
+            let compute_calls = compute_calls.clone();
+            app.world_mut()
+                .run_system_once(
+                    move |mut hooks: ResMut<HookHelper>,
+                          mut commands: Commands,
+                          query: Query<&Memo<u32, u32>>| {
+                        hooks.use_memo(&mut commands, CurrentWidget(widget), &query, dep, |d| {
+                            compute_calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                            d * 10
+                        })
+                    },
+                )
+                .unwrap()
+        };
+
+        assert_eq!(call(&mut app, 1), 10);
+        assert_eq!(call(&mut app, 1), 10);
+        assert_eq!(
+            compute_calls.load(std::sync::atomic::Ordering::SeqCst),
+            1,
+            "an unchanged dependency must not recompute"
+        );
+
+        assert_eq!(call(&mut app, 2), 20);
+        assert_eq!(
+            compute_calls.load(std::sync::atomic::Ordering::SeqCst),
+            2,
+            "a changed dependency must recompute"
+        );
+    }
+
+    #[test]
+    fn use_timer_fires_exactly_once_after_the_duration_elapses() {
+        let mut app = App::new();
+        app.register_widget::<TestWidget>();
+        app.init_resource::<HookHelper>();
+        let widget = app.world_mut().spawn(TestWidget).id();
+
+        let call = |app: &mut App, now_secs: u64| {
+            app.world_mut()
+                .run_system_once(
+                    move |mut hooks: ResMut<HookHelper>,
+                          mut commands: Commands,
+                          query: Query<&TimerState>| {
+                        hooks.use_timer(
+                            &mut commands,
+                            CurrentWidget(widget),
+                            &query,
+                            Duration::from_secs(3),
+                            Duration::from_secs(now_secs),
+                        )
+                    },
+                )
+                .unwrap()
+        };
+
+        assert!(!call(&mut app, 0), "must not fire immediately");
+        assert!(!call(&mut app, 2), "must not fire before the duration elapses");
+        assert!(call(&mut app, 3), "must fire once the duration has elapsed");
+        assert!(!call(&mut app, 5), "must not fire a second time");
+    }
+
+    #[test]
+    fn use_interval_ticks_repeatedly() {
+        let mut app = App::new();
+        app.register_widget::<TestWidget>();
+        app.init_resource::<HookHelper>();
+        let widget = app.world_mut().spawn(TestWidget).id();
+
+        let call = |app: &mut App, now_secs: u64| {
+            app.world_mut()
+                .run_system_once(
+                    move |mut hooks: ResMut<HookHelper>,
+                          mut commands: Commands,
+                          query: Query<&IntervalState>| {
+                        hooks.use_interval(
+                            &mut commands,
+                            CurrentWidget(widget),
+                            &query,
+                            Duration::from_secs(2),
+                            Duration::from_secs(now_secs),
+                        )
+                    },
+                )
+                .unwrap()
+        };
+
+        assert!(!call(&mut app, 0), "must not tick on the frame it starts");
+        assert!(!call(&mut app, 1), "must not tick before the interval elapses");
+        assert!(call(&mut app, 2), "must tick once the interval elapses");
+        assert!(
+            !call(&mut app, 3),
+            "must not tick again immediately after ticking"
+        );
+        assert!(call(&mut app, 4), "must tick again after another full interval");
+    }
+
+    #[test]
+    fn use_debounce_settles_only_after_the_value_stops_changing() {
+        let mut app = App::new();
+        app.register_widget::<TestWidget>();
+        app.init_resource::<HookHelper>();
+        let widget = app.world_mut().spawn(TestWidget).id();
+
+        let call = |app: &mut App, value: u32, now_secs: u64| {
+            app.world_mut()
+                .run_system_once(
+                    move |mut hooks: ResMut<HookHelper>,
+                          mut commands: Commands,
+                          query: Query<&DebounceState<u32>>| {
+                        hooks.use_debounce(
+                            &mut commands,
+                            CurrentWidget(widget),
+                            &query,
+                            value,
+                            Duration::from_secs(1),
+                            Duration::from_secs(now_secs),
+                        )
+                    },
+                )
+                .unwrap()
+        };
+
+        assert_eq!(
+            call(&mut app, 1, 0),
+            None,
+            "not settled yet on the first observation"
+        );
+        assert_eq!(
+            call(&mut app, 2, 0),
+            None,
+            "changing the value resets the settle window"
+        );
+        assert_eq!(
+            call(&mut app, 2, 1),
+            Some(2),
+            "settled once unchanged for the full delay"
+        );
+        assert_eq!(
+            call(&mut app, 2, 2),
+            Some(2),
+            "stays settled while the value keeps not changing"
+        );
+    }
+
+    #[test]
+    fn diff_pending_timers_reports_true_while_pending_and_false_once_fired() {
+        let mut app = App::new();
+        app.register_widget::<TestWidget>();
+        app.init_resource::<HookHelper>();
+        let widget = app.world_mut().spawn(TestWidget).id();
+
+        app.world_mut()
+            .run_system_once(
+                move |mut hooks: ResMut<HookHelper>,
+                      mut commands: Commands,
+                      query: Query<&TimerState>| {
+                    hooks.use_timer(
+                        &mut commands,
+                        CurrentWidget(widget),
+                        &query,
+                        Duration::from_secs(3),
+                        Duration::from_secs(0),
+                    )
+                },
+            )
+            .unwrap();
+        assert!(
+            diff_pending_timers(app.world_mut(), widget),
+            "must report true while the timer is still pending"
+        );
+
+        app.world_mut()
+            .run_system_once(
+                move |mut hooks: ResMut<HookHelper>,
+                      mut commands: Commands,
+                      query: Query<&TimerState>| {
+                    hooks.use_timer(
+                        &mut commands,
+                        CurrentWidget(widget),
+                        &query,
+                        Duration::from_secs(3),
+                        Duration::from_secs(3),
+                    )
+                },
+            )
+            .unwrap();
+        assert!(
+            !diff_pending_timers(app.world_mut(), widget),
+            "must report false once the timer has fired"
         );
     }
 }

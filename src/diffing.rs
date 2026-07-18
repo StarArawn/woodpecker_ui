@@ -4,7 +4,7 @@ use core::any::TypeId;
 use crate::{
     children::{diff_passed_children, Mounted, WidgetChildren},
     diffable_prop::ReflectDiffableProp,
-    hook_helper::HookHelper,
+    hook_helper::{diff_pending_timers, HookHelper},
     layout::system::diff_watched_layout,
     previous_snapshot::PreviousSnapshot,
     widgets::{
@@ -23,7 +23,8 @@ use crate::{
 /// [`crate::diffable_prop::DiffableProp`] is compared against its last-diffed snapshot. A few
 /// things also force a render regardless of prop diffing: redeclared children, a fresh
 /// `Mounted` marker, `Transition`'s playing-state, `AnimationTimeline`'s playing-state,
-/// `Spring`'s settled-state, and `PassedChildren` (which can't derive `Reflect`).
+/// `Spring`'s settled-state, a pending `use_timer`/`use_interval`/`use_debounce` (see
+/// `diff_pending_timers`), and `PassedChildren` (which can't derive `Reflect`).
 pub(crate) fn diff_widget_entity(world: &mut World, entity: Entity) -> bool {
     if let Some(children) = world.get::<WidgetChildren>(entity) {
         if children.children_changed() {
@@ -47,6 +48,10 @@ pub(crate) fn diff_widget_entity(world: &mut World, entity: Entity) -> bool {
     }
 
     if diff_spring(world, entity) {
+        return true;
+    }
+
+    if diff_pending_timers(world, entity) {
         return true;
     }
 
