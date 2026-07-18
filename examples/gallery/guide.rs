@@ -97,6 +97,39 @@ to look up its own components and to parent its children.
 > `.with_key(...)` / `.add_key(...)` with a stable identifier -- otherwise the reconciler will
 > match the wrong old entity to the wrong new child and any per-child state (hooks, animation,
 > scroll position) will jump to the wrong item.
+
+## Optional: bsn!
+
+Behind the `bevy_bsn` feature flag, Bevy's own `bsn!` macro can replace the `WidgetChildren`
+builder chain for the one-shot tree you spawn in `startup()`:
+
+```rust
+commands.entity(*root_widget).apply_scene(bsn! {
+    Children [
+        MyWidget { some_prop: 0 },
+    ]
+});
+```
+
+`bsn!`'s scene system resolves and spawns once, with no concept of the per-frame diff/patch
+cycle `WidgetChildren` reconciliation depends on -- a `Children [...]` block would spawn brand
+new child entities every render if used inside a widget's own `render`, not reconciled ones. So
+inside `render`, reach for `WidgetChildren::add_scene` instead of `add`/`with_child` to describe
+one child's own components with `bsn!`, while still nesting further widgets and attaching
+observers the normal way:
+
+```rust
+children.add_scene::<Element, _>(bsn! {
+    WoodpeckerStyle { font_size: 24.0 }
+    WidgetRender::Text { content: label_text }
+});
+children.add_key("label");
+```
+
+This still goes through the normal keyed reconciliation -- same entity reused across renders,
+its components patched in place each render, exactly as if you'd called `add` with a tuple
+bundle. `bsn!` here only replaces how *that one child's own components* are described, never
+how it's found, reused, or nested.
 "#;
 
 const BUILDING_A_WIDGET: &str = r#"

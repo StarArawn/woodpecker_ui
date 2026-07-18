@@ -29,6 +29,7 @@ use crate::{
 /// Used to tell Woodpecker UI's rendering system(vello) how
 /// to render a specific widget entity.
 #[derive(Component, Clone, Reflect, Default, Debug)]
+#[cfg_attr(feature = "bevy_bsn", derive(bevy::ecs::template::FromTemplate))]
 pub enum WidgetRender {
     #[default]
     /// A basic quad shape. Can include borders.

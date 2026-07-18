@@ -369,6 +369,14 @@ pub trait ThemeRegisterExt {
     /// from [`Theme::default()`] renders with the old default theme's colors until the next
     /// explicit [`Theme`] swap. Toggling the theme once after startup (or setting the
     /// desired `Theme` before `WoodpeckerUIPlugin` spawns any widgets) avoids this.
+    ///
+    /// `resource_changed::<Theme>` alone isn't enough to honor that: a freshly-inserted
+    /// resource (`WoodpeckerUIPlugin`'s own `init_resource::<Theme>()`) reads as "changed" the
+    /// first time this system's run condition ever checks it, since its `last_run` tick starts
+    /// before the resource's insertion tick. Left unguarded, this fires a real resync on the
+    /// very first frame -- wiping every hand-customized `*Styles` value spawned during
+    /// `Startup`, `bsn!`-described or not, exactly once, before a single frame is ever drawn.
+    /// Excluding `resource_added` keeps that initial coincidence from counting as a swap.
     fn register_themed_style<S: ThemedStyle + Component<Mutability = Mutable>>(
         &mut self,
     ) -> &mut Self;
@@ -380,7 +388,8 @@ impl ThemeRegisterExt for App {
     ) -> &mut Self {
         self.add_systems(
             PreUpdate,
-            resync_themed_style::<S>.run_if(resource_changed::<Theme>),
+            resync_themed_style::<S>
+                .run_if(resource_changed::<Theme>.and_then(not(resource_added::<Theme>))),
         );
         self
     }
@@ -500,5 +509,51 @@ mod tests {
             let color = tier.color.to_srgba();
             assert_eq!((color.red, color.green, color.blue), (0.0, 0.0, 0.0));
         }
+    }
+
+    #[derive(Component, Clone, Copy, PartialEq)]
+    struct TestStyle(f32);
+
+    impl ThemedStyle for TestStyle {
+        fn from_theme(theme: &Theme) -> Self {
+            TestStyle(theme.font_size)
+        }
+    }
+
+    #[test]
+    fn a_hand_customized_style_survives_the_theme_resources_own_first_tick() {
+        let mut app = App::new();
+        app.init_resource::<Theme>();
+        app.register_themed_style::<TestStyle>();
+        let entity = app.world_mut().spawn(TestStyle(999.0)).id();
+
+        app.update();
+
+        assert_eq!(
+            app.world().get::<TestStyle>(entity).unwrap().0,
+            999.0,
+            "resource_changed::<Theme> reads as true the first time this run condition ever \
+             checks it, purely because Theme was just inserted, not because anything actually \
+             swapped -- without excluding resource_added, that coincidence alone wipes any \
+             hand-set style spawned during Startup, before a single real Theme swap happens"
+        );
+    }
+
+    #[test]
+    fn a_genuine_later_theme_swap_still_resyncs_an_uncustomized_style() {
+        let mut app = App::new();
+        app.init_resource::<Theme>();
+        app.register_themed_style::<TestStyle>();
+        let entity = app.world_mut().spawn(TestStyle(999.0)).id();
+        app.update();
+
+        app.world_mut().insert_resource(Theme::light());
+        app.update();
+
+        assert_eq!(
+            app.world().get::<TestStyle>(entity).unwrap().0,
+            Theme::light().font_size,
+            "excluding resource_added must not also suppress a real, later Theme swap"
+        );
     }
 }

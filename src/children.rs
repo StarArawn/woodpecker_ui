@@ -153,6 +153,16 @@ impl WidgetChildren {
         self
     }
 
+    /// Builder pattern equivalent of [`Self::add_scene`] -- see its doc comment.
+    #[cfg(feature = "bevy_bsn")]
+    pub fn with_scene<T: Widget + Component + Default, S: bevy::scene::Scene>(
+        mut self,
+        scene: S,
+    ) -> Self {
+        self.add_scene::<T, S>(scene);
+        self
+    }
+
     /// Adds a key to the last child widget entity added
     pub fn with_key(mut self, key: impl Into<String>) -> Self {
         self.add_key(key);
@@ -241,36 +251,19 @@ impl WidgetChildren {
                       observer_list: ObserverList,
                       child_key: Option<String>,
                       portal: Option<Portal>| {
-                    let type_name_without_path =
-                        widget_type.clone().split("::").last().unwrap().to_string();
-                    let child_widget = widget_mapper.get_or_insert_entity_world(
+                    Self::spawn_or_update_child(
                         world,
-                        widget_type,
+                        widget_mapper,
+                        observer_cache,
                         parent,
+                        widget_type,
+                        observer_list,
                         child_key,
                         portal,
+                        |entity| {
+                            entity.insert(T::default()).insert(bundle.clone());
+                        },
                     );
-                    world
-                        .entity_mut(child_widget)
-                        .insert(T::default())
-                        .insert(bundle.clone())
-                        .insert(Mounted)
-                        .insert(Name::new(type_name_without_path.clone()));
-                    for (id, (spawn_entity, ob)) in observer_list.iter().enumerate() {
-                        if !observer_cache.contains(spawn_entity.0, id, child_widget) {
-                            if let Some(observer_entity) = (ob)(world, **spawn_entity, child_widget)
-                            {
-                                observer_cache.add(
-                                    spawn_entity.0,
-                                    id,
-                                    child_widget,
-                                    observer_entity,
-                                );
-                            } else {
-                                panic!("Attempted to add an observer when its already been used. This is considered a bug please open a ticket.");
-                            }
-                        }
-                    }
                 },
             ),
             vec![],
@@ -279,6 +272,144 @@ impl WidgetChildren {
         ));
 
         self
+    }
+
+    /// Adds a new widget to the list of children the same way [`Self::add`] does, but taking a
+    /// Bevy `bsn!` [`bevy::scene::Scene`] to describe the child's own components instead of a
+    /// plain `Bundle`. This is for a widget's *own* props/style, not its children -- a `Scene`
+    /// with its own `Children [...]` block would spawn brand new, undiffed child entities every
+    /// single render (bsn!'s scene system has no notion of this crate's keyed reconciliation),
+    /// so nest further widgets the normal way, via `WidgetChildren::add`/`with_child` on the
+    /// widget this spawns, not inside the `bsn!` block passed in here.
+    ///
+    /// No `Clone` bound on `S`, and this closure is safe to invoke more than once even so.
+    /// `bsn!` output usually isn't `Clone` -- it wraps any field value computed from a captured
+    /// variable (not just `format!`, a bare local works too) in a `SceneFunction<impl FnOnce>`,
+    /// and `Scene::resolve` itself also consumes `self`, so the *raw* `Scene` genuinely is
+    /// single-use. But its *resolved* output, a `ResolvedSceneRoot`, applies via `&self`, not
+    /// `self` -- so this resolves the scene at most once (take-once, same shape as
+    /// [`Self::build_observer_entry`]'s `Observer` handling) and caches that resolved,
+    /// re-appliable form for every call after. This matters because this closure isn't
+    /// guaranteed to run only once in the first place: a widget can re-render on its own (e.g.
+    /// hover state) without its parent re-rendering, and `process_world` then re-walks its
+    /// *existing*, already-drained `children` list rather than a freshly rebuilt one --
+    /// silently re-invoking this same closure with no new scene to consume.
+    #[cfg(feature = "bevy_bsn")]
+    pub fn add_scene<T: Widget + Component + Default, S: bevy::scene::Scene>(
+        &mut self,
+        scene: S,
+    ) -> &mut Self {
+        let widget_type = T::get_name();
+        let raw_scene: Arc<RwLock<Option<Box<dyn bevy::scene::Scene>>>> =
+            Arc::new(RwLock::new(Some(Box::new(scene))));
+        let resolved: Arc<RwLock<Option<bevy::scene::ResolvedSceneRoot>>> =
+            Arc::new(RwLock::new(None));
+        self.children_queue.push((
+            widget_type,
+            Arc::new(
+                move |world: &mut World,
+                      widget_mapper: &mut WidgetMapper,
+                      observer_cache: &mut ObserverCache,
+                      parent: ParentWidget,
+                      widget_type: String,
+                      observer_list: ObserverList,
+                      child_key: Option<String>,
+                      portal: Option<Portal>| {
+                    Self::spawn_or_update_child(
+                        world,
+                        widget_mapper,
+                        observer_cache,
+                        parent,
+                        widget_type,
+                        observer_list,
+                        child_key,
+                        portal,
+                        |entity| {
+                            entity.insert(T::default());
+
+                            if resolved.read().unwrap().is_none() {
+                                let Some(raw) = raw_scene.write().unwrap().take() else {
+                                    return;
+                                };
+                                let root = {
+                                    let world = entity.world();
+                                    bevy::scene::ResolvedSceneRoot::resolve(
+                                        raw,
+                                        world.resource::<AssetServer>(),
+                                        world.resource::<Assets<bevy::scene::ScenePatch>>(),
+                                    )
+                                };
+                                match root {
+                                    Ok(root) => *resolved.write().unwrap() = Some(root),
+                                    Err(err) => {
+                                        error!(
+                                            "Woodpecker UI: failed to resolve bsn! scene: {err}"
+                                        );
+                                        return;
+                                    }
+                                }
+                            }
+
+                            let guard = resolved.read().unwrap();
+                            let Some(root) = guard.as_ref() else {
+                                return;
+                            };
+                            let mut bundle_scratch = bevy::ecs::bundle::BundleScratch::default();
+                            if let Err(err) = root.apply(entity, &mut bundle_scratch) {
+                                error!("Woodpecker UI: failed to apply bsn! scene: {err}");
+                            }
+                        },
+                    );
+                },
+            ),
+            vec![],
+            None,
+            None,
+        ));
+
+        self
+    }
+
+    /// Shared by [`Self::add`] and [`Self::add_scene`]: finds-or-creates the keyed child entity,
+    /// lets the caller insert whatever describes that entity's own components (a `Bundle` for
+    /// `add`, a `bsn!` `Scene` for `add_scene`), then handles the bookkeeping both need
+    /// (`Mounted`, `Name`, observer wiring) identically either way.
+    #[allow(clippy::too_many_arguments)]
+    fn spawn_or_update_child(
+        world: &mut World,
+        widget_mapper: &mut WidgetMapper,
+        observer_cache: &mut ObserverCache,
+        parent: ParentWidget,
+        widget_type: String,
+        observer_list: ObserverList,
+        child_key: Option<String>,
+        portal: Option<Portal>,
+        insert: impl FnOnce(&mut EntityWorldMut),
+    ) {
+        let type_name_without_path = widget_type.clone().split("::").last().unwrap().to_string();
+        let child_widget = widget_mapper.get_or_insert_entity_world(
+            world,
+            widget_type,
+            parent,
+            child_key,
+            portal,
+        );
+        {
+            let mut entity = world.entity_mut(child_widget);
+            insert(&mut entity);
+            entity
+                .insert(Mounted)
+                .insert(Name::new(type_name_without_path));
+        }
+        for (id, (spawn_entity, ob)) in observer_list.iter().enumerate() {
+            if !observer_cache.contains(spawn_entity.0, id, child_widget) {
+                if let Some(observer_entity) = (ob)(world, **spawn_entity, child_widget) {
+                    observer_cache.add(spawn_entity.0, id, child_widget, observer_entity);
+                } else {
+                    panic!("Attempted to add an observer when its already been used. This is considered a bug please open a ticket.");
+                }
+            }
+        }
     }
 
     /// Builds a single `(spawn_location, spawner)` `ObserverList` entry shared by
@@ -794,6 +925,66 @@ mod tests {
         assert!(
             watched.contains(&parent_entity),
             "the self-observer must still watch the widget entity after two renders"
+        );
+    }
+
+    /// Regression test for the bug `add_scene` was almost shipped with: `process_world` can
+    /// replay an *existing* `children` list (e.g. because some other widget re-rendered
+    /// independently without this one rebuilding `children_queue`) without a fresh `Scene` to
+    /// consume. A take-once scene would silently skip re-applying on that replay; this checks
+    /// the resolved, cached form gets re-applied instead, not just successfully applied once.
+    #[cfg(feature = "bevy_bsn")]
+    #[test]
+    fn add_scene_survives_being_replayed_without_a_fresh_scene() {
+        #[derive(Component, Reflect, Default, Clone, PartialEq)]
+        struct SwatchStyle {
+            value: u32,
+        }
+
+        let mut app = bevy::app::App::new();
+        app.add_plugins((
+            bevy::app::TaskPoolPlugin::default(),
+            bevy::asset::AssetPlugin::default(),
+            bevy::scene::ScenePlugin::default(),
+        ));
+        app.insert_resource(WidgetMapper::new());
+        app.insert_resource(ObserverCache::default());
+
+        let parent_entity = app.world_mut().spawn(WidgetChildren::default()).id();
+        let parent = ParentWidget(parent_entity);
+
+        let mut children = WidgetChildren::default();
+        children.add_scene::<TestWidget, _>(bsn! { SwatchStyle { value: 1 } });
+        children.apply(parent);
+        children.process_world(app.world_mut());
+
+        let child = app
+            .world()
+            .entity(parent_entity)
+            .get::<Children>()
+            .expect("parent should have a child after the first render")
+            .iter()
+            .next()
+            .expect("parent should have exactly one child");
+        assert_eq!(
+            app.world().get::<SwatchStyle>(child).unwrap().value,
+            1,
+            "the scene must be applied on the first, real render"
+        );
+
+        app.world_mut().get_mut::<SwatchStyle>(child).unwrap().value = 999;
+
+        children.apply(parent);
+        children.process_world(app.world_mut());
+
+        assert_eq!(
+            app.world().get::<SwatchStyle>(child).unwrap().value,
+            1,
+            "a replayed process_world call (same WidgetChildren value, no fresh `.add_scene()` \
+             call in between -- exactly what happens when a different widget re-renders on its \
+             own without this one's parent rebuilding its children) must still re-assert the \
+             scene's value via the cached resolved scene, not leave whatever touched the \
+             component in between untouched"
         );
     }
 }

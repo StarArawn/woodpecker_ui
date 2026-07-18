@@ -15,6 +15,7 @@ debug-render = []
 metrics = []
 gamepad-nav = ["bevy/gamepad"]
 devtools = []
+bevy_bsn = ["bevy/bevy_scene"]
 
 [dependencies]
 ansi-parser = "0.9.1"
@@ -72,6 +73,16 @@ path = "examples/game_ui/game_ui.rs"
 [[example]]
 name = "gallery"
 path = "examples/gallery/gallery.rs"
+
+[[example]]
+name = "bsn_startup"
+path = "examples/bsn_startup.rs"
+required-features = ["bevy_bsn"]
+
+[[example]]
+name = "bsn_static_ui"
+path = "examples/bsn_static_ui.rs"
+required-features = ["bevy_bsn"]
 
 [profile]
 
