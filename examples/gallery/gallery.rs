@@ -224,7 +224,7 @@ fn render(
         WoodpeckerStyle {
             width: SIDEBAR_WIDTH.into(),
             height: Units::Percentage(100.0),
-            padding: Edge::all(0.0).top(theme.spacing.sm).bottom(theme.spacing.sm),
+            padding: Edge::all(theme.spacing.sm),
             background_color: theme.background,
             border_color: theme.border,
             border: Edge::all(0.0).right(1.0),
