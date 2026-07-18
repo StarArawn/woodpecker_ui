@@ -247,6 +247,7 @@ fn render(
         // row is already visible) expands every ancestor of the newly-selected node so its
         // row comes into view instead of staying hidden in a collapsed subtree.
         force_expand_ancestors_of: selected_key,
+        virtualized: true,
     });
 
     // ---- Detail: an editable form for the selected entity's `WoodpeckerStyle` (if it has

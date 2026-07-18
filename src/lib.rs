@@ -6,11 +6,12 @@
 //!
 //! ## Features
 //! - ECS **first** UI
-//! - Easy to use widget systems
+//! - Plain Rust control flow — no template/macro DSL
 //! - Flexable UI rendering using [vello](https://github.com/linebender/bevy_vello)
 //! - [Taffy](https://github.com/DioxusLabs/taffy) layouting
-//! - [Cosmic Text](https://github.com/pop-os/cosmic-text) for text layouting
-//! - A few helper widgets to get you started
+//! - [Parley](https://github.com/linebender/parley) for text layouting and editing
+//! - React-style hooks, theming, and spring-based animation
+//! - 60+ ready-made widgets — run `cargo run --example gallery` for a live catalog
 //!
 //! ## Example
 //!
