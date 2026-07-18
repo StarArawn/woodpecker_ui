@@ -230,6 +230,7 @@ fn virtual_list_item_content(index: usize) -> WidgetChildren {
                     },
                 )),
             ))
+            .with_key("badge")
             .with_child::<Element>((
                 Element,
                 WoodpeckerStyle {
@@ -240,7 +241,8 @@ fn virtual_list_item_content(index: usize) -> WidgetChildren {
                 WidgetRender::Text {
                     content: format!("Item #{index}"),
                 },
-            )),
+            ))
+            .with_key("label"),
     ))
 }
 
