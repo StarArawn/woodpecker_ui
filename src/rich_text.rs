@@ -52,11 +52,32 @@ impl RichText {
     /// Adds a new text string with a specific color
     pub fn with_color_text(mut self, text: &str, color: bevy::prelude::Color) -> Self {
         self.text = format!("{}{}", self.text, text);
+        let end = self.current_index + text.len();
         self.highlighted.color_text.push(ColorText {
             color,
-            range: self.current_index..text.len(),
+            range: self.current_index..end,
         });
-        self.current_index += text.len();
+        self.current_index = end;
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy::prelude::Srgba;
+
+    /// Regression test: each segment's range must be positioned relative to where it starts
+    /// in the concatenated `text`, not just its own length -- a bug that only showed up past
+    /// the first segment (whose `current_index` happened to be 0, masking it).
+    #[test]
+    fn successive_segments_get_correctly_offset_ranges() {
+        let rich = RichText::new()
+            .with_color_text("Hello World! ", Srgba::BLUE.into())
+            .with_color_text("I am Woodpecker UI!", Srgba::RED.into());
+
+        assert_eq!(rich.text, "Hello World! I am Woodpecker UI!");
+        assert_eq!(rich.highlighted.color_text[0].range, 0..13);
+        assert_eq!(rich.highlighted.color_text[1].range, 13..32);
     }
 }

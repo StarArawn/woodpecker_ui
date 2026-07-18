@@ -193,6 +193,7 @@ impl WidgetMapper {
             }
 
             observer_cache.despawn_for_target(world, entity_to_remove);
+            self.despawn_portaled_descendants(world, observer_cache, entity_to_remove);
 
             for child in get_all_children(world, entity_to_remove) {
                 if world.get_entity(child).is_err() {
@@ -209,6 +210,7 @@ impl WidgetMapper {
                 self.remove_by_entity_id(child_parent, child);
                 self.parent_entity_to_child.remove(&ParentWidget(child));
                 observer_cache.despawn_for_target(world, child);
+                self.despawn_portaled_descendants(world, observer_cache, child);
             }
 
             self.parent_entity_to_child
@@ -267,6 +269,36 @@ impl WidgetMapper {
             if let Some(pending) = map.pending.as_mut() {
                 pending.resolved.retain(|_, e| *e != entity);
                 pending.unclaimed.retain(|_, e| *e != entity);
+            }
+        }
+    }
+
+    /// Recursively despawns any entity `entity` (or a normal descendant of it) declared as a
+    /// portal target. Bevy's own `despawn()` cascade only follows real `ChildOf` relationships,
+    /// but a portaled entity is physically parented to `OverlayRoot` (or another
+    /// `StackingContext`), not to whatever logically declared it -- so it's invisible to that
+    /// cascade and to `get_all_children`'s own physical-hierarchy walk. Without this, a widget
+    /// with a portaled child (`Modal`/`Drawer`/`WoodpeckerWindow`/etc.) whose *ancestor* gets
+    /// removed wholesale (rather than the widget itself individually re-rendering and dropping
+    /// the key) never gets a chance to notice and clean up its own portaled content through its
+    /// own reconciliation pass -- the portaled entity keeps rendering forever, orphaned.
+    fn despawn_portaled_descendants(
+        &mut self,
+        world: &mut World,
+        observer_cache: &mut ObserverCache,
+        entity: Entity,
+    ) {
+        let Some(map) = self.parent_entity_to_child.remove(&ParentWidget(entity)) else {
+            return;
+        };
+        for child in map.by_key.into_values() {
+            if world.get_entity(child).is_err() {
+                continue;
+            }
+            self.despawn_portaled_descendants(world, observer_cache, child);
+            if world.entity(child).contains::<Portal>() {
+                observer_cache.despawn_for_target(world, child);
+                world.entity_mut(child).despawn();
             }
         }
     }
@@ -601,6 +633,44 @@ mod tests {
             world.get_entity(first_pass[0]).is_err(),
             "a portaled entity must still be despawned once its key disappears, same as any \
              non-portaled entity"
+        );
+    }
+
+    /// Regression test: a portaled entity must still be despawned when its logical *ancestor*
+    /// (not the widget that directly declared it) is removed wholesale -- e.g. navigating away
+    /// in a UI whose currently-shown page happens to contain a widget with a portaled child
+    /// (`Modal`/`Drawer`/`WoodpeckerWindow`). The declaring widget itself never gets a chance to
+    /// re-render and notice its own portaled child's key disappeared (it's being despawned,
+    /// not re-rendered), so `finish_reconciliation`'s recursive cleanup must reach into it via
+    /// `WidgetMapper`'s own bookkeeping rather than relying solely on Bevy's `ChildOf` cascade,
+    /// which never reaches a portaled entity (physically parented elsewhere) at all.
+    #[test]
+    fn portaled_grandchild_is_despawned_when_its_ancestor_is_removed_wholesale() {
+        let mut world = World::new();
+        let overlay_entity = world.spawn_empty().id();
+        let grandparent_entity = world.spawn_empty().id();
+        let grandparent = ParentWidget(grandparent_entity);
+        let mut mapper = WidgetMapper::new();
+
+        let middle_entity = reconcile(&mut world, &mut mapper, grandparent, &["middle"])[0];
+
+        let portaled_entity = reconcile_with_portals(
+            &mut world,
+            &mut mapper,
+            ParentWidget(middle_entity),
+            &[("portaled", Some(Portal(Some(overlay_entity))))],
+        )[0];
+
+        reconcile(&mut world, &mut mapper, grandparent, &[]);
+
+        assert!(
+            world.get_entity(middle_entity).is_err(),
+            "the removed ancestor itself must be despawned"
+        );
+        assert!(
+            world.get_entity(portaled_entity).is_err(),
+            "a portaled entity must still be despawned when its logical ancestor is removed \
+             wholesale, not just when the widget that directly declared it drops its key"
         );
     }
 

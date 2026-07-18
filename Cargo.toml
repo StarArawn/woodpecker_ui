@@ -17,28 +17,27 @@ gamepad-nav = ["bevy/gamepad"]
 devtools = []
 
 [dependencies]
-parley = "0.7"
-# parley = { git = "https://github.com/linebender/parley", rev = "74a3499920675a63450727e44a75a57f76389e7a" }
-bevy_vello = { path = "../bevy_vello_bevy19", features = ["text", "default_font"] }
-# bevy_vello = { git = "https://github.com/linebender/bevy_vello", branch = "nixon/bevy-0.19", features = ["text", "default_font"] }
+ansi-parser = "0.9.1"
+autumnus = "0.3.2"
 bevy-trait-query = "0.19"
-dioxus-devtools = { version = "0.7.0-alpha.0", optional = true }
+bevy_vello = { path = "../bevy_vello_bevy19", features = ["text", "default_font"] }
 bytemuck = "1.23.0"
+dioxus-devtools = { version = "0.7.0-alpha.0", optional = true }
 image = "0.24"
 interpolation = "0.2"
 palette = "0.7.6"
+parley = "0.7"
+pulldown-cmark = { version = "0.13.4", default-features = false }
 skrifa = "0.30.0"
 smol_str = { version = "0.2", default-features = false }
-taffy = { version = "0.7", features = ["flexbox", "grid"] }
+taffy = { version = "0.12", features = ["flexbox", "grid"] }
 thiserror = "1.0"
+ttf-parser = "0.25.1"
 usvg = "0.44"
 web-time = "1.1"
 
 # Local
 woodpecker_ui_macros = { version = "0.1", path = "crates/woodpecker_ui_macros" }
-ttf-parser = "0.25.1"
-autumnus = "0.3.2"
-ansi-parser = "0.9.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 arboard = "3.4"
@@ -71,8 +70,8 @@ name = "game_ui"
 path = "examples/game_ui/game_ui.rs"
 
 [[example]]
-name = "editor"
-path = "examples/editor/editor.rs"
+name = "gallery"
+path = "examples/gallery/gallery.rs"
 
 [profile]
 

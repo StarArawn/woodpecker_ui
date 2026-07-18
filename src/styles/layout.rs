@@ -121,34 +121,40 @@ impl From<WidgetPosition> for taffy::Position {
 
 impl From<super::Units> for taffy::Dimension {
     fn from(val: super::Units) -> taffy::Dimension {
-        match val {
-            super::Units::Pixels(pixels) => taffy::Dimension::Length(pixels),
-            super::Units::Percentage(percentage) => taffy::Dimension::Percent(percentage / 100.0),
-            super::Units::Auto => taffy::Dimension::Auto,
+        // `Calc` should already have been eliminated by `WoodpeckerStyle::resolve_calc`
+        // before a style ever reaches this conversion; resolving here against a `0.0` basis
+        // is just a defensive fallback (equivalent to the fixed-pixel component alone).
+        match val.resolve_calc(0.0) {
+            super::Units::Pixels(pixels) => taffy::Dimension::length(pixels),
+            super::Units::Percentage(percentage) => taffy::Dimension::percent(percentage / 100.0),
+            super::Units::Auto => taffy::Dimension::auto(),
+            super::Units::Calc { .. } => unreachable!("resolve_calc always eliminates Calc"),
         }
     }
 }
 
 impl From<super::Units> for taffy::LengthPercentageAuto {
     fn from(val: super::Units) -> taffy::LengthPercentageAuto {
-        match val {
-            super::Units::Pixels(pixels) => taffy::LengthPercentageAuto::Length(pixels),
+        match val.resolve_calc(0.0) {
+            super::Units::Pixels(pixels) => taffy::LengthPercentageAuto::length(pixels),
             super::Units::Percentage(percentage) => {
-                taffy::LengthPercentageAuto::Percent(percentage / 100.0)
+                taffy::LengthPercentageAuto::percent(percentage / 100.0)
             }
-            super::Units::Auto => taffy::LengthPercentageAuto::Auto,
+            super::Units::Auto => taffy::LengthPercentageAuto::auto(),
+            super::Units::Calc { .. } => unreachable!("resolve_calc always eliminates Calc"),
         }
     }
 }
 
 impl From<super::Units> for taffy::LengthPercentage {
     fn from(val: super::Units) -> taffy::LengthPercentage {
-        match val {
-            super::Units::Pixels(pixels) => taffy::LengthPercentage::Length(pixels),
+        match val.resolve_calc(0.0) {
+            super::Units::Pixels(pixels) => taffy::LengthPercentage::length(pixels),
             super::Units::Percentage(percentage) => {
-                taffy::LengthPercentage::Percent(percentage / 100.0)
+                taffy::LengthPercentage::percent(percentage / 100.0)
             }
-            super::Units::Auto => taffy::LengthPercentage::Percent(1.0),
+            super::Units::Auto => taffy::LengthPercentage::percent(1.0),
+            super::Units::Calc { .. } => unreachable!("resolve_calc always eliminates Calc"),
         }
     }
 }
@@ -208,13 +214,13 @@ pub enum WidgetAlignItems {
 impl From<WidgetAlignItems> for taffy::AlignItems {
     fn from(val: WidgetAlignItems) -> taffy::AlignItems {
         match val {
-            WidgetAlignItems::Start => taffy::AlignItems::Start,
-            WidgetAlignItems::End => taffy::AlignItems::End,
-            WidgetAlignItems::FlexStart => taffy::AlignItems::FlexStart,
-            WidgetAlignItems::FlexEnd => taffy::AlignItems::FlexEnd,
-            WidgetAlignItems::Center => taffy::AlignItems::Center,
-            WidgetAlignItems::Baseline => taffy::AlignItems::Baseline,
-            WidgetAlignItems::Stretch => taffy::AlignItems::Stretch,
+            WidgetAlignItems::Start => taffy::AlignItems::START,
+            WidgetAlignItems::End => taffy::AlignItems::END,
+            WidgetAlignItems::FlexStart => taffy::AlignItems::FLEX_START,
+            WidgetAlignItems::FlexEnd => taffy::AlignItems::FLEX_END,
+            WidgetAlignItems::Center => taffy::AlignItems::CENTER,
+            WidgetAlignItems::Baseline => taffy::AlignItems::BASELINE,
+            WidgetAlignItems::Stretch => taffy::AlignItems::STRETCH,
         }
     }
 }
@@ -267,15 +273,15 @@ pub enum WidgetAlignContent {
 impl From<WidgetAlignContent> for taffy::AlignContent {
     fn from(val: WidgetAlignContent) -> taffy::AlignContent {
         match val {
-            WidgetAlignContent::Start => taffy::AlignContent::Start,
-            WidgetAlignContent::End => taffy::AlignContent::End,
-            WidgetAlignContent::FlexStart => taffy::AlignContent::FlexStart,
-            WidgetAlignContent::FlexEnd => taffy::AlignContent::FlexEnd,
-            WidgetAlignContent::Center => taffy::AlignContent::Center,
-            WidgetAlignContent::Stretch => taffy::AlignContent::Stretch,
-            WidgetAlignContent::SpaceBetween => taffy::AlignContent::SpaceBetween,
-            WidgetAlignContent::SpaceEvenly => taffy::AlignContent::SpaceEvenly,
-            WidgetAlignContent::SpaceAround => taffy::AlignContent::SpaceAround,
+            WidgetAlignContent::Start => taffy::AlignContent::START,
+            WidgetAlignContent::End => taffy::AlignContent::END,
+            WidgetAlignContent::FlexStart => taffy::AlignContent::FLEX_START,
+            WidgetAlignContent::FlexEnd => taffy::AlignContent::FLEX_END,
+            WidgetAlignContent::Center => taffy::AlignContent::CENTER,
+            WidgetAlignContent::Stretch => taffy::AlignContent::STRETCH,
+            WidgetAlignContent::SpaceBetween => taffy::AlignContent::SPACE_BETWEEN,
+            WidgetAlignContent::SpaceEvenly => taffy::AlignContent::SPACE_EVENLY,
+            WidgetAlignContent::SpaceAround => taffy::AlignContent::SPACE_AROUND,
         }
     }
 }

@@ -12,7 +12,7 @@ use crate::{
     hook_helper::StateMarker,
     portal::{Portal, SkipPortalLint},
     prelude::{GridTemplate, PreviousWidget, WidgetDisplay, WidgetPosition, WidgetRender},
-    styles::Edge,
+    styles::{Edge, Units},
     svg::SvgAsset,
     DefaultFont,
 };
@@ -333,6 +333,25 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
                 (parent_layout.size.width - measured_width).abs() > 0.01
             });
 
+    // Same idea as `stale_measured_text`, generalized to any `Units::Calc` field on any
+    // entity -- see `traverse_upsert_node`'s `calc_stale` for the full reasoning. Without
+    // this, the skip-if-clean fast path below could start trusting a frame as idle before
+    // `traverse_upsert_node` ever gets a chance to notice a calc-styled entity's parent has
+    // since settled to a different size.
+    let stale_calc = ui_layout
+        .previous_calc_parent_size
+        .iter()
+        .any(|(&calc_entity, &resolved_against)| {
+            let Ok(parent) = child_of_query.get(calc_entity) else {
+                return false;
+            };
+            let Some(parent_layout) = ui_layout.get_layout(parent.parent()) else {
+                return false;
+            };
+            let current = Vec2::new(parent_layout.size.width, parent_layout.size.height);
+            (current - resolved_against).length_squared() > 0.0001
+        });
+
     // How many consecutive clean-looking frames to insist on before actually trusting the
     // skip-if-clean fast path below. `dirty_entities`/`children_query`/`removed`/
     // `last_root_size`/`stale_measured_text` each cover a *specific* known way this frame can
@@ -354,13 +373,14 @@ pub(crate) fn run(layout_system_param: LayoutSystemParam) {
     // any widget prop/state change; `removed` covers despawns; comparing `root_size`
     // against `UiLayout::last_root_size` covers a window resize, which touches no
     // `Changed<T>` we'd otherwise see since it's read fresh from styles every frame rather
-    // than mutated; `stale_measured_text` covers a text entity whose parent's size settled
-    // after the fact (see above).
+    // than mutated; `stale_measured_text`/`stale_calc` cover a text/calc entity whose
+    // parent's size settled after the fact (see above).
     let anything_dirty = !dirty_entities.is_empty()
         || !children_query.is_empty()
         || !removed.is_empty()
         || ui_layout.last_root_size != Some(root_size)
-        || stale_measured_text;
+        || stale_measured_text
+        || stale_calc;
 
     if anything_dirty {
         ui_layout.settled_frames_in_a_row = 0;
@@ -680,7 +700,24 @@ fn traverse_upsert_node(
             }
         });
 
-    if dirty_entities.contains(&entity) || parent_width_changed {
+    // Same class of problem as `parent_width_changed`, generalized to any `Units::Calc`
+    // field on any entity (not just text measurement): a `Calc` value's own `WoodpeckerStyle`
+    // never itself changes when only the *parent's* committed size does, so without this,
+    // an entity that stops being independently dirty gets stuck forever at whatever it
+    // resolved to on its own first (often parent-not-yet-computed, `Vec2::ZERO`) frame. Only
+    // fires once a real parent layout exists -- the very first, `parent_layout: None` frame
+    // is already covered by `dirty_entities` (a fresh spawn), and deliberately isn't recorded
+    // into `previous_calc_parent_size` below, so this correctly fires again once the parent's
+    // real size lands.
+    let calc_parent_size =
+        parent_layout.map(|parent_layout| Vec2::new(parent_layout.width(), parent_layout.height()));
+    let calc_stale = styles.uses_calc()
+        && calc_parent_size.is_some_and(|current| match layout.previous_calc_parent_size.get(&entity) {
+            Some(&previous) => (current - previous).length_squared() > 0.0001,
+            None => true,
+        });
+
+    if dirty_entities.contains(&entity) || parent_width_changed || calc_stale {
         let layout_measure = widget_render.and_then(|widget_render| {
             let parent_layout = parent_layout?;
             // A text entity's very first measurement ever is unbounded (no wrap constraint at
@@ -732,7 +769,15 @@ fn traverse_upsert_node(
             )
         });
 
-        layout.upsert_node(entity, styles, grid_template, layout_measure);
+        if styles.uses_calc() {
+            if let Some(calc_parent_size) = calc_parent_size {
+                layout
+                    .previous_calc_parent_size
+                    .insert(entity, calc_parent_size);
+            }
+        }
+        let resolved_styles = styles.resolve_calc(calc_parent_size.unwrap_or(Vec2::ZERO));
+        layout.upsert_node(entity, &resolved_styles, grid_template, layout_measure);
     }
 
     let Some(children) = children else {
@@ -803,6 +848,18 @@ fn match_render_size(
     }
 }
 
+/// Resolves `max_width` to a concrete pixel value against `basis` (the parent's committed
+/// width), or `None` if it doesn't constrain anything (`Auto`). Delegates `Calc` to
+/// [`Units::resolve_calc`] (collapsing it to `Pixels`) rather than re-deriving its formula here,
+/// in case this runs before the style's own eager resolution pass has done so already.
+fn resolve_max_width(max_width: Units, basis: f32) -> Option<f32> {
+    match max_width.resolve_calc(basis) {
+        Units::Pixels(px) => Some(px),
+        Units::Percentage(pct) => Some(basis * pct / 100.0),
+        Units::Auto | Units::Calc { .. } => None,
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn measure_text(
     text: &str,
@@ -845,7 +902,11 @@ pub(crate) fn measure_text(
     layout_editor.set_width(if unbounded {
         None
     } else {
-        Some(parent_layout.size.x * camera_scale.x)
+        let mut wrap_width = parent_layout.size.x;
+        if let Some(max_width) = resolve_max_width(styles.max_width, parent_layout.size.x) {
+            wrap_width = wrap_width.min(max_width);
+        }
+        Some(wrap_width * camera_scale.x)
     });
     let alignment = match styles
         .text_alignment
@@ -913,6 +974,21 @@ mod tests {
         app.world_mut().run_system_once(run).unwrap();
     }
 
+    /// Unlike `run_layout` (`run_system_once`, which re-initializes a fresh `System` -- and
+    /// so a fresh `last_run` change tick -- on every single call, making every `Changed<T>`
+    /// filter match unconditionally every time), this schedules `run` once and drives it via
+    /// real `app.update()` frames, so `Changed<WoodpeckerStyle>` etc. only match entities
+    /// actually mutated since the *previous* frame -- the real semantics production code runs
+    /// under. Needed for any test asserting that something *stops* being independently dirty
+    /// across frames (e.g. a `Units::Calc` entity whose own style never changes again after
+    /// its first render) actually gets picked up the way a real, continuously-running app
+    /// would.
+    fn setup_scheduled_app() -> App {
+        let mut app = setup_app();
+        app.add_systems(Update, run);
+        app
+    }
+
     /// Regression test for the skip-if-clean fast path: mutating a child's
     /// `WoodpeckerStyle` must still update its `WidgetLayout` within the very next
     /// `run()` call, not get silently dropped by the dirty check.
@@ -972,6 +1048,117 @@ mod tests {
             90.0,
             "a changed child style must still update WidgetLayout on the next run(), even \
              with the skip-if-clean fast path in place"
+        );
+    }
+
+    /// A `Units::Calc` width is resolved against the parent's own last-committed layout
+    /// size before it ever reaches taffy -- see `WoodpeckerStyle::resolve_calc`. Two
+    /// `run_layout` calls are needed for the same one-frame-lag reason as
+    /// `parent_resize_remeasures_a_stable_text_child_via_gating` above: the child's very
+    /// first frame measures against a not-yet-`compute()`-d root (parent size `Vec2::ZERO`),
+    /// so only the second frame's `WidgetLayout` reflects the real, committed parent width.
+    #[test]
+    fn calc_width_resolves_against_the_parents_committed_width() {
+        let mut app = setup_app();
+        let root = app
+            .world_mut()
+            .spawn((
+                TestWidget,
+                WoodpeckerStyle {
+                    width: 300.0.into(),
+                    height: 200.0.into(),
+                    ..Default::default()
+                },
+                WidgetChildren::default(),
+            ))
+            .id();
+        let child = app
+            .world_mut()
+            .spawn((
+                TestWidget,
+                WoodpeckerStyle {
+                    width: Units::Calc {
+                        percent: 100.0,
+                        pixels: -40.0,
+                    },
+                    height: 50.0.into(),
+                    ..Default::default()
+                },
+                WidgetChildren::default(),
+                ChildOf(root),
+            ))
+            .id();
+        app.world_mut()
+            .resource_mut::<WoodpeckerContext>()
+            .set_root_widget(root);
+
+        run_layout(&mut app);
+        run_layout(&mut app);
+        assert_eq!(
+            app.world().get::<WidgetLayout>(child).unwrap().width(),
+            260.0,
+            "calc(100% - 40px) against a 300px-wide parent should resolve to 260px"
+        );
+    }
+
+    /// Regression test: a `Units::Calc` entity's own `WoodpeckerStyle` never changes again
+    /// after it's first spawned (the `calc` expression itself is static), so once its very
+    /// first render resolves against the root's not-yet-computed size (`Vec2::ZERO` --
+    /// `calc(100% - 40px)` collapsing to a nonsensical `-40px`), nothing about *this*
+    /// entity's own `Changed<T>` would ever fire again to re-resolve it against the root's
+    /// real, since-committed width -- exactly the bug `calc_stale`/`stale_calc` exist to
+    /// catch. Uses `setup_scheduled_app`, not `run_layout`'s `run_system_once`: the latter
+    /// re-initializes a fresh system (and so a fresh, maximally-old `last_run` tick) on
+    /// every call, which makes every `Changed<T>` filter match unconditionally regardless of
+    /// whether anything actually changed since the previous call -- silently masking exactly
+    /// this bug class.
+    #[test]
+    fn calc_width_recovers_once_the_parents_real_size_commits_across_real_frames() {
+        let mut app = setup_scheduled_app();
+        let root = app
+            .world_mut()
+            .spawn((
+                TestWidget,
+                WoodpeckerStyle {
+                    width: 300.0.into(),
+                    height: 200.0.into(),
+                    ..Default::default()
+                },
+                WidgetChildren::default(),
+            ))
+            .id();
+        let child = app
+            .world_mut()
+            .spawn((
+                TestWidget,
+                WoodpeckerStyle {
+                    width: Units::Calc {
+                        percent: 100.0,
+                        pixels: -40.0,
+                    },
+                    height: 50.0.into(),
+                    ..Default::default()
+                },
+                WidgetChildren::default(),
+                ChildOf(root),
+            ))
+            .id();
+        app.world_mut()
+            .resource_mut::<WoodpeckerContext>()
+            .set_root_widget(root);
+
+        // Several real frames, with nothing further ever mutated on `child`'s own
+        // `WoodpeckerStyle` -- the exact condition under which the bug this guards against
+        // only manifests after the tree has otherwise gone quiet.
+        for _ in 0..5 {
+            app.update();
+        }
+
+        assert_eq!(
+            app.world().get::<WidgetLayout>(child).unwrap().width(),
+            260.0,
+            "calc(100% - 40px) must settle to 260px against the root's real committed \
+             300px width, not stay stuck at whatever it resolved to on its own first frame"
         );
     }
 
@@ -1348,6 +1535,90 @@ mod tests {
             "a text entity must re-measure against its parent's settled width even on a frame \
              where nothing else is dirty, not stay stuck wrapped at a stale width indefinitely \
              (narrow: {narrow_height}, wide: {wide_height})"
+        );
+    }
+
+    /// Regression test: a text entity narrower than its parent via `max_width` must wrap (and
+    /// commit a height) against that narrower width, not its parent's full width --
+    /// previously `measure_text` always fed the *parent's* full width to the text shaper
+    /// regardless of `max_width`, so a paragraph capped at (say) 100px inside a 400px-wide
+    /// parent measured/wrapped as if it had the full 400px, then got visually clamped to
+    /// 100px at paint time -- wrapping onto more lines than the committed (too-short) height
+    /// reserved, overlapping whatever followed it.
+    #[test]
+    fn max_width_narrower_than_parent_is_respected_by_text_wrapping() {
+        let mut app = setup_app();
+        let root = app
+            .world_mut()
+            .spawn((
+                TestWidget,
+                WoodpeckerStyle {
+                    width: 400.0.into(),
+                    height: 400.0.into(),
+                    flex_direction: WidgetFlexDirection::Column,
+                    ..Default::default()
+                },
+                WidgetChildren::default(),
+            ))
+            .id();
+        let unconstrained_text = app
+            .world_mut()
+            .spawn((
+                TestWidget,
+                WoodpeckerStyle {
+                    width: Units::Percentage(100.0),
+                    font_size: 16.0,
+                    text_wrap: crate::styles::TextWrap::Word,
+                    ..Default::default()
+                },
+                WidgetRender::Text {
+                    content: "one two three four five six seven eight nine ten".into(),
+                },
+                WidgetChildren::default(),
+                ChildOf(root),
+            ))
+            .id();
+        let max_width_text = app
+            .world_mut()
+            .spawn((
+                TestWidget,
+                WoodpeckerStyle {
+                    width: Units::Percentage(100.0),
+                    max_width: 100.0.into(),
+                    font_size: 16.0,
+                    text_wrap: crate::styles::TextWrap::Word,
+                    ..Default::default()
+                },
+                WidgetRender::Text {
+                    content: "one two three four five six seven eight nine ten".into(),
+                },
+                WidgetChildren::default(),
+                ChildOf(root),
+            ))
+            .id();
+        app.world_mut()
+            .resource_mut::<WoodpeckerContext>()
+            .set_root_widget(root);
+
+        run_layout(&mut app);
+        run_layout(&mut app);
+
+        let unconstrained_height = app
+            .world()
+            .get::<WidgetLayout>(unconstrained_text)
+            .unwrap()
+            .height();
+        let max_width_height = app
+            .world()
+            .get::<WidgetLayout>(max_width_text)
+            .unwrap()
+            .height();
+
+        assert!(
+            max_width_height > unconstrained_height,
+            "a text entity capped by max_width must wrap (and commit a height) against that \
+             narrower width, not its parent's full width (unconstrained: \
+             {unconstrained_height}, max_width-capped: {max_width_height})"
         );
     }
 

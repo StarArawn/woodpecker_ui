@@ -29,6 +29,7 @@ mod icon_button;
 mod image_list;
 mod link;
 mod list;
+mod markdown;
 mod masonry;
 mod menu;
 mod modal;
@@ -104,6 +105,7 @@ pub use link::{Link, LinkClicked, LinkStyles};
 pub use list::{
     List, ListItem, ListItemClicked, ListItemLeading, ListItemStyles, ListItemTrailing,
 };
+pub use markdown::Markdown;
 pub use masonry::{pack_masonry, Masonry, MasonryItem, MasonryStyles};
 pub use menu::{Menu, MenuItemSelected, MenuStyles};
 pub use modal::{Modal, ModalStyles, TitleChildren};
@@ -190,6 +192,7 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
             .register_widget::<Link>()
             .register_widget::<List>()
             .register_widget::<ListItem>()
+            .register_widget::<Markdown>()
             .register_widget::<Masonry>()
             .register_widget::<Toggle>()
             .register_widget::<ToggleButton>()

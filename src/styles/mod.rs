@@ -405,6 +405,50 @@ impl WoodpeckerStyle {
 
         new_styles
     }
+
+    /// Resolves every `Units::Calc` value against `parent_size` (the parent's own last-
+    /// committed layout size), collapsing each to a concrete `Units::Pixels`. Ordinary
+    /// `Units::Percentage` values are left untouched -- those are still resolved lazily by
+    /// taffy itself during layout, the same as before this method existed. Only covers the
+    /// core box-geometry fields (`width`/`height`, their `min`/`max` counterparts, and the
+    /// `left`/`right`/`top`/`bottom` inset) -- `padding`/`margin`/`border`/`gap`/`flex_basis`
+    /// don't support `Calc` yet.
+    ///
+    /// Must be called before a style is converted to `taffy::Style` -- see
+    /// `layout::system::traverse_upsert_node`, the one call site that does this today.
+    pub fn resolve_calc(&self, parent_size: Vec2) -> WoodpeckerStyle {
+        let mut resolved = *self;
+        resolved.width = self.width.resolve_calc(parent_size.x);
+        resolved.min_width = self.min_width.resolve_calc(parent_size.x);
+        resolved.max_width = self.max_width.resolve_calc(parent_size.x);
+        resolved.left = self.left.resolve_calc(parent_size.x);
+        resolved.right = self.right.resolve_calc(parent_size.x);
+        resolved.height = self.height.resolve_calc(parent_size.y);
+        resolved.min_height = self.min_height.resolve_calc(parent_size.y);
+        resolved.max_height = self.max_height.resolve_calc(parent_size.y);
+        resolved.top = self.top.resolve_calc(parent_size.y);
+        resolved.bottom = self.bottom.resolve_calc(parent_size.y);
+        resolved
+    }
+
+    /// Whether any field [`Self::resolve_calc`] handles is a `Units::Calc` value -- lets
+    /// `layout::system::traverse_upsert_node` know this entity needs re-resolving (and
+    /// re-upserting into taffy) whenever its parent's committed size changes, the same way
+    /// a text node needs re-measuring on a parent resize (see that function's
+    /// `parent_width_changed`), since a `Calc` value's own `WoodpeckerStyle` never itself
+    /// changes when only the *parent's* size does.
+    pub fn uses_calc(&self) -> bool {
+        self.width.is_calc()
+            || self.min_width.is_calc()
+            || self.max_width.is_calc()
+            || self.left.is_calc()
+            || self.right.is_calc()
+            || self.height.is_calc()
+            || self.min_height.is_calc()
+            || self.max_height.is_calc()
+            || self.top.is_calc()
+            || self.bottom.is_calc()
+    }
 }
 
 impl From<&WoodpeckerStyle> for taffy::Style {
@@ -598,4 +642,55 @@ fn hsv_lerp(from: &Color, to: &Color, amount: f32) -> Color {
 
 pub(crate) fn lerp(a: f32, b: f32, x: f32) -> f32 {
     a * (1.0 - x) + b * x
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_calc_resolves_width_axis_fields_against_parent_width() {
+        let style = WoodpeckerStyle {
+            width: Units::Calc {
+                percent: 100.0,
+                pixels: -40.0,
+            },
+            left: Units::Calc {
+                percent: 50.0,
+                pixels: 10.0,
+            },
+            ..Default::default()
+        };
+        let resolved = style.resolve_calc(Vec2::new(300.0, 200.0));
+        assert_eq!(resolved.width, Units::Pixels(260.0));
+        assert_eq!(resolved.left, Units::Pixels(160.0));
+    }
+
+    #[test]
+    fn resolve_calc_resolves_height_axis_fields_against_parent_height() {
+        let style = WoodpeckerStyle {
+            height: Units::Calc {
+                percent: 100.0,
+                pixels: -20.0,
+            },
+            top: Units::Calc {
+                percent: 50.0,
+                pixels: 5.0,
+            },
+            ..Default::default()
+        };
+        let resolved = style.resolve_calc(Vec2::new(300.0, 200.0));
+        assert_eq!(resolved.height, Units::Pixels(180.0));
+        assert_eq!(resolved.top, Units::Pixels(105.0));
+    }
+
+    #[test]
+    fn resolve_calc_leaves_ordinary_percentages_for_taffy_to_resolve() {
+        let style = WoodpeckerStyle {
+            width: Units::Percentage(50.0),
+            ..Default::default()
+        };
+        let resolved = style.resolve_calc(Vec2::new(300.0, 200.0));
+        assert_eq!(resolved.width, Units::Percentage(50.0));
+    }
 }

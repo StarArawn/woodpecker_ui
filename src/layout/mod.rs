@@ -1,6 +1,8 @@
 pub(crate) mod measure;
 pub(crate) mod system;
 
+use std::ops::{Deref, DerefMut};
+
 use bevy::{ecs::entity::EntityHashMap, prelude::*};
 use measure::{LayoutMeasure, Measure};
 use taffy::{Size, TaffyTree};
@@ -9,6 +11,29 @@ use crate::{
     has_root,
     prelude::{GridTemplate, WoodpeckerStyle},
 };
+
+/// Wraps [`TaffyTree`] so it can live inside a bevy [`Resource`] -- taffy's `Style` is
+/// `!Send + !Sync` since 0.8 (a raw pointer backs its packed `CompactLength` representation),
+/// same as `bevy_ui`'s own `UiSurface`/`UiTree`.
+struct TaffyTreeSync<T>(TaffyTree<T>);
+
+// SAFETY: that raw pointer is only ever a real pointer under taffy's `calc` feature, which
+// this crate doesn't enable -- otherwise it's just a NaN-boxed bit pattern.
+unsafe impl<T: Send> Send for TaffyTreeSync<T> {}
+unsafe impl<T: Sync> Sync for TaffyTreeSync<T> {}
+
+impl<T> Deref for TaffyTreeSync<T> {
+    type Target = TaffyTree<T>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> DerefMut for TaffyTreeSync<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 pub(crate) struct WoodpeckerLayoutPlugin;
 impl Plugin for WoodpeckerLayoutPlugin {
@@ -24,7 +49,7 @@ impl Plugin for WoodpeckerLayoutPlugin {
 pub(crate) struct UiLayout {
     pub(crate) root_entity: Entity,
     entity_to_taffy: EntityHashMap<taffy::NodeId>,
-    taffy: TaffyTree<LayoutMeasure>,
+    taffy: TaffyTreeSync<LayoutMeasure>,
     /// The root viewport size as of the last frame `system::run` actually recomputed
     /// layout -- lets the skip-if-clean fast path detect a window resize (which changes
     /// nothing any `Changed<T>` query would catch, since it's read fresh from the root
@@ -36,6 +61,13 @@ pub(crate) struct UiLayout {
     /// to remeasure. See that function's doc comment for why only text needs this and
     /// `Image`/`Svg` don't.
     pub(crate) previous_measure_width: EntityHashMap<f32>,
+    /// For each entity whose [`WoodpeckerStyle::uses_calc`] is true, the parent size its
+    /// `Units::Calc` fields were last resolved against -- lets `system::traverse_upsert_node`
+    /// detect a parent resize (which touches no `Changed<T>` on *this* entity) as a reason to
+    /// re-resolve, the same role `previous_measure_width` plays for text. A `Vec2`, not a
+    /// scalar, since `Calc` can appear on either axis (`width`/`left`/`right` vs.
+    /// `height`/`top`/`bottom`).
+    pub(crate) previous_calc_parent_size: EntityHashMap<Vec2>,
     /// Whether this frame's layout pass actually ran (as opposed to taking the skip-if-clean
     /// fast path) -- lets `vello_renderer::run` reuse the exact same signal to skip rebuilding
     /// the vello `Scene` on an idle frame, instead of recomputing it a second time. Note this
@@ -55,9 +87,10 @@ impl Default for UiLayout {
         Self {
             root_entity: Entity::PLACEHOLDER,
             entity_to_taffy: Default::default(),
-            taffy: TaffyTree::new(),
+            taffy: TaffyTreeSync(TaffyTree::new()),
             last_root_size: None,
             previous_measure_width: Default::default(),
+            previous_calc_parent_size: Default::default(),
             dirty_this_frame: true,
             settled_frames_in_a_row: 0,
         }
@@ -152,6 +185,7 @@ impl UiLayout {
             let _ = self.taffy.remove(node_id);
         }
         self.previous_measure_width.remove(&entity);
+        self.previous_calc_parent_size.remove(&entity);
     }
 
     pub fn add_children(&mut self, entity: Entity, children: &[Entity]) {
@@ -230,8 +264,8 @@ fn test_bug() {
     let child = taffy
         .new_leaf(Style {
             size: Size {
-                width: Dimension::Percent(1.0),
-                height: Dimension::Percent(1.0),
+                width: Dimension::percent(1.0),
+                height: Dimension::percent(1.0),
             },
             ..Default::default()
         })
@@ -241,10 +275,10 @@ fn test_bug() {
         .new_with_children(
             Style {
                 size: Size {
-                    width: Dimension::Length(1280.0),
-                    height: Dimension::Length(720.0),
+                    width: Dimension::length(1280.0),
+                    height: Dimension::length(720.0),
                 },
-                justify_content: Some(JustifyContent::Center),
+                justify_content: Some(JustifyContent::CENTER),
                 ..Default::default()
             },
             &[child],

@@ -594,6 +594,48 @@ mod tests {
         );
     }
 
+    /// A parent whose own declared-child *count* shrinks across renders (e.g. a widget
+    /// switching between two variable-length pieces of content, each block keyed only by its
+    /// position) must despawn the now-unclaimed extra children from the previous render, not
+    /// leave them lingering alongside the new, shorter list.
+    #[test]
+    fn shrinking_child_count_under_reused_positional_keys_despawns_the_extra_old_children() {
+        let mut world = World::new();
+        world.insert_resource(WidgetMapper::new());
+        world.insert_resource(ObserverCache::default());
+
+        let parent_entity = world.spawn(WidgetChildren::default()).id();
+        let parent = ParentWidget(parent_entity);
+
+        let render_with_n_children = |world: &mut World, n: usize| {
+            let mut children = WidgetChildren::default();
+            for i in 0..n {
+                children.add::<TestWidget>(TestWidget);
+                children.add_key(i.to_string());
+            }
+            children.apply(parent);
+            children.process_world(world);
+        };
+
+        render_with_n_children(&mut world, 5);
+        assert_eq!(
+            world.entity(parent_entity).get::<Children>().unwrap().len(),
+            5
+        );
+
+        render_with_n_children(&mut world, 2);
+        let count_after_shrink = world
+            .entity(parent_entity)
+            .get::<Children>()
+            .map(|c| c.len())
+            .unwrap_or(0);
+        assert_eq!(
+            count_after_shrink, 2,
+            "children from the previous, longer render (positions 2, 3, 4) must be despawned, \
+             not left behind overlapping the new, shorter content"
+        );
+    }
+
     /// Finds every live `Observer` entity in `world` and returns the set of entities any of
     /// them watches. `Observer` targeting (`.with_entity(...)`/`watch_entity`) is independent
     /// of `ChildOf` -- an observer fires based on its own watched-entities list regardless of

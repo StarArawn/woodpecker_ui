@@ -21,45 +21,41 @@ pub enum GridTrackSize {
     MaxContent,
 }
 
-impl From<GridTrackSize> for taffy::NonRepeatedTrackSizingFunction {
+impl From<GridTrackSize> for taffy::TrackSizingFunction {
     fn from(val: GridTrackSize) -> Self {
         match val {
             GridTrackSize::Pixels(px) => taffy::MinMax {
-                min: taffy::MinTrackSizingFunction::Fixed(taffy::LengthPercentage::Length(px)),
-                max: taffy::MaxTrackSizingFunction::Fixed(taffy::LengthPercentage::Length(px)),
+                min: taffy::MinTrackSizingFunction::length(px),
+                max: taffy::MaxTrackSizingFunction::length(px),
             },
             GridTrackSize::Percentage(pct) => taffy::MinMax {
-                min: taffy::MinTrackSizingFunction::Fixed(taffy::LengthPercentage::Percent(
-                    pct / 100.0,
-                )),
-                max: taffy::MaxTrackSizingFunction::Fixed(taffy::LengthPercentage::Percent(
-                    pct / 100.0,
-                )),
+                min: taffy::MinTrackSizingFunction::percent(pct / 100.0),
+                max: taffy::MaxTrackSizingFunction::percent(pct / 100.0),
             },
             // Matches CSS's own expansion of a bare `<flex>` track size into `minmax(auto, <flex>)`.
             GridTrackSize::Fraction(fr) => taffy::MinMax {
-                min: taffy::MinTrackSizingFunction::Auto,
-                max: taffy::MaxTrackSizingFunction::Fraction(fr),
+                min: taffy::MinTrackSizingFunction::auto(),
+                max: taffy::MaxTrackSizingFunction::fr(fr),
             },
             GridTrackSize::Auto => taffy::MinMax {
-                min: taffy::MinTrackSizingFunction::Auto,
-                max: taffy::MaxTrackSizingFunction::Auto,
+                min: taffy::MinTrackSizingFunction::auto(),
+                max: taffy::MaxTrackSizingFunction::auto(),
             },
             GridTrackSize::MinContent => taffy::MinMax {
-                min: taffy::MinTrackSizingFunction::MinContent,
-                max: taffy::MaxTrackSizingFunction::MinContent,
+                min: taffy::MinTrackSizingFunction::min_content(),
+                max: taffy::MaxTrackSizingFunction::min_content(),
             },
             GridTrackSize::MaxContent => taffy::MinMax {
-                min: taffy::MinTrackSizingFunction::MaxContent,
-                max: taffy::MaxTrackSizingFunction::MaxContent,
+                min: taffy::MinTrackSizingFunction::max_content(),
+                max: taffy::MaxTrackSizingFunction::max_content(),
             },
         }
     }
 }
 
-impl From<GridTrackSize> for taffy::TrackSizingFunction {
+impl<S: taffy::CheapCloneStr> From<GridTrackSize> for taffy::GridTemplateComponent<S> {
     fn from(val: GridTrackSize) -> Self {
-        taffy::TrackSizingFunction::Single(val.into())
+        taffy::GridTemplateComponent::Single(val.into())
     }
 }
 
