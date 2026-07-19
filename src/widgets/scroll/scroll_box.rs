@@ -228,17 +228,16 @@ pub fn render(
             *current_widget,
             move |mut trigger: On<Pointer<MouseWheelScroll>>,
                   mut context_query: Query<&mut ScrollContext>| {
-                let x = trigger.scroll.x;
-                let y = trigger.scroll.y;
+                let delta = trigger.pixel_delta(scroll_line);
                 trigger.propagate(false);
                 if let Ok(mut context) = context_query.get_mut(context_entity) {
                     let scroll_x = context.scroll_x();
                     let scroll_y = context.scroll_y();
                     if !disable_horizontal {
-                        context.set_scroll_x(scroll_x - x * scroll_line);
+                        context.set_scroll_x(scroll_x - delta.x);
                     }
                     if !disable_vertical {
-                        context.set_scroll_y(scroll_y + y * scroll_line);
+                        context.set_scroll_y(scroll_y + delta.y);
                     }
                 }
             },

@@ -223,7 +223,7 @@ fn render(
                 return;
             };
             let scroll_y = context.scroll_y();
-            context.set_scroll_y(scroll_y + trigger.scroll.y * SCROLL_LINE);
+            context.set_scroll_y(scroll_y + trigger.pixel_delta(SCROLL_LINE).y);
         },
     );
     children.add::<Clip>((

@@ -236,6 +236,7 @@ fn render(
         &mut ComboBoxScrollState,
     )>,
     mut state_query: Query<&mut ComboBoxState>,
+    root_layout_query: Query<(&WidgetLayout, Has<WoodpeckerApp>)>,
 ) {
     let Ok((
         combo_box,
@@ -574,10 +575,27 @@ fn render(
                 list_children.add_key("trail_spacer");
             }
 
+            let screen_height = root_layout_query
+                .iter()
+                .find(|(_, is_root)| *is_root)
+                .map(|(l, _)| l.size.y)
+                .unwrap_or(f32::MAX);
+            let open_upward = crate::widgets::popover::should_open_upward(
+                trigger_loc.y,
+                trigger_size.y,
+                list_area_height,
+                screen_height,
+            );
+            let open_top = if open_upward {
+                trigger_loc.y - list_area_height - 4.0
+            } else {
+                trigger_loc.y + trigger_size.y + 4.0
+            };
+
             let list_area_style = WoodpeckerStyle {
                 position: WidgetPosition::Fixed,
                 left: trigger_loc.x.into(),
-                top: (trigger_loc.y + trigger_size.y + 4.0).into(),
+                top: open_top.into(),
                 width: trigger_size.x.into(),
                 height: list_area_height.into(),
                 opacity: 1.0,
@@ -585,10 +603,15 @@ fn render(
                 ..combo_styles.list_area
             };
             const SLIDE_OFFSET: f32 = 6.0;
+            let slide_offset = if open_upward {
+                SLIDE_OFFSET
+            } else {
+                -SLIDE_OFFSET
+            };
             let list_area_transition = Transition {
                 style_a: WoodpeckerStyle {
                     opacity: 0.0,
-                    top: (trigger_loc.y + trigger_size.y + 4.0 - SLIDE_OFFSET).into(),
+                    top: (open_top + slide_offset).into(),
                     ..list_area_style
                 },
                 style_b: list_area_style,
@@ -637,7 +660,7 @@ fn render(
                             return;
                         };
                         let scroll_y = context.scroll_y();
-                        context.set_scroll_y(scroll_y + trigger.scroll.y * SCROLL_LINE);
+                        context.set_scroll_y(scroll_y + trigger.pixel_delta(SCROLL_LINE).y);
                     },
                 );
             overlay_children.add_key("list");

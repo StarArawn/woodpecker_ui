@@ -85,6 +85,28 @@ pub(crate) fn diff_popover_content(world: &mut World, entity: Entity) -> bool {
     changed
 }
 
+/// Whether a trigger-anchored floating panel of `panel_height` should open **upward** instead
+/// of downward, given the trigger's own vertical extent and the viewport's height. `true` only
+/// when there isn't enough room below the trigger to fit the panel *and* there's more room
+/// above it than below -- mirrors the "flip" collision behavior every desktop/web dropdown
+/// implements, so a `Dropdown`/`ComboBox`/`DatePicker` opened near the bottom of the screen
+/// doesn't render its list mostly or entirely off-screen. Deliberately one-directional (never
+/// flips an explicit `Top` placement back down): a caller that already chose `Top` chose it for
+/// a reason, and this only exists to rescue the common "opened near the bottom" case.
+pub(crate) fn should_open_upward(
+    trigger_top: f32,
+    trigger_height: f32,
+    panel_height: f32,
+    viewport_height: f32,
+) -> bool {
+    let space_below = (viewport_height - (trigger_top + trigger_height)).max(0.0);
+    if space_below >= panel_height {
+        return false;
+    }
+    let space_above = trigger_top.max(0.0);
+    space_above > space_below
+}
+
 /// `Popover`'s own default `Transition` -- opacity-only, not yet started (`playing: false`).
 /// `render` overwrites `style_a`/`style_b` every call with the freshly anchored position --
 /// unlike `Modal`'s fixed/centered box, `Popover`'s floating content is positioned relative to
@@ -164,7 +186,7 @@ fn render(
         &WidgetLayout,
         &mut Transition,
     )>,
-    layout_query: Query<&WidgetLayout>,
+    layout_query: Query<(&WidgetLayout, Has<WoodpeckerApp>)>,
     mut popover_state: Query<&mut PopoverState>,
 ) {
     let Ok((popover, popover_styles, trigger, content, mut children, layout, mut transition)) =
@@ -221,8 +243,28 @@ fn render(
         let content_size = widget_mapper
             .get_keyed_child::<Element>(current_widget.as_parent(), "content")
             .and_then(|e| layout_query.get(e).ok())
-            .map(|l| l.size)
+            .map(|(l, _)| l.size)
             .unwrap_or_default();
+
+        let viewport_height = layout_query
+            .iter()
+            .find(|(_, is_root)| *is_root)
+            .map(|(l, _)| l.size.y)
+            .unwrap_or(f32::MAX);
+
+        let effective_placement = match popover.placement {
+            PopoverPlacement::Bottom
+                if should_open_upward(
+                    trigger_loc.y,
+                    trigger_size.y,
+                    content_size.y,
+                    viewport_height,
+                ) =>
+            {
+                PopoverPlacement::Top
+            }
+            other => other,
+        };
 
         let mut position = WoodpeckerStyle {
             position: WidgetPosition::Fixed,
@@ -236,7 +278,7 @@ fn render(
             opacity: 1.0,
             ..Default::default()
         };
-        match popover.placement {
+        match effective_placement {
             PopoverPlacement::Bottom => {
                 position.left = trigger_loc.x.into();
                 position.top = (trigger_loc.y + trigger_size.y).into();
@@ -258,7 +300,7 @@ fn render(
         const SLIDE_OFFSET: f32 = 8.0;
         let mut style_a = position;
         style_a.opacity = 0.0;
-        match popover.placement {
+        match effective_placement {
             PopoverPlacement::Bottom => {
                 style_a.top = (trigger_loc.y + trigger_size.y - SLIDE_OFFSET).into();
             }
@@ -294,4 +336,34 @@ fn render(
     }
 
     children.apply(current_widget.as_parent());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stays_downward_when_it_already_fits_below() {
+        assert!(!should_open_upward(100.0, 20.0, 100.0, 400.0));
+    }
+
+    #[test]
+    fn flips_upward_when_it_overflows_below_but_fits_above() {
+        assert!(should_open_upward(370.0, 20.0, 100.0, 400.0));
+    }
+
+    #[test]
+    fn stays_downward_when_neither_side_fits_but_below_has_more_room() {
+        assert!(!should_open_upward(50.0, 10.0, 300.0, 400.0));
+    }
+
+    #[test]
+    fn flips_upward_when_neither_side_fits_but_above_has_more_room() {
+        assert!(should_open_upward(340.0, 10.0, 300.0, 400.0));
+    }
+
+    #[test]
+    fn exact_fit_below_does_not_flip() {
+        assert!(!should_open_upward(300.0, 0.0, 100.0, 400.0));
+    }
 }

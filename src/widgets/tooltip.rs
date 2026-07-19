@@ -91,7 +91,7 @@ fn render(
         &mut Transition,
     )>,
     mut state_query: Query<&mut TooltipState>,
-    layout_query: Query<&WidgetLayout>,
+    layout_query: Query<(&WidgetLayout, Has<WoodpeckerApp>)>,
 ) {
     let Ok((tooltip, tooltip_styles, trigger, mut children, layout, mut transition)) =
         query.get_mut(**current_widget)
@@ -169,8 +169,28 @@ fn render(
             let label_size = widget_mapper
                 .get_keyed_child::<Element>(current_widget.as_parent(), "label")
                 .and_then(|e| layout_query.get(e).ok())
-                .map(|l| l.size)
+                .map(|(l, _)| l.size)
                 .unwrap_or_default();
+
+            let viewport_height = layout_query
+                .iter()
+                .find(|(_, is_root)| *is_root)
+                .map(|(l, _)| l.size.y)
+                .unwrap_or(f32::MAX);
+
+            let effective_placement = match tooltip.placement {
+                PopoverPlacement::Bottom
+                    if super::popover::should_open_upward(
+                        trigger_loc.y,
+                        trigger_size.y,
+                        label_size.y,
+                        viewport_height,
+                    ) =>
+                {
+                    PopoverPlacement::Top
+                }
+                other => other,
+            };
 
             let mut position = WoodpeckerStyle {
                 position: WidgetPosition::Fixed,
@@ -182,7 +202,7 @@ fn render(
                 opacity: 1.0,
                 ..Default::default()
             };
-            match tooltip.placement {
+            match effective_placement {
                 PopoverPlacement::Bottom => {
                     position.left = trigger_loc.x.into();
                     position.top = (trigger_loc.y + trigger_size.y).into();
@@ -204,7 +224,7 @@ fn render(
             const SLIDE_OFFSET: f32 = 4.0;
             let mut style_a = position;
             style_a.opacity = 0.0;
-            match tooltip.placement {
+            match effective_placement {
                 PopoverPlacement::Bottom => {
                     style_a.top = (trigger_loc.y + trigger_size.y - SLIDE_OFFSET).into();
                 }

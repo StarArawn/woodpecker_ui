@@ -1,6 +1,6 @@
 use bevy::{
     ecs::system::SystemParam,
-    input::mouse::MouseWheel,
+    input::mouse::{MouseScrollUnit, MouseWheel},
     picking::{
         backend::{HitData, PointerHits},
         hover::HoverMap,
@@ -197,9 +197,45 @@ fn process_entity(
 }
 
 /// When a user scrolls the mouse wheel over an entity.
-#[derive(Debug, Default, Reflect, Clone, Copy)]
+///
+/// `scroll` is the raw, unscaled delta straight off the platform event -- callers must go
+/// through [`Self::pixel_delta`], not read `scroll` directly, or they'll reintroduce the exact
+/// touchpad-scrolls-way-too-fast bug that field's own doc comment describes.
+#[derive(Debug, Reflect, Clone, Copy)]
 pub struct MouseWheelScroll {
     pub scroll: Vec2,
+    /// Whether `scroll` counts discrete lines (a physical mouse wheel's detents) or is already
+    /// a real pixel distance (a touchpad's continuous swipe, as reported by the OS) -- see
+    /// [`Self::pixel_delta`].
+    pub unit: MouseScrollUnit,
+}
+
+impl Default for MouseWheelScroll {
+    fn default() -> Self {
+        Self {
+            scroll: Vec2::ZERO,
+            unit: MouseScrollUnit::Line,
+        }
+    }
+}
+
+impl MouseWheelScroll {
+    /// The distance, in logical pixels, this event should scroll content by, given the
+    /// scrolling widget's own "how many pixels is one line" step.
+    ///
+    /// `Line`-unit events (a physical mouse wheel's discrete detents) are scaled by
+    /// `pixels_per_line`, matching how a single detent has always translated into a
+    /// comfortable scroll step here. `Pixel`-unit events (a touchpad swipe) are **not**
+    /// additionally scaled -- the OS already reports those in real screen pixels, so applying
+    /// the same per-line multiplier on top (as every call site here used to do, before this
+    /// method existed) scrolled touchpad input tens of times faster than the physical swipe
+    /// distance.
+    pub fn pixel_delta(&self, pixels_per_line: f32) -> Vec2 {
+        match self.unit {
+            MouseScrollUnit::Line => self.scroll * pixels_per_line,
+            MouseScrollUnit::Pixel => self.scroll,
+        }
+    }
 }
 
 pub fn mouse_wheel_system(
@@ -221,9 +257,9 @@ pub fn mouse_wheel_system(
     // Read once up front, not per hovered entity -- `MessageReader::read()` drains its cursor,
     // so reading it inside the loop below would silently see zero events for every pointer
     // after the first.
-    let scrolls: Vec<Vec2> = evr_scroll
+    let scrolls: Vec<(Vec2, MouseScrollUnit)> = evr_scroll
         .read()
-        .map(|mwe| Vec2::new(mwe.x, mwe.y))
+        .map(|mwe| (Vec2::new(mwe.x, mwe.y), mwe.unit))
         .collect();
     if scrolls.is_empty() {
         return;
@@ -256,11 +292,11 @@ pub fn mouse_wheel_system(
             continue;
         };
 
-        for &scroll in &scrolls {
+        for &(scroll, unit) in &scrolls {
             commands.trigger(Pointer::new(
                 *pointer_id,
                 location.clone(),
-                MouseWheelScroll { scroll },
+                MouseWheelScroll { scroll, unit },
                 topmost_entity,
             ));
         }
