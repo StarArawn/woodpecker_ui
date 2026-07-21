@@ -33,6 +33,9 @@ pub(crate) enum Story {
     List,
     Table,
     Chart,
+    BarChart,
+    AreaChart,
+    PieChart,
     Timeline,
     TreeView,
     Typography,
@@ -60,6 +63,7 @@ pub(crate) enum Story {
     Splitter,
     ColorPicker,
     Window,
+    Dock,
 }
 
 /// `(category, label, story)` -- the sidebar groups consecutive entries sharing the same
@@ -90,7 +94,10 @@ pub(crate) const STORIES: &[(&str, &str, Story)] = &[
     ("Data Display", "Chip", Story::Chip),
     ("Data Display", "List", Story::List),
     ("Data Display", "Table", Story::Table),
-    ("Data Display", "Chart", Story::Chart),
+    ("Data Display", "Line Chart", Story::Chart),
+    ("Data Display", "Bar Chart", Story::BarChart),
+    ("Data Display", "Area Chart", Story::AreaChart),
+    ("Data Display", "Pie Chart", Story::PieChart),
     ("Data Display", "Timeline", Story::Timeline),
     ("Data Display", "Tree View", Story::TreeView),
     ("Data Display", "Typography", Story::Typography),
@@ -118,6 +125,7 @@ pub(crate) const STORIES: &[(&str, &str, Story)] = &[
     ("Layout", "Splitter", Story::Splitter),
     ("Color", "Color Picker", Story::ColorPicker),
     ("Windowing", "Window", Story::Window),
+    ("Windowing", "Dock", Story::Dock),
 ];
 
 /// A one-sentence description shown above each story's live demo -- the "Docs" half of the
@@ -149,7 +157,10 @@ pub(crate) fn story_doc(story: Story) -> &'static str {
         Story::Chip => "A compact, pill-shaped tag -- optionally selectable or deletable.",
         Story::List => "A vertical list of rows, each with optional leading/trailing content and hover/selected states.",
         Story::Table => "A header row plus zebra-striped, divided data rows -- optionally virtualized for large datasets.",
-        Story::Chart => "A simple bar/line chart for visualizing a small series of numeric data.",
+        Story::Chart => "A multi-series line chart with labeled axes, gradient fill, and hover values.",
+        Story::BarChart => "A grouped or stacked bar chart for comparing values across categories, with per-bar hover values.",
+        Story::AreaChart => "A stacked area chart showing how multiple series accumulate over a shared axis, with hover values.",
+        Story::PieChart => "A pie or donut chart (set `inner_radius` > 0) for showing proportions of a whole, with per-slice hover values.",
         Story::Timeline => "A vertical sequence of dated events, each with a marker and connecting line.",
         Story::TreeView => "A hierarchical, expand/collapse tree of labeled rows -- a file browser, a scene graph.",
         Story::Typography => "The shared heading/body/caption text scale used throughout the crate's own widgets.",
@@ -177,6 +188,7 @@ pub(crate) fn story_doc(story: Story) -> &'static str {
         Story::Splitter => "A draggable divider between two panes that resizes them proportionally.",
         Story::ColorPicker => "A hue/saturation/value color picker panel with a hex readout.",
         Story::Window => "A draggable, resizable, titled window -- for an in-app floating panel or dialog chrome.",
+        Story::Dock => "A resizable, tabbed, redockable panel layout -- drag a tab to a panel's edge to split, or to its center to join; dropping it anywhere else reverts it back to where it started.",
     }
 }
 
@@ -524,6 +536,62 @@ pub(crate) fn story_props(story: Story) -> &'static [PropDoc] {
                 name: "series",
                 type_str: "Vec<ChartSeries>",
                 doc: "The series to plot, all sharing one Y scale",
+            },
+            PropDoc {
+                name: "show_legend",
+                type_str: "bool",
+                doc: "Whether to render a legend row below the plot",
+            },
+        ],
+        Story::BarChart => &[
+            PropDoc {
+                name: "categories",
+                type_str: "Vec<String>",
+                doc: "The category labels along the X axis, left to right",
+            },
+            PropDoc {
+                name: "series",
+                type_str: "Vec<BarSeries>",
+                doc: "The series to plot, one value per category",
+            },
+            PropDoc {
+                name: "mode",
+                type_str: "BarMode",
+                doc: "Grouped (side-by-side) or stacked bars",
+            },
+            PropDoc {
+                name: "show_legend",
+                type_str: "bool",
+                doc: "Whether to render a legend row below the plot",
+            },
+        ],
+        Story::AreaChart => &[
+            PropDoc {
+                name: "series",
+                type_str: "Vec<AreaSeries>",
+                doc: "The series to plot, each stacked on top of the ones before it",
+            },
+            PropDoc {
+                name: "show_legend",
+                type_str: "bool",
+                doc: "Whether to render a legend row below the plot",
+            },
+        ],
+        Story::PieChart => &[
+            PropDoc {
+                name: "slices",
+                type_str: "Vec<PieSlice>",
+                doc: "The slices to plot, their share computed as a fraction of the total",
+            },
+            PropDoc {
+                name: "inner_radius",
+                type_str: "f32",
+                doc: "0.0 draws a plain pie; anything greater draws a donut with this hole radius",
+            },
+            PropDoc {
+                name: "center_label",
+                type_str: "Option<String>",
+                doc: "Text shown in the donut hole -- only meaningful when inner_radius > 0.0",
             },
             PropDoc {
                 name: "show_legend",
@@ -928,6 +996,18 @@ pub(crate) fn story_props(story: Story) -> &'static [PropDoc] {
                 name: "children_styles",
                 type_str: "WoodpeckerStyle",
                 doc: "Styles for the children",
+            },
+        ],
+        Story::Dock => &[
+            PropDoc {
+                name: "initial_tree",
+                type_str: "DockTree",
+                doc: "The starting layout, seeded once when this DockArea first mounts",
+            },
+            PropDoc {
+                name: "panels",
+                type_str: "DockPanels",
+                doc: "The panels this dock can show",
             },
         ],
     }

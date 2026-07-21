@@ -235,7 +235,9 @@ fn character_sheet_render(
         equipment_row.droppable(
             current_widget,
             state_entity,
-            move |dragged: &DraggableItem| dragged.item_type == item_type,
+            move |dragged: &DraggableItem, _state: &CharacterSheetState| {
+                dragged.item_type == item_type
+            },
             move |state: &mut CharacterSheetState, hover| match hover {
                 Some(valid) => {
                     state.hovered_slot = Some(i);
@@ -247,7 +249,7 @@ fn character_sheet_render(
                     }
                 }
             },
-            move |dragged: &DraggableItem, valid: bool, commands: &mut Commands| {
+            move |dragged: &DraggableItem, valid: bool, _state: &CharacterSheetState, commands: &mut Commands| {
                 let item_id = dragged.id;
                 commands.queue(move |world: &mut World| {
                     let Some(item) = world

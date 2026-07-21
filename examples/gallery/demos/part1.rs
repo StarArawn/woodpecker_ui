@@ -538,3 +538,73 @@ pub(super) fn demo_stepper() -> WidgetChildren {
     WidgetChildren::default().with_child::<StepperDemo>(StepperDemo)
 }
 
+fn dock_placeholder_panel(text: &'static str) -> WidgetChildren {
+    // No padding here -- `DockDropSurface` now applies a baseline inset (`DockStyles::
+    // content_padding`) around every panel's own content automatically.
+    WidgetChildren::default().with_child::<Element>((
+        Element,
+        WoodpeckerStyle {
+            width: Units::Percentage(100.0),
+            height: Units::Percentage(100.0),
+            font_size: 12.0,
+            text_wrap: TextWrap::Word,
+            ..Default::default()
+        },
+        WidgetRender::Text {
+            content: text.into(),
+        },
+    ))
+}
+
+pub(super) fn demo_dock() -> WidgetChildren {
+    WidgetChildren::default().with_child::<Element>((
+        Element,
+        WoodpeckerStyle {
+            width: 560.0.into(),
+            height: 360.0.into(),
+            ..Default::default()
+        },
+        WidgetChildren::default().with_child::<DockArea>((DockArea {
+            initial_tree: DockTree {
+                root: Some(DockNode::Split {
+                    axis: DockAxis::Row,
+                    children: vec![
+                        (DockNode::tabs([PanelId::new("explorer")]), 0.25),
+                        (
+                            DockNode::Split {
+                                axis: DockAxis::Column,
+                                children: vec![
+                                    (DockNode::tabs([PanelId::new("editor")]), 0.7),
+                                    (
+                                        DockNode::tabs([
+                                            PanelId::new("output"),
+                                            PanelId::new("problems"),
+                                        ]),
+                                        0.3,
+                                    ),
+                                ],
+                            },
+                            0.75,
+                        ),
+                    ],
+                }),
+                last_focused: None,
+            },
+            panels: DockPanels::new(vec![
+                PanelDef::new("explorer", "Explorer", |_| {
+                    dock_placeholder_panel("src/\n  main.rs\n  lib.rs\nCargo.toml")
+                }),
+                PanelDef::new("editor", "Editor", |_| {
+                    dock_placeholder_panel("fn main() {\n    println!(\"Hello, dock!\");\n}")
+                }),
+                PanelDef::new("output", "Output", |_| {
+                    dock_placeholder_panel("Compiling woodpecker_ui...\nFinished in 1.2s")
+                }),
+                PanelDef::new("problems", "Problems", |_| {
+                    dock_placeholder_panel("No problems detected.")
+                }),
+            ]),
+        },)),
+    ))
+}
+

@@ -1,6 +1,11 @@
 use crate::{theming::ThemeRegisterExt, watched_resource::WatchedResource, WidgetRegisterExt};
 use bevy::prelude::*;
 
+use dock::{
+    DockDragActive, DockDropSurface, DockRootDropZone, DockSplitDragBase, DockTabBar,
+    DockTabHeader,
+};
+
 mod accordion;
 mod alert;
 pub(crate) mod animation;
@@ -22,6 +27,7 @@ pub mod colors;
 mod combo_box;
 mod date_picker;
 mod divider;
+mod dock;
 mod drawer;
 mod dropdown;
 mod element;
@@ -74,7 +80,9 @@ pub use accordion::{
     Accordion, AccordionChanged, AccordionItem, AccordionItemStyles, AccordionMode,
 };
 pub use alert::{Alert, AlertDismissed, AlertStyles};
-pub use animation::{Animating, AnimationGroup, AnimationTimeline, AnimationTrack, Spring, SpringStyle};
+pub use animation::{
+    Animating, AnimationGroup, AnimationTimeline, AnimationTrack, Spring, SpringStyle,
+};
 pub use app::WoodpeckerApp;
 pub use app_bar::{AppBar, AppBarLeading, AppBarPosition, AppBarStyles, AppBarTrailing};
 // use bevy_mod_picking::prelude::EventListenerPlugin;
@@ -86,7 +94,13 @@ pub use bottom_navigation::{
 pub use breadcrumbs::{BreadcrumbClicked, Breadcrumbs, BreadcrumbsStyles};
 pub use button::{ButtonStyles, WButton};
 pub use card::{Card, CardActions, CardStyles};
-pub use chart::{ChartSeries, ChartStyles, LineChart};
+pub use chart::{
+    axis_label_children, chart_tooltip, default_series_palette, draw_axis_lines, stacked_baselines,
+    wedge_path, AreaChart, AreaChartStyles, AreaSeries, AxisOrientation, AxisSpec, AxisTick,
+    BarChart, BarChartStyles, BarMode, BarSeries, CategoricalScale, ChartLegend, ChartLegendStyles,
+    ChartSeries, ChartSeriesData, ChartStyles, LegendEntry, LineChart, LinearScale, PieChart,
+    PieChartStyles, PieSlice, Scale,
+};
 pub use checkbox::{
     Checkbox, CheckboxChanged, CheckboxState, CheckboxStyles, CheckboxWidgetStyles,
 };
@@ -96,6 +110,11 @@ pub use color_picker::{ColorPicker, ColorPickerChanged, ColorPickerStyles};
 pub use combo_box::{ComboBox, ComboBoxChanged, ComboBoxMatchMode, ComboBoxStyles};
 pub use date_picker::{CalendarDate, DateChanged, DatePicker, DatePickerStyles};
 pub use divider::{Divider, DividerStyles};
+pub use dock::{
+    DockArea, DockAxis, DockEdge, DockFloating, DockNode, DockPanelRegistry, DockPanels,
+    DockStyles, DockTabBarStyles, DockTree, FloatingDockWindow, FloatingWindowId, NodePath,
+    PanelDef, PanelFactory, PanelId,
+};
 pub use drawer::{Drawer, DrawerCloseRequested, DrawerPosition, DrawerStyles, DrawerVariant};
 pub use dropdown::{Dropdown, DropdownChanged, DropdownStyles};
 pub use element::Element;
@@ -162,12 +181,21 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
             .register_widget::<Element>()
             .register_widget::<WButton>()
             .register_widget::<LineChart>()
+            .register_widget::<BarChart>()
+            .register_widget::<AreaChart>()
+            .register_widget::<PieChart>()
+            .register_widget::<ChartLegend>()
             .register_widget::<Avatar>()
             .register_widget::<Badge>()
             .register_widget::<BottomNavigation>()
             .register_widget::<Breadcrumbs>()
             .register_widget::<Card>()
             .register_widget::<Divider>()
+            .register_widget::<DockArea>()
+            .register_widget::<DockTabBar>()
+            .register_widget::<DockTabHeader>()
+            .register_widget::<DockDropSurface>()
+.register_widget::<DockRootDropZone>()
             .register_widget::<Drawer>()
             .register_widget::<ProgressBar>()
             .register_widget::<Spinner>()
@@ -231,11 +259,18 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
             .register_themed_style::<ButtonStyles>()
             .register_themed_style::<CardStyles>()
             .register_themed_style::<ChartStyles>()
+            .register_themed_style::<BarChartStyles>()
+            .register_themed_style::<AreaChartStyles>()
+            .register_themed_style::<PieChartStyles>()
+            .register_themed_style::<ChartLegendStyles>()
             .register_themed_style::<CheckboxWidgetStyles>()
             .register_themed_style::<ColorPickerStyles>()
             .register_themed_style::<ComboBoxStyles>()
             .register_themed_style::<DatePickerStyles>()
             .register_themed_style::<DividerStyles>()
+            .register_themed_style::<DockStyles>()
+            .register_themed_style::<DockTabBarStyles>()
+            .init_resource::<DockSplitDragBase>()
             .register_themed_style::<DrawerStyles>()
             .register_themed_style::<DropdownStyles>()
             .register_themed_style::<IconButtonStyles>()
@@ -273,6 +308,9 @@ impl Plugin for WoodpeckerUIWidgetPlugin {
             .register_themed_style::<WindowStyles>()
             .insert_resource(ToastQueue::default())
             .register_type::<WatchedResource<ToastQueue>>()
+            .register_type::<DockTree>()
+            .register_type::<DockFloating>()
+            .register_type::<DockDragActive>()
             .add_systems(
                 PreUpdate,
                 (

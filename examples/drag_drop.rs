@@ -314,9 +314,9 @@ fn drop_zone_render(
         state_entity,
         // Everything this demo ever drags is a valid drop -- a real app would inspect the
         // payload here (e.g. an item's type) to decide.
-        |_payload: &DraggableCard| true,
+        |_payload: &DraggableCard, _state: &DropZoneState| true,
         |state: &mut DropZoneState, hover_valid| state.hover_valid = hover_valid,
-        move |_payload: &DraggableCard, valid: bool, commands: &mut Commands| {
+        move |_payload: &DraggableCard, valid: bool, _state: &DropZoneState, commands: &mut Commands| {
             if valid {
                 commands.insert_resource(DropHistory(Some(label.clone())));
             }

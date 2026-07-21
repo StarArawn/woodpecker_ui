@@ -167,6 +167,78 @@ pub(crate) fn type_doc(name: &str) -> Option<TypeDoc> {
                 PropDoc { name: "color", type_str: "Color", doc: "The color of this series' line, fill, and legend swatch." },
             ],
         }),
+        "BarSeries" => Some(TypeDoc {
+            description: "One named series of values on a `BarChart`, one value per category.",
+            fields: &[
+                PropDoc { name: "name", type_str: "String", doc: "The series name, shown in the legend." },
+                PropDoc { name: "values", type_str: "Vec<f32>", doc: "One value per `BarChart::categories` entry." },
+                PropDoc { name: "color", type_str: "Color", doc: "The color of this series' bars and legend swatch." },
+            ],
+        }),
+        "BarMode" => Some(TypeDoc {
+            description: "How a `BarChart` with more than one series lays its bars out per category.",
+            fields: &[
+                PropDoc { name: "Grouped", type_str: "", doc: "Each series gets its own bar, side by side within the category." },
+                PropDoc { name: "Stacked", type_str: "", doc: "Series stack on top of each other within one bar per category." },
+            ],
+        }),
+        "AreaSeries" => Some(TypeDoc {
+            description: "One named series on an `AreaChart`, stacked on top of every series declared before it.",
+            fields: &[
+                PropDoc { name: "name", type_str: "String", doc: "The series name, shown in the legend." },
+                PropDoc { name: "data", type_str: "Vec<f32>", doc: "The data points to plot, left to right." },
+                PropDoc { name: "color", type_str: "Color", doc: "The color of this series' fill, border, and legend swatch." },
+            ],
+        }),
+        "PieSlice" => Some(TypeDoc {
+            description: "One slice of a `PieChart`.",
+            fields: &[
+                PropDoc { name: "label", type_str: "String", doc: "The slice's label, shown in the legend." },
+                PropDoc { name: "value", type_str: "f32", doc: "The slice's value -- its share is value / sum(all slice values)." },
+                PropDoc { name: "color", type_str: "Color", doc: "The slice's fill and legend swatch color." },
+            ],
+        }),
+        "DockTree" => Some(TypeDoc {
+            description: "The split/tab layout tree for a `DockArea` -- structural mutations (redock, close, resize) all go through this type's own methods (`remove_panel`, `insert_center`, `insert_edge`, `set_active`, `apply_splitter_delta`).",
+            fields: &[
+                PropDoc { name: "root", type_str: "Option<DockNode>", doc: "The tree's contents, or None once every panel has been removed." },
+                PropDoc { name: "last_focused", type_str: "Option<NodePath>", doc: "The last tab group a panel was made active in -- where a floated panel's redock button returns it." },
+            ],
+        }),
+        "DockNode" => Some(TypeDoc {
+            description: "One node of a `DockTree`: a resizable split, or a tab group of panels with one active at a time.",
+            fields: &[
+                PropDoc { name: "Split", type_str: "", doc: "A resizable split -- each child paired with its own share of the available space." },
+                PropDoc { name: "Tabs", type_str: "", doc: "A tab group of panels, one active at a time." },
+            ],
+        }),
+        "DockAxis" => Some(TypeDoc {
+            description: "The direction a `DockNode::Split`'s children lay out along.",
+            fields: &[
+                PropDoc { name: "Row", type_str: "", doc: "Children lay out left to right." },
+                PropDoc { name: "Column", type_str: "", doc: "Children lay out top to bottom." },
+            ],
+        }),
+        "DockEdge" => Some(TypeDoc {
+            description: "Where a panel was dropped relative to an existing dock node -- Center joins the target's tab group; the other four wrap the target in a new split on that side.",
+            fields: &[
+                PropDoc { name: "Left", type_str: "", doc: "Split with the new panel on the left." },
+                PropDoc { name: "Right", type_str: "", doc: "Split with the new panel on the right." },
+                PropDoc { name: "Top", type_str: "", doc: "Split with the new panel on top." },
+                PropDoc { name: "Bottom", type_str: "", doc: "Split with the new panel on the bottom." },
+                PropDoc { name: "Center", type_str: "", doc: "Join the target's own tab group instead of splitting." },
+            ],
+        }),
+        "PanelId" => Some(TypeDoc {
+            description: "A stable key identifying one dockable panel -- a String, not an Entity, since entities aren't stable across app restarts.",
+            fields: &[
+                PropDoc { name: "0", type_str: "String", doc: "The panel's stable identity." },
+            ],
+        }),
+        "DockPanels" => Some(TypeDoc {
+            description: "The panels a `DockArea` can show -- built from a `Vec<PanelDef>`, each holding a stable id, display title, and a factory closure that lazily builds that panel's content (only ever called for the active tab of each group).",
+            fields: &[],
+        }),
         "ImageListItem" => Some(TypeDoc {
             description: "One tile within an `ImageList`.",
             fields: &[

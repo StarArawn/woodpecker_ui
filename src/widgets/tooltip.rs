@@ -85,6 +85,7 @@ fn render(
     mut query: Query<(
         &Tooltip,
         &TooltipStyles,
+        &WoodpeckerStyle,
         &PassedChildren,
         &mut WidgetChildren,
         &WidgetLayout,
@@ -93,7 +94,7 @@ fn render(
     mut state_query: Query<&mut TooltipState>,
     layout_query: Query<(&WidgetLayout, Has<WoodpeckerApp>)>,
 ) {
-    let Ok((tooltip, tooltip_styles, trigger, mut children, layout, mut transition)) =
+    let Ok((tooltip, tooltip_styles, own_style, trigger, mut children, layout, mut transition)) =
         query.get_mut(**current_widget)
     else {
         return;
@@ -131,7 +132,33 @@ fn render(
 
     children.add::<Element>((
         Element,
-        WoodpeckerStyle::default(),
+        // `width`/`height`/`flex_grow`/`flex_basis` copied from Tooltip's *own* declared style
+        // (whatever the caller actually set there), not `WoodpeckerStyle::default()`
+        // (`Auto`/`Auto`) -- trigger content that itself wants `width: 100%`/`height: 100%`
+        // (e.g. a bar chart segment sized to fill its cell) has nothing to resolve that
+        // percentage against inside an `Auto`-sized wrapper and collapses to nothing.
+        //
+        // Deliberately propagates the *declared* sizing intent, not Tooltip's last-resolved
+        // pixel size (`WidgetLayout`) -- that was this fix's first attempt, and it introduces a
+        // feedback loop for the common `Auto`-sized case (any ordinary inline trigger, e.g. this
+        // crate's own chart legend rows): Tooltip's own box is `Auto`-sized *from* trigger's
+        // natural content size, so pinning trigger's size *to* Tooltip's last-resolved size
+        // means each frame's (possibly-too-small, e.g. on first mount) result becomes the next
+        // frame's hard constraint, with nothing ever able to grow back out of an initial
+        // undersized measurement -- confirmed via a live repro, garbled/overlapping legend text
+        // that never recovered. Propagating the declared value instead of the resolved one
+        // sidesteps that entirely: `Auto` copied onto trigger is a no-op (identical to the
+        // original, pre-fix behavior), while `Percentage`/`Pixels`/`flex_grow` copied onto
+        // trigger resolves against Tooltip's own box the normal way flexbox always has -- and
+        // that box's own size came from *its* parent, never circularly from trigger itself.
+        WoodpeckerStyle {
+            width: own_style.width,
+            height: own_style.height,
+            flex_grow: own_style.flex_grow,
+            flex_shrink: own_style.flex_shrink,
+            flex_basis: own_style.flex_basis,
+            ..Default::default()
+        },
         Pickable::default(),
         trigger.0.clone(),
     ));

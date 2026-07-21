@@ -192,6 +192,64 @@ pub(super) fn demo_chart() -> WidgetChildren {
     ))
 }
 
+pub(super) fn demo_bar_chart() -> WidgetChildren {
+    WidgetChildren::default().with_child::<Element>((
+        Element,
+        WoodpeckerStyle {
+            width: 420.0.into(),
+            ..Default::default()
+        },
+        WidgetChildren::default().with_child::<BarChart>((BarChart {
+            categories: vec![
+                "Mon".into(),
+                "Tue".into(),
+                "Wed".into(),
+                "Thu".into(),
+                "Fri".into(),
+            ],
+            series: vec![
+                BarSeries::new(
+                    "Revenue",
+                    vec![12.0, 18.0, 14.0, 22.0, 20.0],
+                    Srgba::new(0.35, 0.55, 0.9, 1.0).into(),
+                ),
+                BarSeries::new(
+                    "Costs",
+                    vec![8.0, 9.0, 10.0, 11.0, 12.0],
+                    Srgba::new(0.9, 0.4, 0.35, 1.0).into(),
+                ),
+            ],
+            mode: BarMode::Grouped,
+            show_legend: true,
+        },)),
+    ))
+}
+
+pub(super) fn demo_area_chart() -> WidgetChildren {
+    WidgetChildren::default().with_child::<Element>((
+        Element,
+        WoodpeckerStyle {
+            width: 420.0.into(),
+            ..Default::default()
+        },
+        WidgetChildren::default().with_child::<AreaChart>((AreaChart {
+            series: vec![
+                AreaSeries::new(
+                    "Organic",
+                    vec![10.0, 14.0, 12.0, 18.0, 22.0, 20.0],
+                    Srgba::new(0.35, 0.55, 0.9, 1.0).into(),
+                ),
+                AreaSeries::new(
+                    "Paid",
+                    vec![4.0, 6.0, 5.0, 8.0, 9.0, 10.0],
+                    Srgba::new(0.4, 0.8, 0.5, 1.0).into(),
+                ),
+            ],
+            show_legend: true,
+        },)),
+    ))
+}
+
 pub(super) fn demo_timeline() -> WidgetChildren {
     WidgetChildren::default().with_child::<Element>((
         Element,

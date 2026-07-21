@@ -105,6 +105,7 @@ fn render(
         splitter_styles.color
     };
     styles.background_color = color;
+    styles.flex_shrink = 0.0;
     if splitter.vertical {
         styles.width = 4.0.into();
         if styles.height == Units::Auto {

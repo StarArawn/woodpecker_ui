@@ -21,7 +21,7 @@ bevy_bsn = ["bevy/bevy_scene"]
 ansi-parser = "0.9.1"
 autumnus = "0.3.2"
 bevy-trait-query = "0.19"
-bevy_vello = { path = "../bevy_vello_bevy19", features = ["text", "default_font"] }
+bevy_vello = { git = "https://github.com/linebender/bevy_vello", rev = "6eb7f13e1ae46216d271c65b78e6ac461866cfbb", features = ["text", "default_font"] }
 bytemuck = "1.23.0"
 dioxus-devtools = { version = "0.7.0-alpha.0", optional = true }
 image = "0.24"

@@ -11,6 +11,7 @@ pub(crate) enum GuideTopic {
     LayoutAndUnits,
     Composition,
     PortalsAndOverlays,
+    Docking,
 }
 
 pub(crate) const GUIDE_TOPICS: &[(&str, GuideTopic)] = &[
@@ -23,6 +24,7 @@ pub(crate) const GUIDE_TOPICS: &[(&str, GuideTopic)] = &[
     ("Layout & Units", GuideTopic::LayoutAndUnits),
     ("Composition", GuideTopic::Composition),
     ("Portals & Overlays", GuideTopic::PortalsAndOverlays),
+    ("Docking", GuideTopic::Docking),
 ];
 
 pub(crate) fn guide_title(topic: GuideTopic) -> &'static str {
@@ -44,6 +46,7 @@ pub(crate) fn markdown_source(topic: GuideTopic) -> &'static str {
         GuideTopic::LayoutAndUnits => LAYOUT_AND_UNITS,
         GuideTopic::Composition => COMPOSITION,
         GuideTopic::PortalsAndOverlays => PORTALS_AND_OVERLAYS,
+        GuideTopic::Docking => DOCKING,
     }
 }
 
@@ -451,4 +454,57 @@ disappearing and cleans it up, since native Bevy despawn-cascade only ever follo
 > `WoodpeckerWindow` use internally to float above the page. It's worth understanding mainly so a
 > portaled widget's behavior (painting above siblings, surviving scroll clipping, but still
 > inheriting theme from where it was declared) makes sense.
+"#;
+
+const DOCKING: &str = r#"
+`DockArea` is a resizable, tabbed, redockable panel layout -- the kind of shell an editor or
+inspector-style tool UI needs, built entirely from primitives the rest of this guide already
+covers: `use_context` for shared state, `Change<T>` events from `Splitter`, and `.portal()` for
+floated panels (`DockArea` reuses `WoodpeckerWindow` directly for those, rather than building its
+own floating chrome).
+
+## Registering panels
+
+A caller never builds panel content up front. `DockArea::panels` takes a `DockPanels` wrapping a
+`Vec<PanelDef>`, each pairing a stable `PanelId` and title with a *factory* closure:
+
+```rust
+DockArea {
+    initial_tree: DockTree::single(PanelId::new("inspector")),
+    panels: DockPanels::new(vec![
+        PanelDef::new("inspector", "Inspector", |_id| my_inspector_panel()),
+    ]),
+}
+```
+
+The factory only runs for the *active* tab of each group -- a panel sitting behind another tab,
+or in a still-collapsed part of the tree, never pays to build its content at all.
+
+## Why a panel's own state survives being redocked
+
+Every panel's content is declared with `.with_key(panel_id)` at the point it's rendered. Dragging
+a tab to a new split or tab group changes *where* in the tree that key is rendered, but the key
+itself doesn't change -- so the framework's normal keyed-child reconciliation reuses the same
+entity, and whatever `use_state` that panel's own content set up (scroll position, expanded
+tree nodes, form input) survives the move untouched.
+
+## Reading the tree from outside
+
+`DockArea` owns its tree as a `DockTree` context, seeded once from `initial_tree` and mutated
+from then on by drag/redock/close. A caller wanting to inspect or reset the live layout (e.g. a
+"reset to default layout" button elsewhere in the app) reaches it the same way any descendant
+does:
+
+```rust
+if let Some(tree_entity) = hooks.get_context::<DockTree>(current_widget) {
+    if let Ok(mut tree) = tree_query.get_mut(tree_entity) {
+        *tree = DockTree::single(PanelId::new("inspector"));
+    }
+}
+```
+
+> There's no save/load-to-disk story yet -- `DockTree`/`PanelId` are deliberately kept
+> serialization-shaped (plain enums, string-keyed) even without a `Serialize` derive, so adding
+> that later doesn't need a rework, but today a fresh `DockArea` always starts from whatever
+> `initial_tree` the caller passes in.
 "#;

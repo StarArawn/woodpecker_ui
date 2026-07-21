@@ -220,9 +220,9 @@ impl WidgetChildren {
         &mut self,
         spawn_location: CurrentWidget,
         state_entity: Entity,
-        accept: impl Fn(&T) -> bool + Send + Sync + Clone + 'static,
+        accept: impl Fn(&T, &S) -> bool + Send + Sync + Clone + 'static,
         on_hover: impl Fn(&mut S, Option<bool>) + Send + Sync + Clone + 'static,
-        on_drop: impl Fn(&T, bool, &mut Commands) + Send + Sync + Clone + 'static,
+        on_drop: impl Fn(&T, bool, &S, &mut Commands) + Send + Sync + Clone + 'static,
     ) -> &mut Self {
         let accept_enter = accept.clone();
         let on_hover_enter = on_hover.clone();
@@ -237,7 +237,8 @@ impl WidgetChildren {
                 let Ok(payload) = dragged_query.get(trigger.dragged) else {
                     return;
                 };
-                on_hover_enter(&mut state, Some(accept_enter(payload)));
+                let valid = accept_enter(payload, &state);
+                on_hover_enter(&mut state, Some(valid));
             },
         );
 
@@ -261,13 +262,14 @@ impl WidgetChildren {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
                     return;
                 };
-                on_hover(&mut state, None);
 
                 let Ok(payload) = dragged_query.get(trigger.dropped) else {
+                    on_hover(&mut state, None);
                     return;
                 };
-                let valid = accept(payload);
-                on_drop(payload, valid, &mut commands);
+                let valid = accept(payload, &state);
+                on_hover(&mut state, None);
+                on_drop(payload, valid, &state, &mut commands);
             },
         );
 
@@ -279,9 +281,9 @@ impl WidgetChildren {
         mut self,
         spawn_location: CurrentWidget,
         state_entity: Entity,
-        accept: impl Fn(&T) -> bool + Send + Sync + Clone + 'static,
+        accept: impl Fn(&T, &S) -> bool + Send + Sync + Clone + 'static,
         on_hover: impl Fn(&mut S, Option<bool>) + Send + Sync + Clone + 'static,
-        on_drop: impl Fn(&T, bool, &mut Commands) + Send + Sync + Clone + 'static,
+        on_drop: impl Fn(&T, bool, &S, &mut Commands) + Send + Sync + Clone + 'static,
     ) -> Self {
         self.droppable(spawn_location, state_entity, accept, on_hover, on_drop);
         self

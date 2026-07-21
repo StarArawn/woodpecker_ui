@@ -44,6 +44,9 @@ pub(crate) fn story_demo(story: Story) -> WidgetChildren {
         Story::List => demo_list(),
         Story::Table => demo_table(),
         Story::Chart => demo_chart(),
+        Story::BarChart => demo_bar_chart(),
+        Story::AreaChart => demo_area_chart(),
+        Story::PieChart => demo_pie_chart(),
         Story::Timeline => demo_timeline(),
         Story::TreeView => demo_tree_view(),
         Story::Typography => demo_typography(),
@@ -71,6 +74,7 @@ pub(crate) fn story_demo(story: Story) -> WidgetChildren {
         Story::Splitter => demo_splitter(),
         Story::ColorPicker => demo_color_picker(),
         Story::Window => demo_window(),
+        Story::Dock => demo_dock(),
     }
 }
 

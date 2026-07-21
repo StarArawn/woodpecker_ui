@@ -465,3 +465,23 @@ pub(super) fn demo_modal() -> WidgetChildren {
     WidgetChildren::default().with_child::<ModalDemo>(ModalDemo)
 }
 
+pub(super) fn demo_pie_chart() -> WidgetChildren {
+    WidgetChildren::default().with_child::<Element>((
+        Element,
+        WoodpeckerStyle {
+            width: 320.0.into(),
+            ..Default::default()
+        },
+        WidgetChildren::default().with_child::<PieChart>((PieChart {
+            slices: vec![
+                PieSlice::new("Desktop", 52.0, Srgba::new(0.35, 0.55, 0.9, 1.0).into()),
+                PieSlice::new("Mobile", 34.0, Srgba::new(0.4, 0.8, 0.5, 1.0).into()),
+                PieSlice::new("Tablet", 14.0, Srgba::new(0.9, 0.7, 0.3, 1.0).into()),
+            ],
+            inner_radius: 40.0,
+            center_label: Some("100%".into()),
+            show_legend: true,
+        },)),
+    ))
+}
+
