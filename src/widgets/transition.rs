@@ -73,7 +73,7 @@ pub enum TransitionEasing {
 }
 
 impl TransitionEasing {
-    fn try_into_easing_function(&self) -> Option<EaseFunction> {
+    pub(crate) fn try_into_easing_function(&self) -> Option<EaseFunction> {
         match self {
             TransitionEasing::QuadraticIn => Some(EaseFunction::QuadraticIn),
             TransitionEasing::QuadraticOut => Some(EaseFunction::QuadraticOut),
@@ -219,4 +219,35 @@ pub(crate) fn update_transitions(mut query: Query<(&mut Transition, &mut Woodpec
         let new_styles = transition.update();
         *styles = new_styles;
     }
+}
+
+/// Snapshot of the last-diffed [`Transition::is_playing`] value for a widget entity.
+///
+/// `Transition` deliberately never opts into [`crate::diffable_prop::DiffableProp`]: its
+/// `start: Instant` field would make it compare as "changed" every frame while animating,
+/// when a widget should really only re-render when its animation starts or stops.
+#[derive(Component, Default)]
+pub(crate) struct PreviousTransitionPlaying(bool);
+
+/// Returns `true` (and updates the snapshot) if `entity` has a `Transition` component whose
+/// playing-state changed since the last check. A widget with no `Transition` at all is
+/// simply never affected by this check.
+pub(crate) fn diff_transition(world: &mut World, entity: Entity) -> bool {
+    let Some(transition) = world.get::<Transition>(entity) else {
+        return false;
+    };
+    let is_playing = transition.is_playing();
+
+    let changed = match world.get::<PreviousTransitionPlaying>(entity) {
+        Some(previous) => previous.0 != is_playing,
+        None => true,
+    };
+
+    if changed {
+        world
+            .entity_mut(entity)
+            .insert(PreviousTransitionPlaying(is_playing));
+    }
+
+    changed
 }

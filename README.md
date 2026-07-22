@@ -9,19 +9,39 @@
     <p>
 </h1>
 
-Woodpecker UI is a Bevy ECS driven user interface crate. Its designed to be easy to use and work seamlessly with the bevy game engine.
+Woodpecker UI is an ECS-first, reactive UI crate for the Bevy game engine. Widgets are just entities and components, layout is Taffy, rendering is [vello](https://github.com/linebender/bevy_vello), text is [Parley](https://github.com/linebender/parley), and the tree only re-renders the widgets that actually changed.
 
 # Features
-  - ECS **first** UI
-  - Easy to use widget systems
-  - Flexable UI rendering using [vello](https://github.com/linebender/bevy_vello)
-  - [Taffy](https://github.com/DioxusLabs/taffy) layouting
-  - [Parley](https://github.com/linebender/parley) for text layouting and editing
-  - A few helper widgets to get you started
+  - **ECS first** — widgets are entities/components, no external retained UI tree to keep in sync with the game world
+  - **Plain Rust control flow** — `for`, `if`, `match` all just work; no template/macro DSL to learn
+  - **[vello](https://github.com/linebender/bevy_vello) rendering** with box shadows, clipping, SVGs, and 9-patch images
+  - **[Taffy](https://github.com/DioxusLabs/taffy)** flexbox + grid layouting
+  - **[Parley](https://github.com/linebender/parley)** text layout, rich text, and multi-line text editing
+  - **React-style hooks** — `use_state`, `use_context`, `use_effect`, `use_memo`, `use_previous`, `use_timer`, `use_interval`, `use_debounce`
+  - **Theming** system with dark/light and custom themes
+  - **Animation** — spring-based transitions and keyframe timelines
+  - Drag & drop, gamepad navigation, and keyboard tab-focus navigation built in
+  - Devtools and a `metrics` feature for inspecting the widget tree at runtime
+  - Optional [Bevy BSN](https://github.com/bevyengine/bevy/issues/14437) scene support (`bevy_bsn` feature)
+  - Experimental hot reloading via [Dioxus hot patching](https://github.com/DioxusLabs/dioxus)
+  - 60+ ready-made widgets (see below) to get you started
 
+# Widget catalog
+  - **Inputs**: Button, IconButton, Checkbox, Radio Group, Toggle, Toggle Button, Slider, Number Input, Text Box, Combo Box, Dropdown, Date Picker, Color Picker, Rating
+  - **Navigation**: App Bar, Bottom Navigation, Navigation Rail, Breadcrumbs, Tabs, Drawer, Pagination, Stepper, Menu
+  - **Data display**: Table, Tree View, Virtual List, List, Line Chart, Timeline, Typography, Markdown (with syntax highlighting), Avatar, Badge, Chip, Image List
+  - **Feedback & overlays**: Alert, Toast, Modal, Popover, Tooltip, Skeleton, Spinner, Progress Bar, Speed Dial
+  - **Layout**: Element, Paper, Card, Divider, Clip, Scroll Box, Splitter, Masonry, Accordion, Transfer List, Windows
+
+Run `cargo run --example gallery` for a Storybook-style, in-app catalog of every widget above plus a built-in guide covering architecture, hooks, styling/theming, layout, and composition.
 
 ### Running on desktop:
 `cargo run --example todo`
+
+Other showcase examples worth a look:
+  - `cargo run --example gallery` — interactive widget catalog and guide
+  - `cargo run --example dashboard` — a full admin dashboard app
+  - `cargo run --example game_ui` — an RPG-style HUD/inventory/character screen UI
 
 ### Running on WASM:
 1. `cargo install wasm-server-runner`
@@ -33,6 +53,9 @@ Woodpecker UI is a Bevy ECS driven user interface crate. Its designed to be easy
 2. `dx serve --example counter --hotpatch --features="hotreload"`
 
 Hot reloading is very lightweight and wont hinder your performance in release mode at all! Currently only the todo example is wired up for hot reloading but any widget render system can be hot reloaded with the #[hot] macro!
+
+### Bevy BSN support
+Enable the `bevy_bsn` feature to declare widget trees using Bevy's [BSN](https://github.com/bevyengine/bevy/issues/14437) scene syntax instead of (or alongside) the builder API. See [examples/bsn.rs](examples/bsn.rs) for a complete example.
 
 ### Found a bug? Please open an issue!
 
@@ -60,26 +83,22 @@ fn startup(
     let font = asset_server.load("Outfit/static/Outfit-Regular.ttf");
     font_manager.add(&font);
 
-    let root = commands
-        .spawn((
-            WoodpeckerApp,
-            WidgetChildren::default().with_child::<Element>((
-                Element,
-                WoodpeckerStyle {
-                    font_size: 50.0,
-                    color: Srgba::RED.into(),
-                    margin: Edge::all(10.0),
-                    font: Some(font.id()),
-                    ..Default::default()
-                },
-                WidgetRender::Text {
-                    content: "Hello World! I am Woodpecker UI!".into(),
-                    word_wrap: false,
-                },
-            )),
-        ))
-        .id();
-    ui_context.set_root_widget(root);
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands
+        .entity(*root_widget)
+        .insert(WidgetChildren::default().with_child::<Element>((
+            Element,
+            WoodpeckerStyle {
+                font_size: 50.0,
+                color: Srgba::RED.into(),
+                margin: Edge::all(10.0),
+                font: Some(font.id()),
+                ..Default::default()
+            },
+            WidgetRender::Text {
+                content: "Hello World! I am Woodpecker UI!".into(),
+            },
+        )));
 }
 ```
 
@@ -90,15 +109,15 @@ fn startup(
 use bevy::prelude::*;
 use woodpecker_ui::prelude::*;
 
-#[derive(Component, PartialEq, Default, Debug, Clone)]
+#[derive(Component, PartialEq, Default, Debug, Clone, Reflect)]
+#[reflect(Component, DiffableProp, PartialEq)]
 pub struct CounterState {
     count: u32,
 }
 
 #[derive(Widget, Component, Reflect, PartialEq, Default, Debug, Clone)]
+#[reflect(Component, DiffableProp, PartialEq)]
 #[auto_update(render)]
-#[props(CounterWidget)]
-#[state(CounterState)]
 #[require(WoodpeckerStyle, WidgetChildren)]
 pub struct CounterWidget {
     initial_count: u32,
@@ -148,7 +167,6 @@ fn render(
                 },
                 WidgetRender::Text {
                     content: format!("Current Count: {}", state.count),
-                    word_wrap: false,
                 },
             ))
             .with_child::<WButton>((
@@ -162,13 +180,12 @@ fn render(
                     },
                     WidgetRender::Text {
                         content: "Increase Count".into(),
-                        word_wrap: false,
                     },
                 )),
             ))
             .with_observe(
                 current_widget,
-                move |_: Trigger<Pointer<Click>>, mut query: Query<&mut CounterState>| {
+                move |_: On<Pointer<Click>>, mut query: Query<&mut CounterState>| {
                     let Ok(mut state) = query.get_mut(state_entity) else {
                         return;
                     };
@@ -200,46 +217,19 @@ fn startup(
     let font = asset_server.load("Outfit/static/Outfit-Regular.ttf");
     font_manager.add(&font);
 
-    let root = commands
-        .spawn((
-            WoodpeckerApp,
-            WidgetChildren::default().with_child::<CounterWidget>((
-                CounterWidget { initial_count: 0 },
-                WoodpeckerStyle {
-                    width: Units::Percentage(100.0),
-                    ..Default::default()
-                },
-            )),
-        ))
-        .id();
-    ui_context.set_root_widget(root);
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands
+        .entity(*root_widget)
+        .insert(WidgetChildren::default().with_child::<CounterWidget>((
+            CounterWidget { initial_count: 0 },
+            WoodpeckerStyle {
+                width: Units::Percentage(100.0),
+                ..Default::default()
+            },
+        )));
 }
 ```
 </details>
-
-
-# Q and A
-
-## Q1. Why not use Bevy UI?
-  1. Bevy UI rendering leaves a lot to be desired. Woodpecker UI uses vello a newer rendering system for UI's. It supports everything that I was looking for in a UI renderer.
-  2. Bevy UI is designed to be an immediate mode UI similar to egui. Woodpecker UI is reactive and only changes the widget tree when a widget changes and in the future will only render to the screen when changed.
-
-## Q2. Why not use one of the other UI libraries out there?
-  1. A lot of times they don't integrate into the ECS very nicely. They tend to want ownership of the data which means it must live outside of bevy's ECS world. I have problems with this.
-  2. Non-Rust syntax. Woodpecker UI uses rust syntax for everything, a for loop is a for loop, an if statement is an if statement. There is no custom wrappers for these things in Woodpecker UI. Which makes writing code a lot easier! See: [examples/todo/list.rs Line 53](https://github.com/StarArawn/woodpecker_ui/tree/main/examples/todo/list.rs#L53)
-  3. They use Bevy UI. See the Bevy UI section above.
-
-## Q3. What about Kayak UI?
-You might notice the syntax used here is quite similar to Kayak UI, but Kayak UI suffered from overly complicated internals. It made contributing to Kayak UI much too difficult and caused quite a few fundamental bugs. In Woodpecker UI I took what made Kayak UI great and made the backend much much simpler. As an example the primiary system that runs the UI was over 1k lines in Kayak and in Woodpecker its less than 200! This should help foster collaborative development and encourage people to help fix bugs!
-
-## Q4. Why not wait for the next-gen Bevy UI? Why make your own?
-  1. There is no timeline for when this might come out.
-  2. There are a lot of conflicting opinions about how the next-gen Bevy UI should work. In my opinion there isn't a clear direction(yet although its starting to form). How does it render things? What about input eventing? I hope/believe this will change for the better!
-  3. So far I'm personally not a huge fan of using scenes and also the new BSN macro. From what I've seen it has some problems around not using rust syntax, data management, and although you can opt out of using BSN you cannot opt out of using scenes and entity patches for UI. Although thats not completely clear yet.
-  4. I apparently really like writing UI crates.
-
-## Q5. Should I use Woodpecker UI?
-I would look at the features and like any other crate that you pick you should weigh your options and pick the one best suited to your needs. I don't claim that Woodpecker UI will fit any need and its really up to the individual to decide.
 
 ## License
 

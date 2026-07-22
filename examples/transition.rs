@@ -23,15 +23,14 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
         ..Default::default()
     };
 
-    let root = commands
-        .spawn((
-            WoodpeckerApp,
-            WoodpeckerStyle {
-                font_size: 50.0,
-                color: Srgba::RED.into(),
-                ..Default::default()
-            },
-            WidgetChildren::default()
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands.entity(*root_widget).insert((
+        WoodpeckerStyle {
+            font_size: 50.0,
+            color: Srgba::RED.into(),
+            ..Default::default()
+        },
+        WidgetChildren::default()
                 .with_child::<Element>((
                     Element,
                     WidgetRender::Quad,
@@ -40,15 +39,16 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                         timeout: 500.0,
                         looping: true,
                         style_a: WoodpeckerStyle {
-                            ..quad_styles.clone()
+                            ..quad_styles
                         },
                         style_b: WoodpeckerStyle {
-                            left: Units::Pixels(500.0).into(),
-                            ..quad_styles.clone()
+                            left: Units::Pixels(500.0),
+                            ..quad_styles
                         },
                         ..Default::default()
                     },
                 ))
+                .with_key("quad_quadratic")
                 .with_child::<Element>((
                     Element,
                     WidgetRender::Quad,
@@ -58,16 +58,17 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                         looping: true,
                         style_a: WoodpeckerStyle {
                             top: 175.0.into(),
-                            ..quad_styles.clone()
+                            ..quad_styles
                         },
                         style_b: WoodpeckerStyle {
                             top: 175.0.into(),
-                            left: Units::Pixels(500.0).into(),
-                            ..quad_styles.clone()
+                            left: Units::Pixels(500.0),
+                            ..quad_styles
                         },
                         ..Default::default()
                     },
                 ))
+                .with_key("quad_cubic")
                 .with_child::<Element>((
                     Element,
                     WidgetRender::Quad,
@@ -77,22 +78,31 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                         looping: true,
                         style_a: WoodpeckerStyle {
                             top: 300.0.into(),
-                            ..quad_styles.clone()
+                            ..quad_styles
                         },
                         style_b: WoodpeckerStyle {
                             top: 300.0.into(),
-                            left: Units::Pixels(500.0).into(),
+                            left: Units::Pixels(500.0),
                             background_color: Srgba::new(0.0, 0.0, 1.0, 1.0).into(),
-                            ..quad_styles.clone()
+                            ..quad_styles
                         },
                         ..Default::default()
                     },
                 ))
+                .with_key("quad_circular")
                 // With clipping!
                 .with_child::<Clip>((
                     Clip,
                     WidgetChildren::default().with_child::<Element>((
                         Element,
+                        WoodpeckerStyle {
+                            // Without this, the text wraps to fit the clip's growing width
+                            // instead of staying on one line and getting visually cut off by
+                            // it -- which defeats the point of this being the "with clipping"
+                            // demo (see the "with no clipping" one below for the wrap case).
+                            text_wrap: TextWrap::None,
+                            ..Default::default()
+                        },
                         WidgetRender::Text {
                             content: "Hello, I am some random long text that gets clipped by a transition! :D".into(),
                         },
@@ -104,16 +114,17 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                         style_a: WoodpeckerStyle {
                             width: 0.0.into(),
                             top: 425.0.into(),
-                            ..quad_styles.clone()
+                            ..quad_styles
                         },
                         style_b: WoodpeckerStyle {
                             top: 425.0.into(),
                             width: 1000.0.into(),
-                            ..quad_styles.clone()
+                            ..quad_styles
                         },
                         ..Default::default()
                     },
                 ))
+                .with_key("clipped_text")
                 // With no clipping!
                 .with_child::<Element>((
                     Element,
@@ -134,17 +145,16 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                         style_a: WoodpeckerStyle {
                             width: 0.0.into(),
                             top: 450.0.into(),
-                            ..quad_styles.clone()
+                            ..quad_styles
                         },
                         style_b: WoodpeckerStyle {
                             top: 450.0.into(),
                             width: 500.0.into(),
-                            ..quad_styles.clone()
+                            ..quad_styles
                         },
                         ..Default::default()
                     },
-                )),
-        ))
-        .id();
-    ui_context.set_root_widget(root);
+                ))
+                .with_key("wrapped_text"),
+    ));
 }

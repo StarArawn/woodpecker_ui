@@ -20,10 +20,10 @@ fn startup(
     let font = asset_server.load("Outfit/static/Outfit-Regular.ttf");
     font_manager.add(&font);
 
-    let root = commands
-        .spawn((
-            WoodpeckerApp,
-            WidgetChildren::default().with_child::<Modal>((
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands.entity(*root_widget).insert(
+        WidgetChildren::default()
+            .with_child::<Modal>((
                 Modal {
                     visible: true,
                     title: "Richtext example".into(),
@@ -58,10 +58,9 @@ fn startup(
                         )),
                     )),
                 ),
-            )),
-        ))
-        .id();
-    ui_context.set_root_widget(root);
+            ))
+            .with_child::<OverlayRootWidget>(OverlayRootWidget),
+    );
 }
 
 pub const CODE_BLOCK: &str = r#"
@@ -87,26 +86,23 @@ pub const CODE_BLOCK: &str = r#"
         let font = asset_server.load("Outfit/static/Outfit-Regular.ttf");
         font_manager.add(&font);
 
-        let root = commands
-            .spawn((
-                WoodpeckerApp,
-                WidgetChildren::default().with_child::<Element>((
-                    Element,
-                    WoodpeckerStyle {
-                        font_size: 50.0,
-                        color: Srgba::RED.into(),
-                        margin: Edge::all(10.0),
-                        font: Some(font.id()),
-                        ..Default::default()
-                    },
-                    WidgetRender::RichText {
-                        content: RichText::new()
-                            .with_color_text("Hello World! ", Srgba::BLUE.into())
-                            .with_color_text("I am Woodpecker UI!", Srgba::RED.into()),
-                    },
-                )),
-            ))
-            .id();
-        ui_context.set_root_widget(root);
+        let root_widget = ui_context.spawn_root(&mut commands);
+        commands.entity(*root_widget).insert(
+            WidgetChildren::default().with_child::<Element>((
+                Element,
+                WoodpeckerStyle {
+                    font_size: 50.0,
+                    color: Srgba::RED.into(),
+                    margin: Edge::all(10.0),
+                    font: Some(font.id()),
+                    ..Default::default()
+                },
+                WidgetRender::RichText {
+                    content: RichText::new()
+                        .with_color_text("Hello World! ", Srgba::BLUE.into())
+                        .with_color_text("I am Woodpecker UI!", Srgba::RED.into()),
+                },
+            )),
+        );
     }
 "#;

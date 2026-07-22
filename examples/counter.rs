@@ -1,15 +1,15 @@
 use bevy::prelude::*;
 use woodpecker_ui::prelude::*;
 
-#[derive(Component, PartialEq, Default, Debug, Clone)]
+#[derive(Component, PartialEq, Default, Debug, Clone, Reflect)]
+#[reflect(Component, DiffableProp, PartialEq)]
 pub struct CounterState {
     count: u32,
 }
 
 #[derive(Widget, Component, Reflect, PartialEq, Default, Debug, Clone)]
+#[reflect(Component, DiffableProp, PartialEq)]
 #[auto_update(render)]
-#[props(CounterWidget)]
-#[state(CounterState)]
 #[require(WoodpeckerStyle, WidgetChildren)]
 pub struct CounterWidget {
     initial_count: u32,
@@ -78,7 +78,7 @@ fn render(
             ))
             .with_observe(
                 current_widget,
-                move |_: Trigger<Pointer<Click>>, mut query: Query<&mut CounterState>| {
+                move |_: On<Pointer<Click>>, mut query: Query<&mut CounterState>| {
                     let Ok(mut state) = query.get_mut(state_entity) else {
                         return;
                     };
@@ -112,17 +112,14 @@ fn startup(
     let font = asset_server.load("Outfit/static/Outfit-Regular.ttf");
     font_manager.add(&font);
 
-    let root = commands
-        .spawn((
-            WoodpeckerApp,
-            WidgetChildren::default().with_child::<CounterWidget>((
-                CounterWidget { initial_count: 0 },
-                WoodpeckerStyle {
-                    width: Units::Percentage(100.0),
-                    ..Default::default()
-                },
-            )),
-        ))
-        .id();
-    ui_context.set_root_widget(root);
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands
+        .entity(*root_widget)
+        .insert(WidgetChildren::default().with_child::<CounterWidget>((
+            CounterWidget { initial_count: 0 },
+            WoodpeckerStyle {
+                width: Units::Percentage(100.0),
+                ..Default::default()
+            },
+        )));
 }

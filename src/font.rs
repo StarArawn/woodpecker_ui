@@ -33,8 +33,13 @@ pub enum TextAlign {
 /// Internally this uses cosmic text to layout and measure text.
 #[derive(Resource)]
 pub struct FontManager {
-    font_data: HashMap<Handle<VelloFont>, Vec<u8>>,
-    vello_to_family: HashMap<Handle<VelloFont>, String>,
+    font_data: HashMap<AssetId<VelloFont>, Vec<u8>>,
+    // `pub(crate)` (rather than private) solely so layout system tests can register a
+    // placeholder family without needing a real font asset loaded through `load_fonts` --
+    // parley falls back to a system font if the named family isn't actually registered via
+    // `font_cx.collection.register_fonts`, which is fine for testing that measurements
+    // respond to wrap width, not for testing any specific font's metrics.
+    pub(crate) vello_to_family: HashMap<AssetId<VelloFont>, String>,
     fonts: HashSet<Handle<VelloFont>>,
     /// The parley font context for parley shaping/etc..
     pub font_cx: parley::FontContext,
@@ -65,10 +70,7 @@ impl FontManager {
 
     /// Retrieves the font family name.
     pub fn get_family(&self, vello_font: &AssetId<VelloFont>) -> String {
-        self.vello_to_family
-            .get(&Handle::Weak(*vello_font))
-            .unwrap()
-            .clone()
+        self.vello_to_family.get(vello_font).unwrap().clone()
     }
 
     /// Adds a font handle to the font manager to keep it alive.
@@ -84,11 +86,18 @@ impl FontManager {
         layout: &WidgetLayout,
         default_font: &DefaultFont,
     ) -> Option<Vec2> {
-        measure_text(text, styles, self, default_font, layout, Vec2::splat(1.0)).and_then(|m| {
-            match m {
-                LayoutMeasure::Fixed(fixed) => Some(fixed.size),
-                _ => None,
-            }
+        measure_text(
+            text,
+            styles,
+            self,
+            default_font,
+            layout,
+            Vec2::splat(1.0),
+            false,
+        )
+        .and_then(|m| match m {
+            LayoutMeasure::Fixed(fixed) => Some(fixed.size),
+            _ => None,
         })
     }
 }
@@ -96,7 +105,7 @@ impl FontManager {
 /// Loads vello font assets into the font manager.
 pub(crate) fn load_fonts(
     mut font_manager: ResMut<FontManager>,
-    mut event_reader: EventReader<AssetEvent<VelloFont>>,
+    mut event_reader: MessageReader<AssetEvent<VelloFont>>,
     assets: Res<Assets<VelloFont>>,
 ) {
     for event in event_reader.read() {
@@ -130,11 +139,9 @@ pub(crate) fn load_fonts(
                 None,
             );
 
-            font_manager
-                .vello_to_family
-                .insert(Handle::Weak(*id), font_family);
+            font_manager.vello_to_family.insert(*id, font_family);
 
-            font_manager.font_data.insert(Handle::Weak(*id), font_data);
+            font_manager.font_data.insert(*id, font_data);
         }
     }
 }

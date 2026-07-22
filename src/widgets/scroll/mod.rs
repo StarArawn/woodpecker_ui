@@ -10,6 +10,7 @@ use bevy::prelude::*;
 
 /// Context data provided by a [`ScrollBox`](crate::prelude::ScrollBox) widget
 #[derive(Component, Default, Reflect, Debug, Copy, Clone, PartialEq)]
+#[reflect(Component, DiffableProp, PartialEq)]
 pub struct ScrollContext {
     pub(super) scroll_x: f32,
     pub(super) scroll_y: f32,
@@ -79,6 +80,18 @@ impl ScrollContext {
         self.mode
     }
 
+    /// The scroll box's own viewport width -- i.e. the visible window, not the (possibly
+    /// larger) content. Consumers windowing their own content against this scroll position
+    /// (see `Table::virtualized`) need this to know how much is actually on screen.
+    pub fn viewport_width(&self) -> f32 {
+        self.scrollbox_width
+    }
+
+    /// The scroll box's own viewport height. See [`Self::viewport_width`].
+    pub fn viewport_height(&self) -> f32 {
+        self.scrollbox_height
+    }
+
     /// Set the scroll offset along the x-axis
     ///
     /// This automatically accounts for the scroll mode
@@ -133,8 +146,8 @@ impl ScrollContext {
 /// This is used by the other scrolling widgets so they can understand how to
 /// behave.
 #[derive(Component, Widget, Reflect, Default, PartialEq, Clone)]
+#[reflect(Component, DiffableProp, PartialEq, Clone)]
 #[auto_update(render)]
-#[props(ScrollContextProvider)]
 #[require(WidgetChildren, WoodpeckerStyle)]
 pub struct ScrollContextProvider {
     /// The initial scroll context
@@ -148,7 +161,7 @@ pub struct ScrollContextProvider {
 /// Allows you to attach a tag to the scroll or windowing context.
 /// This is useful for querying a specific context for
 /// manual control.
-#[derive(Clone, Reflect)]
+#[derive(Clone)]
 pub struct TaggedContext {
     pub(crate) f: Arc<dyn Fn(EntityCommands<'_>) + 'static + Send + Sync>,
 }
@@ -187,8 +200,16 @@ pub fn render(
         return;
     };
 
-    // Setup scroll context.
-    let entity = context.use_context(&mut commands, *current_widget, provider.initial_value);
+    // Setup scroll context. `use_own_context`, not `use_context` -- this widget's entire job
+    // is to create a *fresh* context for its own subtree (see its own doc comment), so it must
+    // never walk up and silently adopt an ancestor `ScrollContextProvider`'s context instead.
+    // `use_context`'s ordinary ancestor walk can't distinguish "the nearest provider is mine"
+    // from "the nearest provider is an unrelated ancestor's" -- nesting two
+    // `ScrollContextProvider`s (even indirectly, e.g. a scrollable panel inside an already-
+    // scrollable page) used to silently collapse both regions onto one shared scroll position,
+    // the same failure mode `VirtualList` hit and fixed the same way (see
+    // `HookHelper::use_own_context`'s doc comment).
+    let entity = context.use_own_context(&mut commands, *current_widget, provider.initial_value);
     if let Some(tag) = provider.tag.as_ref() {
         (tag.f)(commands.entity(entity));
     }

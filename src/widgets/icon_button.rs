@@ -1,10 +1,9 @@
 use crate::prelude::*;
 use bevy::prelude::*;
 
-use super::colors;
-
 /// A collection of styles for icon buttons.
-#[derive(Component, Clone, Copy, PartialEq)]
+#[derive(Component, Clone, Copy, PartialEq, Reflect)]
+#[reflect(Component, DiffableProp, PartialEq)]
 pub struct IconButtonStyles {
     /// Normal Styles
     pub normal: WoodpeckerStyle,
@@ -18,14 +17,28 @@ pub struct IconButtonStyles {
 
 impl Default for IconButtonStyles {
     fn default() -> Self {
+        Self::from_theme(&Theme::default())
+    }
+}
+
+impl ThemedStyle for IconButtonStyles {
+    fn from_theme(theme: &Theme) -> Self {
         let normal = WoodpeckerStyle {
-            background_color: colors::BACKGROUND_MID,
+            background_color: theme.background_mid,
+            border_radius: Corner::all(theme.control_radius),
+            // Without these, `justify_content`/`align_items` default to `None` (flex-start /
+            // stretch) -- a bare glyph child then sits top-left instead of centered. Easy to
+            // miss with small ASCII glyphs (plenty of whitespace hides it), impossible to miss
+            // with a Phosphor icon that fills nearly its whole line-height box (see
+            // `crate::icons`'s doc comment on the font's metrics).
+            justify_content: Some(WidgetAlignContent::Center),
+            align_items: Some(WidgetAlignItems::Center),
             ..Default::default()
         };
         Self {
             normal,
             hovered: WoodpeckerStyle {
-                background_color: colors::BACKGROUND_LIGHT,
+                background_color: theme.background_light,
                 ..normal
             },
             width: 32.0.into(),
@@ -34,17 +47,17 @@ impl Default for IconButtonStyles {
     }
 }
 
-#[derive(Component, Debug, Default, PartialEq, Clone)]
+#[derive(Component, Debug, Default, PartialEq, Clone, Reflect)]
+#[reflect(Component, DiffableProp, PartialEq)]
 pub struct IconButtonState {
     pub hovering: bool,
 }
 
 /// A generic button widget used for easy buttons!
 #[derive(Component, Widget, Default, Reflect, PartialEq, Clone)]
+#[reflect(Component, DiffableProp, PartialEq)]
 #[auto_update(render)]
-#[props(IconButton, IconButtonStyles)]
-#[state(IconButtonState)]
-#[require(WidgetRender = WidgetRender::Quad, WidgetChildren, WoodpeckerStyle = ButtonStyles::default().normal, IconButtonStyles, Pickable)]
+#[require(WidgetRender = WidgetRender::Quad, WidgetChildren, WoodpeckerStyle = IconButtonStyles::default().normal, IconButtonStyles, Pickable)]
 pub struct IconButton;
 
 pub fn render(
@@ -85,24 +98,12 @@ pub fn render(
         };
     }
 
-    commands
-        .entity(**current_widget)
-        .observe(
-            move |_: Trigger<Pointer<Over>>, mut state_query: Query<&mut IconButtonState>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
-                state.hovering = true;
-            },
-        )
-        .observe(
-            move |_: Trigger<Pointer<Out>>, mut state_query: Query<&mut IconButtonState>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
-                state.hovering = false;
-            },
-        );
+    children.self_hover_state(
+        *current_widget,
+        state_entity,
+        SystemCursorIcon::Pointer,
+        |state: &mut IconButtonState, hovering| state.hovering = hovering,
+    );
 
     children.apply(current_widget.as_parent());
 }

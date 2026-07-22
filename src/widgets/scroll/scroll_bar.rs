@@ -1,19 +1,41 @@
-use crate::{picking_backend::compute_letterboxed_transform, prelude::*};
-use bevy::{prelude::*, window::PrimaryWindow};
-// use bevy_mod_picking::{
-//     events::{Click, Drag, DragEnd, DragStart, Drop, Pointer},
-//     prelude::{ListenerMut, On, Pickable},
-//     PickableBundle,
-// };
+use crate::prelude::*;
+use bevy::prelude::*;
 
 use super::{map_range, ScrollContext};
 
+/// [`ScrollBar`]'s themed default colors, used whenever `thumb_color`/`track_color` isn't
+/// explicitly set on the widget itself. A separate sibling component (rather than baking these
+/// defaults directly into `render()`) so they live-resync on a [`Theme`] swap -- see
+/// [`ThemeRegisterExt::register_themed_style`].
+#[derive(Component, Reflect, Clone, Copy, PartialEq)]
+#[reflect(Component, DiffableProp, PartialEq)]
+pub struct ScrollBarStyles {
+    /// Default thumb color, used when `ScrollBar::thumb_color` is `None`.
+    pub thumb_color: Color,
+    /// Default track color, used when `ScrollBar::track_color` is `None`.
+    pub track_color: Color,
+}
+
+impl Default for ScrollBarStyles {
+    fn default() -> Self {
+        Self::from_theme(&Theme::default())
+    }
+}
+
+impl ThemedStyle for ScrollBarStyles {
+    fn from_theme(theme: &Theme) -> Self {
+        Self {
+            thumb_color: theme.background_light,
+            track_color: theme.dark_background.with_alpha(0.4),
+        }
+    }
+}
+
 /// [`ScrollBar`] widget
 #[derive(Component, Widget, Reflect, Default, Debug, PartialEq, Clone)]
+#[reflect(Component, DiffableProp, PartialEq)]
 #[auto_update(render)]
-#[props(ScrollBar, WidgetLayout)]
-#[context(ScrollContext)]
-#[require(WoodpeckerStyle, WidgetChildren)]
+#[require(WoodpeckerStyle, WidgetChildren, WatchLayout, ScrollBarStyles)]
 pub struct ScrollBar {
     /// If true, disables the ability to drag
     pub disabled: bool,
@@ -39,13 +61,16 @@ pub fn render(
     current_widget: Res<CurrentWidget>,
     mut query: Query<(
         &ScrollBar,
+        &ScrollBarStyles,
         &mut WidgetChildren,
         &mut WoodpeckerStyle,
         &WidgetLayout,
     )>,
     context_query: Query<&ScrollContext>,
 ) {
-    let Ok((scrollbar, mut children, mut styles, layout)) = query.get_mut(**current_widget) else {
+    let Ok((scrollbar, scrollbar_styles, mut children, mut styles, layout)) =
+        query.get_mut(**current_widget)
+    else {
         return;
     };
     let context_entity =
@@ -65,12 +90,12 @@ pub fn render(
     let thickness = scrollbar.thickness;
     let thumb_color = scrollbar
         .thumb_color
-        .unwrap_or_else(|| Color::srgba(0.239, 0.258, 0.337, 1.0));
+        .unwrap_or(scrollbar_styles.thumb_color);
     let thumb_styles = scrollbar.thumb_styles;
     let thumb_thickness = scrollbar.thumb_thickness;
     let track_color = scrollbar
         .track_color
-        .unwrap_or_else(|| Color::srgba(0.1581, 0.1758, 0.191, 0.15));
+        .unwrap_or(scrollbar_styles.track_color);
     let track_styles = scrollbar.track_styles.unwrap_or(WoodpeckerStyle {
         background_color: track_color,
         border_radius: Corner::all(thickness / 2.0),
@@ -173,27 +198,26 @@ pub fn render(
                         WidgetRender::Quad,
                     ))
                     .with_observe(
-                        current_widget,|mut trigger: Trigger<Pointer<Click>>| {
+                        current_widget,|mut trigger: On<Pointer<Click>>| {
                         trigger.propagate(false);
                     })
                     .with_observe(
                         current_widget,
-                        |trigger: Trigger<Pointer<DragStart>>, mut commands: Commands| {
-                            commands.entity(trigger.target).insert(Pickable::IGNORE);
+                        |trigger: On<Pointer<DragStart>>, mut commands: Commands| {
+                            commands.entity(trigger.entity).insert(Pickable::IGNORE);
                         },
                     )
                     .with_observe(
                         current_widget,
-                        |trigger: Trigger<Pointer<DragEnd>>, mut commands: Commands| {
-                            commands.entity(trigger.target).insert(Pickable::default());
+                        |trigger: On<Pointer<DragEnd>>, mut commands: Commands| {
+                            commands.entity(trigger.entity).insert(Pickable::default());
                         },
                     )
                     .with_observe(
                         current_widget,
-                        move |trigger: Trigger<Pointer<Drag>>,
+                        move |trigger: On<Pointer<Drag>>,
                         layout_query: Query<&WidgetLayout>,
-                        window: Single<&Window, With<PrimaryWindow>>,
-                        camera: Query<&Camera, With<WoodpeckerView>>,
+                        pointer_world: PointerWorldPosition,
                          mut context_query: Query<&mut ScrollContext>| {
                             let Ok(mut context) = context_query.get_mut(context_entity) else {
                                 return;
@@ -203,17 +227,9 @@ pub fn render(
                                 return;
                             };
 
-                            let Some(camera) = camera.iter().next() else {
+                            let Some(cursor_pos_world) = pointer_world.convert(trigger.pointer_location.position) else {
                                 return;
                             };
-
-                            let (offset, size, _scale) = compute_letterboxed_transform(
-                                window.size(),
-                                camera.logical_target_size().unwrap(),
-                            );
-
-                            let cursor_pos_world =
-                                ((trigger.pointer_location.position - offset) / size) * camera.logical_target_size().unwrap();
 
 
                             // The size of the thumb as a percentage
@@ -249,10 +265,9 @@ pub fn render(
         WidgetRender::Quad,
     )).observe(
         current_widget,move |
-            trigger: Trigger<Pointer<Click>>, 
+            trigger: On<Pointer<Click>>,
             layout_query: Query<&WidgetLayout>,
-            window: Single<&Window, With<PrimaryWindow>>,
-            camera: Query<&Camera, With<WoodpeckerView>>,
+            pointer_world: PointerWorldPosition,
             mut context_query: Query<&mut ScrollContext>| {
         let Ok(mut context) = context_query.get_mut(context_entity) else {
             return;
@@ -262,17 +277,9 @@ pub fn render(
             return;
         };
 
-        let Some(camera) = camera.iter().next() else {
+        let Some(cursor_pos_world) = pointer_world.convert(trigger.pointer_location.position) else {
             return;
         };
-
-        let (offset, size, _scale) = compute_letterboxed_transform(
-            window.size(),
-            camera.logical_target_size().unwrap(),
-        );
-
-        let cursor_pos_world =
-            ((trigger.pointer_location.position - offset) / size) * camera.logical_target_size().unwrap();
 
         // --- Move Thumb --- //
         // Positional difference (scaled by thumb size)
@@ -292,4 +299,25 @@ pub fn render(
     });
 
     children.apply(current_widget.as_parent());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_theme_tracks_background_light_and_dark_background() {
+        let dark = ScrollBarStyles::from_theme(&Theme::dark());
+        assert_eq!(dark.thumb_color, Theme::dark().background_light);
+        assert_eq!(
+            dark.track_color,
+            Theme::dark().dark_background.with_alpha(0.4)
+        );
+
+        let light = ScrollBarStyles::from_theme(&Theme::light());
+        assert_ne!(
+            dark.thumb_color, light.thumb_color,
+            "from_theme must track the passed-in theme, not a fixed default"
+        );
+    }
 }

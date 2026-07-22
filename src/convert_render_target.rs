@@ -4,13 +4,13 @@ use bevy::render::extract_resource::{ExtractResource, ExtractResourcePlugin};
 use bevy::render::render_asset::RenderAssets;
 use bevy::render::render_resource::binding_types::{sampler, texture_2d};
 use bevy::render::render_resource::{
-    BindGroup, BindGroupEntries, BindGroupLayout, BindGroupLayoutEntries, CachedRenderPipelineId,
-    CommandEncoderDescriptor, FragmentState, PipelineCache, RenderPipelineDescriptor, ShaderStages,
-    TextureFormat, VertexState,
+    BindGroup, BindGroupEntries, BindGroupLayout, BindGroupLayoutDescriptor,
+    BindGroupLayoutEntries, CachedRenderPipelineId, CommandEncoderDescriptor, FragmentState,
+    PipelineCache, RenderPipelineDescriptor, ShaderStages, TextureFormat, VertexState,
 };
 use bevy::render::renderer::{RenderDevice, RenderQueue};
 use bevy::render::texture::GpuImage;
-use bevy::render::{Render, RenderApp, RenderSet};
+use bevy::render::{Render, RenderApp, RenderSystems};
 use bevy_vello::render::VelloRenderer;
 use bevy_vello::vello::peniko;
 use bevy_vello::vello::wgpu::{
@@ -31,9 +31,11 @@ impl Plugin for ConvertRenderTargetPlugin {
         render_app.init_resource::<ConvertPipeline>().add_systems(
             Render,
             (
-                prepare_bind_groups.in_set(RenderSet::Queue),
-                render.in_set(RenderSet::Queue).after(prepare_bind_groups),
-                override_images.in_set(RenderSet::Queue).after(render),
+                prepare_bind_groups.in_set(RenderSystems::Queue),
+                render
+                    .in_set(RenderSystems::Queue)
+                    .after(prepare_bind_groups),
+                override_images.in_set(RenderSystems::Queue).after(render),
             ),
         );
     }
@@ -42,7 +44,7 @@ impl Plugin for ConvertRenderTargetPlugin {
 #[derive(Resource, Default, ExtractResource, Clone)]
 pub struct RenderTargetImages {
     pub images: HashMap<Handle<Image>, Handle<Image>>,
-    pub vello_images: HashMap<Handle<Image>, peniko::Image>,
+    pub vello_images: HashMap<Handle<Image>, peniko::ImageBrush>,
     shaders: HashMap<TextureFormat, Handle<Shader>>,
 }
 
@@ -131,12 +133,18 @@ fn prepare_bind_groups(
             continue;
         };
 
-        if !pipeline.pipeline.contains_key(&org_image.texture_format) {
-            let Some(shader) = render_target_images.shaders.get(&org_image.texture_format) else {
+        if !pipeline
+            .pipeline
+            .contains_key(&org_image.texture_descriptor.format)
+        {
+            let Some(shader) = render_target_images
+                .shaders
+                .get(&org_image.texture_descriptor.format)
+            else {
                 continue;
             };
 
-            let texture_bind_group_layout = render_device.create_bind_group_layout(
+            let texture_bind_group_layout_descriptor = BindGroupLayoutDescriptor::new(
                 "texture converter bindgroup",
                 &BindGroupLayoutEntries::sequential(
                     ShaderStages::FRAGMENT,
@@ -146,18 +154,20 @@ fn prepare_bind_groups(
                     ),
                 ),
             );
+            let texture_bind_group_layout =
+                pipeline_cache.get_bind_group_layout(&texture_bind_group_layout_descriptor);
 
             pipeline.pipeline.insert(
-                org_image.texture_format,
+                org_image.texture_descriptor.format,
                 (
                     pipeline_cache.queue_render_pipeline(RenderPipelineDescriptor {
                         label: None,
-                        layout: vec![texture_bind_group_layout.clone()],
-                        push_constant_ranges: Vec::new(),
+                        layout: vec![texture_bind_group_layout_descriptor],
+                        immediate_size: 0,
                         vertex: VertexState {
                             shader: shader.clone(),
                             shader_defs: vec![],
-                            entry_point: "vertex".into(),
+                            entry_point: Some("vertex".into()),
                             buffers: vec![],
                         },
                         primitive: PrimitiveState {
@@ -169,7 +179,7 @@ fn prepare_bind_groups(
                         fragment: Some(FragmentState {
                             shader: shader.clone(),
                             shader_defs: vec![],
-                            entry_point: "fragment".into(),
+                            entry_point: Some("fragment".into()),
                             targets: vec![Some(ColorTargetState {
                                 format: TextureFormat::Rgba8Unorm,
                                 blend: None,
@@ -184,7 +194,10 @@ fn prepare_bind_groups(
         }
 
         // Create bind groups
-        let (_, bg_layout) = pipeline.pipeline.get(&org_image.texture_format).unwrap();
+        let (_, bg_layout) = pipeline
+            .pipeline
+            .get(&org_image.texture_descriptor.format)
+            .unwrap();
         bind_groups.bind_group.insert(
             render_target.clone(),
             render_device.create_bind_group(
@@ -224,7 +237,8 @@ fn render(
             continue;
         };
 
-        let Some((pipeline, _)) = pipeline.pipeline.get(&gpu_image.texture_format) else {
+        let Some((pipeline, _)) = pipeline.pipeline.get(&gpu_image.texture_descriptor.format)
+        else {
             continue;
         };
 
@@ -236,6 +250,7 @@ fn render(
             label: Some("Convert image pass"),
             color_attachments: &[Some(RenderPassColorAttachment {
                 view: &conv_image.texture_view,
+                depth_slice: None,
                 resolve_target: None,
                 ops: Operations {
                     load: bevy::render::render_resource::LoadOp::Clear(Color::RED),
@@ -245,6 +260,7 @@ fn render(
             depth_stencil_attachment: None,
             timestamp_writes: None,
             occlusion_query_set: None,
+            multiview_mask: None,
         });
 
         pass.set_pipeline(pipeline);
@@ -273,7 +289,7 @@ fn override_images(
         };
 
         renderer.override_image(
-            image,
+            &image.image,
             Some(TexelCopyTextureInfoBase {
                 texture: (*gpu_image.texture).clone(),
                 mip_level: 0,

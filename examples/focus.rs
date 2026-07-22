@@ -35,7 +35,7 @@ fn focus_render(
 
     // For loops just like regular rust syntax! No need for weirdness here.
     // You can also use iterators no issues!
-    for _ in 0..5 {
+    for i in 0..5 {
         children
             .add::<FocusWidget>((
                 WidgetRender::Quad,
@@ -56,8 +56,8 @@ fn focus_render(
             ))
             .observe(
                 *entity,
-                |trigger: Trigger<Pointer<Over>>, mut query: Query<&mut FocusWidget>| {
-                    let Ok(mut widget) = query.get_mut(trigger.target) else {
+                |trigger: On<Pointer<Over>>, mut query: Query<&mut FocusWidget>| {
+                    let Ok(mut widget) = query.get_mut(trigger.entity) else {
                         return;
                     };
 
@@ -68,8 +68,8 @@ fn focus_render(
             )
             .observe(
                 *entity,
-                |trigger: Trigger<Pointer<Out>>, mut query: Query<&mut FocusWidget>| {
-                    let Ok(mut widget) = query.get_mut(trigger.target) else {
+                |trigger: On<Pointer<Out>>, mut query: Query<&mut FocusWidget>| {
+                    let Ok(mut widget) = query.get_mut(trigger.entity) else {
                         return;
                     };
 
@@ -80,8 +80,8 @@ fn focus_render(
             )
             .observe(
                 *entity,
-                |trigger: Trigger<WidgetFocus>, mut query: Query<&mut FocusWidget>| {
-                    let Ok(mut widget) = query.get_mut(trigger.target()) else {
+                |trigger: On<WidgetFocus>, mut query: Query<&mut FocusWidget>| {
+                    let Ok(mut widget) = query.get_mut(trigger.target) else {
                         return;
                     };
                     widget.focused = true;
@@ -90,17 +90,18 @@ fn focus_render(
             )
             .observe(
                 *entity,
-                |trigger: Trigger<WidgetBlur>, mut query: Query<&mut FocusWidget>| {
-                    let Ok(mut widget) = query.get_mut(trigger.target()) else {
+                |trigger: On<WidgetBlur>, mut query: Query<&mut FocusWidget>| {
+                    let Ok(mut widget) = query.get_mut(trigger.target) else {
                         return;
                     };
                     widget.focused = false;
                     widget.hovered = false;
                 },
             )
-            .observe(*entity, |trigger: Trigger<WidgetKeyboardCharEvent>| {
+            .observe(*entity, |trigger: On<WidgetKeyboardCharEvent>| {
                 info!("Widget {} got key {}!", trigger.target, trigger.c)
             });
+        children.add_key(i.to_string());
     }
     children.apply(entity.as_parent());
 }
@@ -135,7 +136,6 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
         WidgetChildren::default(),
     ));
 
-    let root = commands.spawn((WoodpeckerApp, root_children)).id();
-
-    ui_context.set_root_widget(root);
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands.entity(*root_widget).insert(root_children);
 }

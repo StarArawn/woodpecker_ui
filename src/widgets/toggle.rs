@@ -1,10 +1,8 @@
 use crate::prelude::*;
 use bevy::{
-    ecs::{change_detection::MaybeLocation, component::Tick},
+    ecs::change_detection::{MaybeLocation, Tick},
     prelude::*,
 };
-
-use super::colors;
 
 /// A toggle change event
 #[derive(Debug, Reflect, Clone)]
@@ -15,6 +13,7 @@ pub struct ToggleChanged {
 
 /// The state of the toggle button
 #[derive(Component, Debug, Reflect, PartialEq, Clone)]
+#[reflect(Component, DiffableProp, PartialEq)]
 pub struct ToggleState {
     /// Is hovering
     pub is_hovering: bool,
@@ -90,6 +89,7 @@ impl ToggleStyles {
 
 /// A collection of styles for the toggle widget
 #[derive(Component, Reflect, PartialEq, Clone)]
+#[reflect(Component, DiffableProp, PartialEq)]
 pub struct ToggleWidgetStyles {
     /// Background styles
     pub background: ToggleStyles,
@@ -99,26 +99,39 @@ pub struct ToggleWidgetStyles {
 
 impl Default for ToggleWidgetStyles {
     fn default() -> Self {
+        Self::from_theme(&Theme::default())
+    }
+}
+
+impl ThemedStyle for ToggleWidgetStyles {
+    fn from_theme(theme: &Theme) -> Self {
         let background_normal = WoodpeckerStyle {
-            background_color: colors::BACKGROUND_LIGHT,
+            background_color: theme.background_light,
             width: 34.0.into(),
             height: 14.0.into(),
             border_radius: Corner::all(8.0),
             ..Default::default()
         };
         let background_hovered = WoodpeckerStyle {
-            background_color: colors::BACKGROUND,
+            background_color: theme.background,
             ..background_normal
         };
         let background_checked = WoodpeckerStyle {
-            background_color: colors::PRIMARY_LIGHT,
+            background_color: theme.primary_light,
             ..background_normal
         };
         let background_hovered_checked = WoodpeckerStyle {
-            background_color: colors::PRIMARY,
+            background_color: theme.primary,
             ..background_normal
         };
 
+        // `theme.text` (not `theme.background`/`.background_light`) for the knob in every
+        // state -- like the slider thumb, it needs to read as a raised, solid knob against
+        // its own track, not just a slightly-different shade of the same dark surface family.
+        // `theme.text` self-adjusts (near-white in `Theme::dark()`, near-black in
+        // `Theme::light()`), so it stays high-contrast in either theme. Only the *track*'s
+        // color communicates hover/checked state, matching how a physical toggle switch's
+        // knob never changes color -- only its position and the surface around it do.
         let check_base = WoodpeckerStyle {
             position: WidgetPosition::Absolute,
             width: 20.0.into(),
@@ -126,26 +139,16 @@ impl Default for ToggleWidgetStyles {
             left: (-3.0).into(),
             top: (-3.0).into(),
             border_radius: Corner::all(10.0),
+            background_color: theme.text,
             ..Default::default()
         };
-        let check_normal = WoodpeckerStyle {
-            background_color: colors::BACKGROUND,
-            ..check_base
-        };
-        let check_hovered = WoodpeckerStyle {
-            background_color: colors::BACKGROUND_LIGHT,
-            ..check_base
-        };
+        let check_normal = check_base;
+        let check_hovered = check_base;
         let check_checked = WoodpeckerStyle {
             left: 20.0.into(),
-            background_color: colors::PRIMARY,
             ..check_base
         };
-        let check_hovered_checked = WoodpeckerStyle {
-            left: 20.0.into(),
-            background_color: colors::PRIMARY_LIGHT,
-            ..check_base
-        };
+        let check_hovered_checked = check_checked;
         Self {
             background: ToggleStyles {
                 normal: background_normal,
@@ -165,9 +168,8 @@ impl Default for ToggleWidgetStyles {
 
 /// A toggle button widget
 #[derive(Widget, Component, Reflect, PartialEq, Clone, Default)]
+#[reflect(Component, DiffableProp, PartialEq)]
 #[auto_update(render)]
-#[props(Toggle, ToggleWidgetStyles)]
-#[state(ToggleState)]
 #[require(ToggleWidgetStyles, WidgetChildren, WoodpeckerStyle, WidgetRender = WidgetRender::Quad, Pickable, Transition = get_transition())]
 pub struct Toggle;
 
@@ -256,7 +258,7 @@ fn render(
     *children = WidgetChildren::default()
         .with_observe(
             current_widget,
-            move |_: Trigger<Pointer<Click>>,
+            move |_: On<Pointer<Click>>,
                   mut commands: Commands,
                   mut state_query: Query<&mut ToggleState>| {
                 let Ok(mut state) = state_query.get_mut(state_entity) else {
@@ -265,39 +267,137 @@ fn render(
 
                 state.is_checked = !state.is_checked;
 
-                commands.trigger_targets(
-                    Change {
-                        target: *current_widget,
-                        data: ToggleChanged {
-                            checked: state.is_checked,
-                        },
+                commands.trigger(Change {
+                    target: *current_widget,
+                    data: ToggleChanged {
+                        checked: state.is_checked,
                     },
-                    *current_widget,
-                );
+                });
             },
         )
-        .with_observe(
+        .with_self_hover_state(
             current_widget,
-            move |_: Trigger<Pointer<Over>>, mut state_query: Query<&mut ToggleState>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
-
-                state.is_hovering = true;
-            },
-        )
-        .with_observe(
-            current_widget,
-            move |_: Trigger<Pointer<Out>>, mut state_query: Query<&mut ToggleState>| {
-                let Ok(mut state) = state_query.get_mut(state_entity) else {
-                    return;
-                };
-
-                state.is_hovering = false;
-            },
+            state_entity,
+            SystemCursorIcon::Pointer,
+            |state: &mut ToggleState, hovering| state.is_hovering = hovering,
         );
 
     children.add::<Element>((Element, WidgetRender::Quad, state.circle_transition));
 
     children.apply(current_widget.as_parent());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn styles() -> ToggleStyles {
+        ToggleStyles {
+            normal: WoodpeckerStyle {
+                width: 1.0.into(),
+                ..Default::default()
+            },
+            hovered: WoodpeckerStyle {
+                width: 2.0.into(),
+                ..Default::default()
+            },
+            checked: WoodpeckerStyle {
+                width: 3.0.into(),
+                ..Default::default()
+            },
+            hovered_checked: WoodpeckerStyle {
+                width: 4.0.into(),
+                ..Default::default()
+            },
+        }
+    }
+
+    fn state(
+        is_checked: bool,
+        is_hovering: bool,
+        previous_checked: bool,
+        previous_hover: bool,
+    ) -> ToggleState {
+        ToggleState {
+            is_hovering,
+            is_checked,
+            previous_checked,
+            previous_hover,
+            circle_transition: Transition::default(),
+        }
+    }
+
+    #[test]
+    fn current_unchecked_unhovered_uses_normal_style() {
+        let styles = styles();
+        // previous_* fields are deliberately the opposite of is_checked/is_hovering here, to
+        // prove `previous: false` reads the current fields and not the previous ones.
+        let state = state(false, false, true, true);
+        assert_eq!(styles.get_style(&state, false), styles.normal);
+    }
+
+    #[test]
+    fn current_hovering_not_checked_uses_hovered_style() {
+        let styles = styles();
+        let state = state(false, true, true, false);
+        assert_eq!(styles.get_style(&state, false), styles.hovered);
+    }
+
+    #[test]
+    fn current_checked_not_hovering_uses_checked_style() {
+        let styles = styles();
+        let state = state(true, false, false, true);
+        assert_eq!(styles.get_style(&state, false), styles.checked);
+    }
+
+    #[test]
+    fn current_checked_and_hovering_uses_hovered_checked_style() {
+        let styles = styles();
+        let state = state(true, true, false, false);
+        assert_eq!(
+            styles.get_style(&state, false),
+            styles.hovered_checked,
+            "both checked and hovering must select hovered_checked, not just one or the other"
+        );
+    }
+
+    #[test]
+    fn previous_true_reads_previous_fields_instead_of_current() {
+        // Current is checked+hovering (which would select hovered_checked if read), but
+        // previous_checked/previous_hover are both false -- previous=true must switch on the
+        // previous_* fields, not is_checked/is_hovering, so the result must be `normal`.
+        let styles = styles();
+        let state = state(true, true, false, false);
+        assert_eq!(
+            styles.get_style(&state, true),
+            styles.normal,
+            "previous=true must select styles from previous_checked/previous_hover, not \
+             is_checked/is_hovering"
+        );
+    }
+
+    #[test]
+    fn previous_unchecked_hovered_uses_hovered_style() {
+        let styles = styles();
+        let state = state(true, false, false, true);
+        assert_eq!(styles.get_style(&state, true), styles.hovered);
+    }
+
+    #[test]
+    fn previous_checked_not_hovered_uses_checked_style() {
+        let styles = styles();
+        let state = state(false, true, true, false);
+        assert_eq!(styles.get_style(&state, true), styles.checked);
+    }
+
+    #[test]
+    fn previous_checked_and_hovered_uses_hovered_checked_style() {
+        let styles = styles();
+        let state = state(false, false, true, true);
+        assert_eq!(
+            styles.get_style(&state, true),
+            styles.hovered_checked,
+            "both previous_checked and previous_hover set must select hovered_checked"
+        );
+    }
 }

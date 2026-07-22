@@ -4,21 +4,52 @@ use crate::{
     prelude::*,
 };
 use bevy::prelude::*;
-// use bevy_mod_picking::{
-//     events::Pointer,
-//     prelude::{ListenerInput, On},
-//     PickableBundle,
-// };
 
 use super::ScrollContext;
+
+/// How many consecutive frames an auto-shown scrollbar's raw overflow reading must agree
+/// before its shown/hidden state actually flips. A still-reflowing subtree (e.g. `Table`
+/// columns mid-resize) can genuinely, if briefly, overflow its container for a frame or two
+/// while layout converges -- see `layout::system::run`'s own `SETTLE_FRAMES` for the same
+/// class of issue -- so trusting any single frame's reading flickers the scrollbar on and off
+/// during a continuous window resize.
+const SCROLLBAR_SETTLE_FRAMES: u32 = 5;
+
+/// Per-instance debounce state for [`ScrollBox`]'s auto-shown scrollbars -- see
+/// `SCROLLBAR_SETTLE_FRAMES`. Deliberately not `DiffableProp`: written unconditionally every
+/// render, which would make it permanently "changed" and defeat the point of the generic diff
+/// system (mirrors `VirtualListScrollState`'s identical reasoning).
+#[derive(Component, Default, Clone, PartialEq)]
+pub struct ScrollBarVisibilityState {
+    horizontal_shown: bool,
+    horizontal_streak: u32,
+    vertical_shown: bool,
+    vertical_streak: u32,
+}
+
+impl ScrollBarVisibilityState {
+    /// Only flips `shown` once `wants_shown` has agreed for `SCROLLBAR_SETTLE_FRAMES`
+    /// consecutive calls; any disagreement resets the streak.
+    fn debounce(shown: &mut bool, streak: &mut u32, wants_shown: bool) -> bool {
+        if wants_shown == *shown {
+            *streak = 0;
+        } else {
+            *streak += 1;
+            if *streak >= SCROLLBAR_SETTLE_FRAMES {
+                *shown = wants_shown;
+                *streak = 0;
+            }
+        }
+        *shown
+    }
+}
 
 /// A widget that renders a scrollable "box" of content.
 /// Requires that itself be wrapped by the [`super::ScrollContextProvider`]
 #[derive(Widget, Component, Reflect, Default, Clone, PartialEq)]
+#[reflect(Component, DiffableProp, PartialEq)]
 #[auto_update(render)]
-#[props(ScrollBox, PassedChildren, WidgetLayout)]
-#[context(ScrollContext)]
-#[require(WoodpeckerStyle, WidgetChildren, PassedChildren)]
+#[require(WoodpeckerStyle, WidgetChildren, PassedChildren, WatchLayout)]
 pub struct ScrollBox {
     /// If true, always shows scrollbars even when there's nothing to scroll
     ///
@@ -62,6 +93,7 @@ pub fn render(
         &WidgetPreviousLayout,
     )>,
     mut context_query: Query<&mut ScrollContext>,
+    mut visibility_state_query: Query<&mut ScrollBarVisibilityState>,
 ) {
     let Ok((scroll_box, passed_children, mut children, mut styles, layout, prev_layout)) =
         query.get_mut(**current_widget)
@@ -74,6 +106,16 @@ pub fn render(
     let Ok(mut context) = context_query.get_mut(context_entity) else {
         return;
     };
+
+    let visibility_state_entity = context_helper.use_state(
+        &mut commands,
+        *current_widget,
+        ScrollBarVisibilityState::default(),
+    );
+    let Ok(mut visibility) = visibility_state_query.get_mut(visibility_state_entity) else {
+        return;
+    };
+    let visibility = &mut *visibility;
 
     // === Configuration === //
     let always_show_scrollbar = scroll_box.always_show_scrollbar;
@@ -94,9 +136,19 @@ pub fn render(
     let hori_thickness = scrollbar_thickness;
     let vert_thickness = scrollbar_thickness;
 
-    let hide_horizontal =
-        hide_horizontal || !always_show_scrollbar && scrollable_width < f32::EPSILON;
-    let hide_vertical = hide_vertical || !always_show_scrollbar && scrollable_height < f32::EPSILON;
+    let auto_horizontal_visible = ScrollBarVisibilityState::debounce(
+        &mut visibility.horizontal_shown,
+        &mut visibility.horizontal_streak,
+        scrollable_width >= f32::EPSILON,
+    );
+    let auto_vertical_visible = ScrollBarVisibilityState::debounce(
+        &mut visibility.vertical_shown,
+        &mut visibility.vertical_streak,
+        scrollable_height >= f32::EPSILON,
+    );
+
+    let hide_horizontal = hide_horizontal || !always_show_scrollbar && !auto_horizontal_visible;
+    let hide_vertical = hide_vertical || !always_show_scrollbar && !auto_vertical_visible;
 
     let pad_x = if hide_vertical { 0.0 } else { vert_thickness };
     let pad_y = if hide_horizontal { 0.0 } else { hori_thickness };
@@ -106,7 +158,9 @@ pub fn render(
         context.pad_y = pad_y;
     }
 
-    if prev_layout != layout {
+    // See the matching comment in `scroll/content.rs`: ignore a degenerate `(0, 0)` layout
+    // rather than learning it as the real viewport size.
+    if prev_layout != layout && layout.size != Vec2::ZERO {
         context.scrollbox_width = layout.width();
         context.scrollbox_height = layout.height();
     }
@@ -172,19 +226,18 @@ pub fn render(
         ))
         .observe(
             *current_widget,
-            move |mut trigger: Trigger<Pointer<MouseWheelScroll>>,
+            move |mut trigger: On<Pointer<MouseWheelScroll>>,
                   mut context_query: Query<&mut ScrollContext>| {
-                let x = trigger.scroll.x;
-                let y = trigger.scroll.y;
+                let delta = trigger.pixel_delta(scroll_line);
                 trigger.propagate(false);
                 if let Ok(mut context) = context_query.get_mut(context_entity) {
                     let scroll_x = context.scroll_x();
                     let scroll_y = context.scroll_y();
                     if !disable_horizontal {
-                        context.set_scroll_x(scroll_x - x * scroll_line);
+                        context.set_scroll_x(scroll_x - delta.x);
                     }
                     if !disable_vertical {
-                        context.set_scroll_y(scroll_y + y * scroll_line);
+                        context.set_scroll_y(scroll_y + delta.y);
                     }
                 }
             },

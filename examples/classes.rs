@@ -50,33 +50,33 @@ fn main() {
 fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
     commands.spawn((Camera2d, WoodpeckerView));
 
-    let root = commands
-        .spawn((
-            WoodpeckerApp,
-            classes::app_styles,
-            WidgetChildren::default()
-                .with_child::<Element>((
-                    Element,
-                    classes::red_text,
-                    WidgetRender::Text {
-                        content: "Hello, I am red text!".into(),
-                    },
-                ))
-                .with_child::<Element>((
-                    Element,
-                    classes::blue_text,
-                    WidgetRender::Text {
-                        content: "Hello, I am blue text!".into(),
-                    },
-                ))
-                .with_child::<Element>((
-                    Element,
-                    classes::green_text,
-                    WidgetRender::Text {
-                        content: "Hello, I am green text!".into(),
-                    },
-                )),
-        ))
-        .id();
-    ui_context.set_root_widget(root);
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands.entity(*root_widget).insert((
+        classes::app_styles,
+        WidgetChildren::default()
+            .with_child::<Element>((
+                Element,
+                classes::red_text,
+                WidgetRender::Text {
+                    content: "Hello, I am red text!".into(),
+                },
+            ))
+            .with_key("red")
+            .with_child::<Element>((
+                Element,
+                classes::blue_text,
+                WidgetRender::Text {
+                    content: "Hello, I am blue text!".into(),
+                },
+            ))
+            .with_key("blue")
+            .with_child::<Element>((
+                Element,
+                classes::green_text,
+                WidgetRender::Text {
+                    content: "Hello, I am green text!".into(),
+                },
+            ))
+            .with_key("green"),
+    ));
 }

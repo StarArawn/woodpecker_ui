@@ -3,8 +3,8 @@ use bevy::prelude::*;
 
 /// The Woodpecker UI Element
 #[derive(Component, Widget, PartialEq, Reflect, Default, Clone)]
+#[reflect(Component, DiffableProp, PartialEq)]
 #[auto_update(render)]
-#[props(Element, WoodpeckerStyle)]
 #[require(WidgetChildren, WoodpeckerStyle)]
 pub struct Element;
 

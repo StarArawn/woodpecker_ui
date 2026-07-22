@@ -7,7 +7,61 @@ use vello::{
     peniko,
 };
 
+/// [`ColorPicker`]'s themed colors -- a separate sibling component (rather than the hardcoded
+/// `colors::*` values this used before) so the panel live-resyncs on a [`Theme`] swap.
+///
+/// The hex-value text was previously a fixed `Color::WHITE`, correct only against
+/// `Theme::dark()`'s dark panel -- once `panel_background` itself tracks the active theme, a
+/// light theme would make that text illegible, so it's promoted to a themed `text_color`
+/// (`theme.text`) here rather than staying a hardcoded white. The white selector-ring border
+/// around each swatch dot and the copy-button's white background are left alone -- those are
+/// deliberately theme-independent affordances (a white ring reads clearly against any
+/// hue/saturation/value, unlike text sitting on the panel's own background).
+#[derive(Component, Reflect, Clone, Copy, PartialEq)]
+#[reflect(Component, DiffableProp, PartialEq)]
+pub struct ColorPickerStyles {
+    /// Panel background color.
+    pub panel_background: Color,
+    /// Panel corner radius.
+    pub panel_radius: f32,
+    /// Panel border color -- matches `Dropdown`/`Menu`'s own popup-panel border so the picker
+    /// reads as a floating surface rather than blending into whatever it sits on.
+    pub panel_border_color: Color,
+    /// Panel border width.
+    pub panel_border_width: f32,
+    /// Panel drop shadow.
+    pub panel_shadow: WidgetBoxShadow,
+    /// Hex-value label text color.
+    pub text_color: Color,
+    /// Hex-value label font size.
+    pub font_size: f32,
+    /// Border color of the small inner ring on the saturation/value selector dot.
+    pub selector_ring_color: Color,
+}
+
+impl Default for ColorPickerStyles {
+    fn default() -> Self {
+        Self::from_theme(&Theme::default())
+    }
+}
+
+impl ThemedStyle for ColorPickerStyles {
+    fn from_theme(theme: &Theme) -> Self {
+        Self {
+            panel_background: theme.background,
+            panel_radius: theme.panel_radius,
+            panel_border_color: theme.border,
+            panel_border_width: 1.0,
+            panel_shadow: theme.elevation.md,
+            text_color: theme.text,
+            font_size: theme.font_size,
+            selector_ring_color: theme.background_light,
+        }
+    }
+}
+
 #[derive(Component, Debug, Reflect, Clone, Copy, PartialEq, Default)]
+#[reflect(Component, DiffableProp, PartialEq)]
 struct ColorPickerState {
     is_dragging: bool,
     current_color: Hsva,
@@ -22,10 +76,9 @@ pub struct ColorPickerChanged {
 
 /// Color picker widget
 #[derive(Widget, Component, Reflect, Clone, Copy, PartialEq, Default)]
+#[reflect(Component, DiffableProp, PartialEq)]
 #[auto_update(render)]
-#[props(ColorPicker)]
-#[state(ColorPickerState)]
-#[require(WoodpeckerStyle, WidgetChildren, WidgetRender = WidgetRender::Quad)]
+#[require(WoodpeckerStyle, WidgetChildren, WidgetRender = WidgetRender::Quad, ColorPickerStyles)]
 pub struct ColorPicker {
     /// Initial color to use
     pub initial_color: Color,
@@ -36,10 +89,16 @@ fn render(
     current_widget: Res<CurrentWidget>,
     mut hooks: ResMut<HookHelper>,
     asset_server: Res<AssetServer>,
-    mut query: Query<(&ColorPicker, &mut WoodpeckerStyle, &mut WidgetChildren)>,
+    mut query: Query<(
+        &ColorPicker,
+        &ColorPickerStyles,
+        &mut WoodpeckerStyle,
+        &mut WidgetChildren,
+    )>,
     state_query: Query<&ColorPickerState>,
 ) {
-    let Ok((picker, mut styles, mut children)) = query.get_mut(**current_widget) else {
+    let Ok((picker, picker_styles, mut styles, mut children)) = query.get_mut(**current_widget)
+    else {
         return;
     };
 
@@ -52,8 +111,11 @@ fn render(
     let state = state_query.get(state_entity).unwrap_or(&default_state);
 
     *styles = WoodpeckerStyle {
-        background_color: colors::BACKGROUND,
-        border_radius: Corner::all(20.0),
+        background_color: picker_styles.panel_background,
+        border_radius: Corner::all(picker_styles.panel_radius),
+        border: Edge::all(picker_styles.panel_border_width),
+        border_color: picker_styles.panel_border_color,
+        box_shadow: Some(picker_styles.panel_shadow),
         width: 320.0.into(),
         ..Default::default()
     };
@@ -66,7 +128,7 @@ fn render(
     *children = WidgetChildren::default().with_child::<Clip>((
         Clip,
         WoodpeckerStyle {
-            border_radius: Corner::all(20.0),
+            border_radius: Corner::all(picker_styles.panel_radius),
             width: Units::Percentage(100.0),
             height: Units::Percentage(100.0),
             flex_direction: WidgetFlexDirection::Column,
@@ -85,6 +147,7 @@ fn render(
                 },
                 WidgetRender::Quad,
             ))
+            .with_key("main_color")
             // Color hex value
             .with_child::<Element>((
                 Element,
@@ -97,8 +160,8 @@ fn render(
                     .with_child::<Element>((
                         Element,
                         WoodpeckerStyle {
-                            font_size: 22.0,
-                            color: Color::WHITE,
+                            font_size: picker_styles.font_size,
+                            color: picker_styles.text_color,
                             flex_grow: 1.0,
                             text_wrap: TextWrap::None,
                             ..Default::default()
@@ -130,7 +193,7 @@ fn render(
                     ))
                     .with_observe(
                         *current_widget,
-                        move |_trigger: Trigger<Pointer<Click>>,
+                        move |_trigger: On<Pointer<Click>>,
                               state_query: Query<&ColorPickerState>| {
                             let Ok(state) = state_query.get(state_entity) else {
                                 return;
@@ -161,6 +224,7 @@ fn render(
                         },
                     ),
             ))
+            .with_key("hex_value")
             // Hue
             .with_child::<Element>((
                 Element,
@@ -191,7 +255,7 @@ fn render(
             ))
             .with_observe(
                 *current_widget,
-                move |trigger: Trigger<Pointer<Drag>>,
+                move |trigger: On<Pointer<Drag>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,
                       layout_query: Query<&WidgetLayout>| {
@@ -210,21 +274,17 @@ fn render(
                     state.current_color.hue = value.clamp(0.0, 1.0) * 365.0;
 
                     let color: Color = state.current_color.into();
-                    commands.trigger_targets(
-                        Change {
-                            target: widget_entity,
-                            data: ColorPickerChanged {
-                                color: color.to_srgba().into(),
-                            },
+                    commands.trigger(Change {
+                        target: widget_entity,
+                        data: ColorPickerChanged {
+                            color: color.to_srgba().into(),
                         },
-                        widget_entity,
-                    );
+                    });
                 },
             )
             .with_observe(
                 *current_widget,
-                move |_trigger: Trigger<Pointer<DragEnd>>,
-                      mut query: Query<&mut ColorPickerState>| {
+                move |_trigger: On<Pointer<DragEnd>>, mut query: Query<&mut ColorPickerState>| {
                     let Ok(mut state) = query.get_mut(state_entity) else {
                         return;
                     };
@@ -234,7 +294,7 @@ fn render(
             )
             .with_observe(
                 *current_widget,
-                move |trigger: Trigger<Pointer<Click>>,
+                move |trigger: On<Pointer<Click>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,
                       layout_query: Query<&WidgetLayout>| {
@@ -255,17 +315,16 @@ fn render(
                     let value = relative_x / (layout.size.x - 80.0);
                     state.current_color.hue = value.clamp(0.0, 1.0) * 365.0;
                     let color: Color = state.current_color.into();
-                    commands.trigger_targets(
-                        Change {
-                            target: widget_entity,
-                            data: ColorPickerChanged {
-                                color: color.to_srgba().into(),
-                            },
+                    commands.trigger(Change {
+                        target: widget_entity,
+                        data: ColorPickerChanged {
+                            color: color.to_srgba().into(),
                         },
-                        widget_entity,
-                    );
+                    });
                 },
             )
+            .with_hover_cursor(*current_widget, SystemCursorIcon::Pointer)
+            .with_key("hue")
             // Saturation
             .with_child::<Element>((
                 Element,
@@ -299,7 +358,7 @@ fn render(
                             width: 16.0.into(),
                             height: 16.0.into(),
                             border_radius: Corner::all(100.0),
-                            border_color: colors::BACKGROUND_LIGHT,
+                            border_color: picker_styles.selector_ring_color,
                             border: Edge::all(3.0),
                             ..Default::default()
                         },
@@ -312,7 +371,7 @@ fn render(
             ))
             .with_observe(
                 *current_widget,
-                move |trigger: Trigger<Pointer<Drag>>,
+                move |trigger: On<Pointer<Drag>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,
                       layout_query: Query<&WidgetLayout>| {
@@ -331,21 +390,17 @@ fn render(
                     state.current_color.saturation = value.clamp(0.0, 1.0);
 
                     let color: Color = state.current_color.into();
-                    commands.trigger_targets(
-                        Change {
-                            target: widget_entity,
-                            data: ColorPickerChanged {
-                                color: color.to_srgba().into(),
-                            },
+                    commands.trigger(Change {
+                        target: widget_entity,
+                        data: ColorPickerChanged {
+                            color: color.to_srgba().into(),
                         },
-                        widget_entity,
-                    );
+                    });
                 },
             )
             .with_observe(
                 *current_widget,
-                move |_trigger: Trigger<Pointer<DragEnd>>,
-                      mut query: Query<&mut ColorPickerState>| {
+                move |_trigger: On<Pointer<DragEnd>>, mut query: Query<&mut ColorPickerState>| {
                     let Ok(mut state) = query.get_mut(state_entity) else {
                         return;
                     };
@@ -355,7 +410,7 @@ fn render(
             )
             .with_observe(
                 *current_widget,
-                move |trigger: Trigger<Pointer<Click>>,
+                move |trigger: On<Pointer<Click>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,
                       layout_query: Query<&WidgetLayout>| {
@@ -376,17 +431,16 @@ fn render(
                     let value = relative_x / (layout.size.x - 80.0);
                     state.current_color.saturation = value.clamp(0.0, 1.0);
                     let color: Color = state.current_color.into();
-                    commands.trigger_targets(
-                        Change {
-                            target: widget_entity,
-                            data: ColorPickerChanged {
-                                color: color.to_srgba().into(),
-                            },
+                    commands.trigger(Change {
+                        target: widget_entity,
+                        data: ColorPickerChanged {
+                            color: color.to_srgba().into(),
                         },
-                        widget_entity,
-                    );
+                    });
                 },
             )
+            .with_hover_cursor(*current_widget, SystemCursorIcon::Pointer)
+            .with_key("saturation")
             // Value
             .with_child::<Element>((
                 Element,
@@ -420,7 +474,7 @@ fn render(
                             width: 16.0.into(),
                             height: 16.0.into(),
                             border_radius: Corner::all(100.0),
-                            border_color: colors::BACKGROUND_LIGHT,
+                            border_color: picker_styles.selector_ring_color,
                             border: Edge::all(3.0),
                             ..Default::default()
                         },
@@ -433,7 +487,7 @@ fn render(
             ))
             .with_observe(
                 *current_widget,
-                move |trigger: Trigger<Pointer<Drag>>,
+                move |trigger: On<Pointer<Drag>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,
                       layout_query: Query<&WidgetLayout>| {
@@ -452,21 +506,17 @@ fn render(
                     state.current_color.value = value.clamp(0.0, 1.0);
 
                     let color: Color = state.current_color.into();
-                    commands.trigger_targets(
-                        Change {
-                            target: widget_entity,
-                            data: ColorPickerChanged {
-                                color: color.to_srgba().into(),
-                            },
+                    commands.trigger(Change {
+                        target: widget_entity,
+                        data: ColorPickerChanged {
+                            color: color.to_srgba().into(),
                         },
-                        widget_entity,
-                    );
+                    });
                 },
             )
             .with_observe(
                 *current_widget,
-                move |_trigger: Trigger<Pointer<DragEnd>>,
-                      mut query: Query<&mut ColorPickerState>| {
+                move |_trigger: On<Pointer<DragEnd>>, mut query: Query<&mut ColorPickerState>| {
                     let Ok(mut state) = query.get_mut(state_entity) else {
                         return;
                     };
@@ -476,7 +526,7 @@ fn render(
             )
             .with_observe(
                 *current_widget,
-                move |trigger: Trigger<Pointer<Click>>,
+                move |trigger: On<Pointer<Click>>,
                       mut commands: Commands,
                       mut query: Query<&mut ColorPickerState>,
                       layout_query: Query<&WidgetLayout>| {
@@ -497,17 +547,16 @@ fn render(
                     let value = relative_x / (layout.size.x - 80.0);
                     state.current_color.value = value.clamp(0.0, 1.0);
                     let color: Color = state.current_color.into();
-                    commands.trigger_targets(
-                        Change {
-                            target: widget_entity,
-                            data: ColorPickerChanged {
-                                color: color.to_srgba().into(),
-                            },
+                    commands.trigger(Change {
+                        target: widget_entity,
+                        data: ColorPickerChanged {
+                            color: color.to_srgba().into(),
                         },
-                        widget_entity,
-                    );
+                    });
                 },
-            ),
+            )
+            .with_hover_cursor(*current_widget, SystemCursorIcon::Pointer)
+            .with_key("value"),
     ));
 
     children.apply(current_widget.as_parent());
@@ -557,7 +606,13 @@ fn get_hue_gradient(color: Hsva) -> WidgetRender {
                 &rect,
             );
 
-            vello_scene.push_layer(peniko::Mix::Multiply, 0.75, kurbo::Affine::default(), &rect);
+            vello_scene.push_layer(
+                peniko::Fill::NonZero,
+                peniko::Mix::Multiply,
+                0.75,
+                kurbo::Affine::default(),
+                &rect,
+            );
 
             let color = parse_color("#818181").unwrap();
             vello_scene.stroke(
@@ -617,7 +672,13 @@ fn get_saturation_gradient(color: Hsva) -> WidgetRender {
                 &rect,
             );
 
-            vello_scene.push_layer(peniko::Mix::Multiply, 0.75, kurbo::Affine::default(), &rect);
+            vello_scene.push_layer(
+                peniko::Fill::NonZero,
+                peniko::Mix::Multiply,
+                0.75,
+                kurbo::Affine::default(),
+                &rect,
+            );
 
             let color = parse_color("#818181").unwrap();
             vello_scene.stroke(
@@ -676,7 +737,13 @@ fn get_value_gradient(color: Hsva) -> WidgetRender {
                 &rect,
             );
 
-            vello_scene.push_layer(peniko::Mix::Multiply, 0.75, kurbo::Affine::default(), &rect);
+            vello_scene.push_layer(
+                peniko::Fill::NonZero,
+                peniko::Mix::Multiply,
+                0.75,
+                kurbo::Affine::default(),
+                &rect,
+            );
 
             let color = parse_color("#818181").unwrap();
             vello_scene.stroke(
@@ -689,5 +756,28 @@ fn get_value_gradient(color: Hsva) -> WidgetRender {
 
             vello_scene.pop_layer();
         }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_theme_tracks_the_passed_in_theme() {
+        let theme = Theme::dark();
+        let styles = ColorPickerStyles::from_theme(&theme);
+        assert_eq!(styles.panel_background, theme.background);
+        assert_eq!(styles.panel_radius, theme.panel_radius);
+        assert_eq!(styles.text_color, theme.text);
+        assert_eq!(styles.font_size, theme.font_size);
+        assert_eq!(styles.selector_ring_color, theme.background_light);
+
+        let dark = ColorPickerStyles::from_theme(&Theme::dark());
+        let light = ColorPickerStyles::from_theme(&Theme::light());
+        assert_ne!(
+            dark.panel_background, light.panel_background,
+            "from_theme must track the passed-in theme, not a fixed default"
+        );
     }
 }

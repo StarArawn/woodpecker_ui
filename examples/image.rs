@@ -16,13 +16,8 @@ fn startup(
 ) {
     commands.spawn((Camera2d, WoodpeckerView));
 
-    let root = commands
-        .spawn((
-            WoodpeckerApp,
-            WidgetRender::Image {
-                handle: asset_server.load("woodpecker.jpg"),
-            },
-        ))
-        .id();
-    ui_context.set_root_widget(root);
+    let root_widget = ui_context.spawn_root(&mut commands);
+    commands.entity(*root_widget).insert(WidgetRender::Image {
+        handle: asset_server.load("woodpecker.jpg"),
+    });
 }

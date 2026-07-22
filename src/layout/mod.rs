@@ -1,11 +1,39 @@
 pub(crate) mod measure;
 pub(crate) mod system;
 
+use std::ops::{Deref, DerefMut};
+
 use bevy::{ecs::entity::EntityHashMap, prelude::*};
 use measure::{LayoutMeasure, Measure};
 use taffy::{Size, TaffyTree};
 
-use crate::{has_root, prelude::WoodpeckerStyle};
+use crate::{
+    has_root,
+    prelude::{GridTemplate, WoodpeckerStyle},
+};
+
+/// Wraps [`TaffyTree`] so it can live inside a bevy [`Resource`] -- taffy's `Style` is
+/// `!Send + !Sync` since 0.8 (a raw pointer backs its packed `CompactLength` representation),
+/// same as `bevy_ui`'s own `UiSurface`/`UiTree`.
+struct TaffyTreeSync<T>(TaffyTree<T>);
+
+// SAFETY: that raw pointer is only ever a real pointer under taffy's `calc` feature, which
+// this crate doesn't enable -- otherwise it's just a NaN-boxed bit pattern.
+unsafe impl<T: Send> Send for TaffyTreeSync<T> {}
+unsafe impl<T: Sync> Sync for TaffyTreeSync<T> {}
+
+impl<T> Deref for TaffyTreeSync<T> {
+    type Target = TaffyTree<T>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> DerefMut for TaffyTreeSync<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 pub(crate) struct WoodpeckerLayoutPlugin;
 impl Plugin for WoodpeckerLayoutPlugin {
@@ -21,7 +49,37 @@ impl Plugin for WoodpeckerLayoutPlugin {
 pub(crate) struct UiLayout {
     pub(crate) root_entity: Entity,
     entity_to_taffy: EntityHashMap<taffy::NodeId>,
-    taffy: TaffyTree<LayoutMeasure>,
+    taffy: TaffyTreeSync<LayoutMeasure>,
+    /// The root viewport size as of the last frame `system::run` actually recomputed
+    /// layout -- lets the skip-if-clean fast path detect a window resize (which changes
+    /// nothing any `Changed<T>` query would catch, since it's read fresh from the root
+    /// widget's own style every frame, not mutated) as one more dirty signal.
+    pub(crate) last_root_size: Option<Vec2>,
+    /// For each `Text`/`RichText` entity, the parent width its `LayoutMeasure` was last
+    /// computed against -- lets `system::traverse_upsert_node`'s incremental gating detect a
+    /// parent resize (which touches no `Changed<T>` on the *text* entity itself) as a reason
+    /// to remeasure. See that function's doc comment for why only text needs this and
+    /// `Image`/`Svg` don't.
+    pub(crate) previous_measure_width: EntityHashMap<f32>,
+    /// For each entity whose [`WoodpeckerStyle::uses_calc`] is true, the parent size its
+    /// `Units::Calc` fields were last resolved against -- lets `system::traverse_upsert_node`
+    /// detect a parent resize (which touches no `Changed<T>` on *this* entity) as a reason to
+    /// re-resolve, the same role `previous_measure_width` plays for text. A `Vec2`, not a
+    /// scalar, since `Calc` can appear on either axis (`width`/`left`/`right` vs.
+    /// `height`/`top`/`bottom`).
+    pub(crate) previous_calc_parent_size: EntityHashMap<Vec2>,
+    /// Whether this frame's layout pass actually ran (as opposed to taking the skip-if-clean
+    /// fast path) -- lets `vello_renderer::run` reuse the exact same signal to skip rebuilding
+    /// the vello `Scene` on an idle frame, instead of recomputing it a second time. Note this
+    /// is *not* simply "something changed this frame" -- see
+    /// `system::run`'s `settled_frames_in_a_row` for why a still-settling frame counts as
+    /// dirty here too.
+    pub(crate) dirty_this_frame: bool,
+    /// How many consecutive frames `system::run` has found nothing dirty. Only once this
+    /// reaches [`system::SETTLE_FRAMES`] does the skip-if-clean fast path actually trust that
+    /// the tree is done settling and start taking it -- see that constant's doc comment for
+    /// why a single clean-looking frame isn't enough on its own.
+    pub(crate) settled_frames_in_a_row: u32,
 }
 
 impl Default for UiLayout {
@@ -29,7 +87,12 @@ impl Default for UiLayout {
         Self {
             root_entity: Entity::PLACEHOLDER,
             entity_to_taffy: Default::default(),
-            taffy: TaffyTree::new(),
+            taffy: TaffyTreeSync(TaffyTree::new()),
+            last_root_size: None,
+            previous_measure_width: Default::default(),
+            previous_calc_parent_size: Default::default(),
+            dirty_this_frame: true,
+            settled_frames_in_a_row: 0,
         }
     }
 }
@@ -37,21 +100,35 @@ impl Default for UiLayout {
 impl UiLayout {
     /// Retrieves the Taffy node associated with the given UI node entity and updates its style.
     /// If no associated Taffy node exists a new Taffy node is inserted into the Taffy layout.
+    ///
+    /// `grid_template` should be `Some` when the entity has a [`GridTemplate`] component
+    /// (i.e. it's a grid container) -- its track definitions are overlaid onto the
+    /// `taffy::Style` built from `style` alone, since `GridTemplate` lives in a separate
+    /// component (see its doc comment for why).
     pub fn upsert_node(
         &mut self,
         entity: Entity,
         style: &WoodpeckerStyle,
+        grid_template: Option<&GridTemplate>,
         mut new_node_context: Option<LayoutMeasure>,
     ) {
         let taffy = &mut self.taffy;
+
+        let taffy_style = || {
+            let mut taffy_style: taffy::Style = style.into();
+            if let Some(grid_template) = grid_template {
+                grid_template.apply(&mut taffy_style);
+            }
+            taffy_style
+        };
 
         let mut added = false;
         let taffy_node_id = *self.entity_to_taffy.entry(entity).or_insert_with(|| {
             added = true;
             if let Some(measure) = new_node_context.take() {
-                taffy.new_leaf_with_context(style.into(), measure).unwrap()
+                taffy.new_leaf_with_context(taffy_style(), measure).unwrap()
             } else {
-                taffy.new_leaf(style.into()).unwrap()
+                taffy.new_leaf(taffy_style()).unwrap()
             }
         });
 
@@ -62,7 +139,7 @@ impl UiLayout {
                     .unwrap();
             }
 
-            taffy.set_style(taffy_node_id, style.into()).unwrap();
+            taffy.set_style(taffy_node_id, taffy_style()).unwrap();
         }
     }
 
@@ -70,21 +147,45 @@ impl UiLayout {
         if !self.entity_to_taffy.contains_key(&parent) {
             return;
         }
-        let parent_node_id = self.entity_to_taffy.get(&parent).unwrap();
+        let parent_node_id = *self.entity_to_taffy.get(&parent).unwrap();
 
         if !self.entity_to_taffy.contains_key(&child) {
             return;
         }
-        let child_node_id = self.entity_to_taffy.get(&child).unwrap();
-        self.taffy
-            .add_child(*parent_node_id, *child_node_id)
-            .unwrap();
+        let child_node_id = *self.entity_to_taffy.get(&child).unwrap();
+
+        // `taffy::TaffyTree::add_child` doesn't dedupe, so re-adding an already-attached
+        // pair (e.g. a re-hoisted `position: Fixed` widget) would create duplicate edges
+        // that corrupt layout and the picking-priority `order` counter.
+        if self.taffy.parent(child_node_id) == Some(parent_node_id) {
+            return;
+        }
+
+        self.taffy.add_child(parent_node_id, child_node_id).unwrap();
+    }
+
+    /// Detaches `child` from `parent` without removing `child`'s taffy node entirely
+    /// (unlike [`Self::remove_child`]). A no-op if `child` isn't currently attached to
+    /// `parent`.
+    pub fn detach_child(&mut self, parent: Entity, child: Entity) {
+        let Some(parent_node_id) = self.entity_to_taffy.get(&parent).copied() else {
+            return;
+        };
+        let Some(child_node_id) = self.entity_to_taffy.get(&child).copied() else {
+            return;
+        };
+        if self.taffy.parent(child_node_id) != Some(parent_node_id) {
+            return;
+        }
+        let _ = self.taffy.remove_child(parent_node_id, child_node_id);
     }
 
     pub fn remove_child(&mut self, entity: Entity) {
         if let Some(node_id) = self.entity_to_taffy.remove(&entity) {
             let _ = self.taffy.remove(node_id);
         }
+        self.previous_measure_width.remove(&entity);
+        self.previous_calc_parent_size.remove(&entity);
     }
 
     pub fn add_children(&mut self, entity: Entity, children: &[Entity]) {
@@ -163,8 +264,8 @@ fn test_bug() {
     let child = taffy
         .new_leaf(Style {
             size: Size {
-                width: Dimension::Percent(1.0),
-                height: Dimension::Percent(1.0),
+                width: Dimension::percent(1.0),
+                height: Dimension::percent(1.0),
             },
             ..Default::default()
         })
@@ -174,10 +275,10 @@ fn test_bug() {
         .new_with_children(
             Style {
                 size: Size {
-                    width: Dimension::Length(1280.0),
-                    height: Dimension::Length(720.0),
+                    width: Dimension::length(1280.0),
+                    height: Dimension::length(720.0),
                 },
-                justify_content: Some(JustifyContent::Center),
+                justify_content: Some(JustifyContent::CENTER),
                 ..Default::default()
             },
             &[child],

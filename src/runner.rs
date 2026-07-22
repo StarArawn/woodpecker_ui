@@ -1,25 +1,13 @@
-// This runner system is the fundamental bones of how Woodpecker UI works.
-// Its relatively simple in operation although more complex mechanisms can be found
-// elsewhere in the code base for widget handling like:
-// - entity_mapping.rs
-// - hook_helper.rs
-// - children.rs
-// Most of the functionality in those files that runs starts here in this file.
+// The fundamental bones of how Woodpecker UI works; more complex widget-handling
+// mechanisms live in entity_mapping.rs, hook_helper.rs, and children.rs, but most of it
+// is driven from here.
 
-use bevy::{
-    ecs::component::Tick,
-    platform::collections::{HashMap, HashSet},
-    prelude::*,
-};
+use bevy::{ecs::change_detection::Tick, platform::collections::HashMap, prelude::*};
 use bevy_trait_query::One;
 
 use crate::{
-    children::WidgetChildren,
-    context::Widget,
-    hook_helper::StateMarker,
-    metrics::WidgetMetrics,
-    prelude::{PreviousWidget, WidgetMapper},
-    CurrentWidget, ObserverCache, WoodpeckerContext,
+    children::WidgetChildren, context::Widget, hook_helper::StateMarker, metrics::WidgetMetrics,
+    prelude::PreviousWidget, CurrentWidget, WoodpeckerContext,
 };
 
 pub(crate) fn system(world: &mut World) {
@@ -30,12 +18,6 @@ pub(crate) fn system(world: &mut World) {
 
     let mut widget_query_state =
         QueryState::<One<&dyn Widget>, Without<PreviousWidget>>::new(world);
-
-    // STEP 1: Run update systems and mark widgets as needing to be re-rendered
-    // Note: re-rendering means to re-build the sub-tree at X point in the tree.
-    world.resource_scope(|_world: &mut World, mut widget_mapper: Mut<WidgetMapper>| {
-        widget_mapper.clear_added_this_frame();
-    });
 
     let widgets_list = {
         let _ = info_span!("Query Widget Entities", name = "Query Widget Entities").entered();
@@ -55,7 +37,6 @@ pub(crate) fn system(world: &mut World) {
             .collect::<Vec<_>>()
     };
 
-    let mut removed_list = HashSet::default();
     let mut metrics = world.remove_resource::<WidgetMetrics>().unwrap();
     metrics.clear_last_frame();
 
@@ -66,18 +47,12 @@ pub(crate) fn system(world: &mut World) {
         )
         .entered();
         for widget_entity in widgets_list {
-            // Skip removed widgets.
-            if removed_list.contains(&widget_entity) {
-                continue;
-            }
-
             update_widgets(
                 world,
                 widget_entity,
                 &mut context,
                 &mut metrics,
                 &mut new_ticks,
-                &mut removed_list,
                 &mut widget_query_state,
             );
         }
@@ -108,7 +83,6 @@ fn update_widgets(
     context: &mut WoodpeckerContext,
     metrics: &mut WidgetMetrics,
     new_ticks: &mut HashMap<String, Tick>,
-    removed_list: &mut HashSet<Entity>,
     widget_query_state: &mut QueryState<One<&dyn Widget>, Without<PreviousWidget>>,
 ) {
     // STEP 2: Diff widgets
@@ -119,7 +93,6 @@ fn update_widgets(
             context,
             metrics,
             new_ticks,
-            removed_list,
             widget_entity,
             widget_query_state,
         );
@@ -164,6 +137,11 @@ fn run_update_system(
     };
 
     let local_name = widget.get_name_local();
+
+    // Universal, reflection-based diff: replaces what used to be per-widget-type,
+    // macro-generated prop/state/context diffing. See `diffing::diff_widget_entity`.
+    let generically_changed = crate::diffing::diff_widget_entity(world, widget_entity);
+
     let is_uninitialized = context.get_uninitialized(local_name.clone());
     let Some(update) = context.get_update_system(local_name.clone()) else {
         error!("Woodpecker UI: Please register widgets and their systems!");
@@ -175,28 +153,18 @@ fn run_update_system(
     }
 
     world.insert_resource(CurrentWidget(widget_entity));
-    // Store the original tick.
-    // We do this so that between widget updates of the same
-    // type we get a consistent "tick", meaning change detection
-    // works as expected.
+    // Save/restore the tick around this run so widgets sharing the same system get
+    // consistent change detection between updates.
     let old_tick = update.get_last_run();
-    let should_update = update.run((), world);
-    // Apply commands and other things to world.
-    // TODO: Do we actually care for update which honestly
-    // should be readonly?
+    let should_update = update.run_without_applying_deferred((), world).unwrap();
+    // TODO: Do we actually care for update which honestly should be readonly?
     update.apply_deferred(world);
-    // Get the new tick.
     let new_tick = update.get_last_run();
-    // Store the new tick after all the widgets have finished
-    // we insert this back onto the system.
     new_ticks.insert(local_name, new_tick);
-    // Restore the original tick so that when the next
-    // widget of the same type runs this we get consistent
-    // change detection and events.
     update.set_last_run(old_tick);
     world.remove_resource::<CurrentWidget>();
 
-    should_update
+    generically_changed || should_update
 }
 
 fn run_render_system(
@@ -204,12 +172,9 @@ fn run_render_system(
     context: &mut WoodpeckerContext,
     metrics: &mut WidgetMetrics,
     new_ticks: &mut HashMap<String, Tick>,
-    removed_list: &mut HashSet<Entity>,
     widget_entity: Entity,
     widget_query_state: &mut QueryState<One<&dyn Widget>, Without<PreviousWidget>>,
 ) {
-    let root_widget = context.get_root_widget();
-
     // Pull widget data.
     let Ok(widget) = widget_query_state.get(world, widget_entity) else {
         error!("Woodpecker UI: Missing widget data for {}!", widget_entity);
@@ -227,29 +192,21 @@ fn run_render_system(
         render.initialize(world);
     }
 
-    // Root observers never can be re-created so we don't want to despawn them.
-    if widget_entity != root_widget {
-        // Clear out observer entities on re-render
-        world.resource_scope(
-            |world: &mut World, mut observer_cache: Mut<ObserverCache>| {
-                observer_cache.despawn_for_widget(world, widget_entity);
-            },
-        );
-    }
-
     trace!("re-rendering: {}-{}", widget_name, widget_entity);
     metrics.increase_counts();
     // Run the render function and apply changes to the bevy world.
     world.insert_resource(CurrentWidget(widget_entity));
     let old_tick = render.get_last_run();
-    render.run((), world);
+    render.run_without_applying_deferred((), world).unwrap();
     let new_tick = render.get_last_run();
     new_ticks.insert(widget_name.clone(), new_tick);
     render.set_last_run(old_tick);
     render.apply_deferred(world);
     world.remove_resource::<CurrentWidget>();
 
-    // Step 4: If there are children that have been added process them now!
+    // Step 4: If there are children that have been added process them now! This is also
+    // where stale children (whose key wasn't re-declared this pass) get despawned -- see
+    // `WidgetMapper::finish_reconciliation`, called from `WidgetChildren::process_world`.
     if let Some(mut children) = world
         .entity_mut(widget_entity)
         .get::<WidgetChildren>()
@@ -259,43 +216,113 @@ fn run_render_system(
         world.entity_mut(widget_entity).insert(children);
     }
 
-    // STEP 5: Despawn unmounted widgets.
-    world.resource_scope(|world: &mut World, mut widget_mapper: Mut<WidgetMapper>| {
-        // Note: Children here are only the immediate children attached to the parent(widget_entity).
-        let children = widget_mapper.get_all_children(widget_entity);
-        for child in children.iter() {
-            // Only remove if the child was not added this frame.
-            if !widget_mapper.added_this_frame(*child) {
-                trace!("Removing: {child}");
-
-                if world.get_entity(*child).is_err() {
-                    panic!("Error: Attempted to despawn an entity already despawned. :( Widget entities should never manually be removed. This might be a bug with the widget runner backend, please file a ticket!");
-                }
-
-                // Remove observers
-                world.resource_scope(
-                    |world: &mut World, mut observer_cache: Mut<ObserverCache>| {
-                    observer_cache.despawn_for_target(world, *child);
-                });
-
-                // Remove from the mapper.
-                widget_mapper.remove_by_entity_id(widget_entity, *child);
-                // Despawn and despawn recursive.
-                removed_list.insert(*child);
-                // Entity and its children were despawned lets make sure all of the descendants are removed from the mapper!
-                for child in get_all_children(world, *child) {
-                    let parent = world.entity(child).get::<ChildOf>().expect("Unknown dangling child! This is an error with woodpecker UI source please file a bug report.").parent();
-                    widget_mapper.remove_by_entity_id(parent, child);
-                    removed_list.insert(child);
-                }
-                // Do this last so the parent query still works.
-                if world.get_entity(*child).is_ok() {
-                    world.entity_mut(*child).despawn();
-                }
-            }
-        }
-    });
-
     // A this point we should have initialized both the update and render systems.
     context.remove_uninitialized(widget_name);
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        children::WidgetChildren, prelude::WidgetMapper, CurrentWidget, ObserverCache,
+        WidgetRegisterExt, WoodpeckerContext,
+    };
+    use bevy::prelude::*;
+
+    use super::get_all_children;
+
+    #[derive(Component, Reflect, Default, Clone)]
+    struct TestRootWidget;
+
+    impl crate::context::Widget for TestRootWidget {
+        fn update() -> impl System<In = (), Out = bool>
+        where
+            Self: Sized,
+        {
+            // Always re-render, so we get to exercise render_test_root every frame.
+            IntoSystem::into_system(|| true)
+        }
+
+        fn render() -> impl System<In = (), Out = ()>
+        where
+            Self: Sized,
+        {
+            IntoSystem::into_system(render_test_root)
+        }
+    }
+
+    #[derive(Component, Reflect, Default, Clone)]
+    struct TestLeafWidget;
+    impl crate::context::Widget for TestLeafWidget {}
+
+    #[derive(Event, Clone)]
+    struct TestClick;
+
+    fn render_test_root(current_widget: Res<CurrentWidget>, mut query: Query<&mut WidgetChildren>) {
+        let Ok(mut children) = query.get_mut(**current_widget) else {
+            return;
+        };
+        *children = WidgetChildren::default();
+        children.add::<TestLeafWidget>(TestLeafWidget);
+        children.observe(*current_widget, |_trigger: On<TestClick>| {});
+        children.apply(current_widget.as_parent());
+    }
+
+    fn find_observer_entity(world: &World, target: Entity) -> Option<Entity> {
+        world
+            .entity(target)
+            .get::<Children>()?
+            .iter()
+            .find(|e| world.get_entity(*e).is_ok_and(|e| e.contains::<Observer>()))
+    }
+
+    /// Regression test: `run_render_system` used to despawn every observer a widget owned
+    /// before each re-render, even when nothing changed, forcing recreation every frame.
+    /// Drives the real `runner::system` entry point across two frames and asserts the
+    /// child entity and its observer both survive unchanged.
+    #[test]
+    fn observer_and_child_survive_across_full_runner_frames() {
+        let mut app = App::new();
+        app.register_widget::<TestRootWidget>();
+        app.register_widget::<TestLeafWidget>();
+        app.world_mut().insert_resource(WidgetMapper::new());
+        app.world_mut().insert_resource(ObserverCache::default());
+        app.world_mut()
+            .insert_resource(crate::metrics::WidgetMetrics::default());
+
+        let root_entity = app
+            .world_mut()
+            .spawn((TestRootWidget, WidgetChildren::default()))
+            .id();
+        app.world_mut()
+            .resource_mut::<WoodpeckerContext>()
+            .set_root_widget(root_entity);
+
+        super::system(app.world_mut());
+
+        let child_entity_1 = get_all_children(app.world_mut(), root_entity)
+            .into_iter()
+            .next()
+            .expect("root should have a child after first frame");
+        let observer_entity_1 = find_observer_entity(app.world(), child_entity_1)
+            .expect("child should have an observer after first frame");
+
+        super::system(app.world_mut());
+
+        let child_entity_2 = get_all_children(app.world_mut(), root_entity)
+            .into_iter()
+            .next()
+            .expect("root should have a child after second frame");
+        assert_eq!(
+            child_entity_1, child_entity_2,
+            "child entity must be reused across frames"
+        );
+
+        let observer_entity_2 = find_observer_entity(app.world(), child_entity_2)
+            .expect("child should still have an observer after second frame");
+        assert_eq!(
+            observer_entity_1, observer_entity_2,
+            "observer entity must survive an unchanged re-render across real runner::system \
+             frames, not be despawned and recreated"
+        );
+    }
 }

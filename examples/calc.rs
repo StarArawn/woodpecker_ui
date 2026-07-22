@@ -24,6 +24,7 @@ fn main() {
         .add_plugins(WoodpeckerUIPlugin::default())
         .add_systems(Startup, startup)
         .insert_resource(CalcOutput("".into()))
+        .register_watched_resource::<CalcOutput>()
         .register_widget::<Output>()
         .run();
 }
@@ -47,7 +48,7 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
 
     let mut buttons = WidgetChildren::default();
 
-    let root = CurrentWidget(commands.spawn_empty().id());
+    let root_widget = ui_context.spawn_root(&mut commands);
 
     // Clear button
     buttons
@@ -71,11 +72,12 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
             )),
         ))
         .observe(
-            root,
-            |_: Trigger<Pointer<Click>>, mut calc_output: ResMut<CalcOutput>| {
+            root_widget,
+            |_: On<Pointer<Click>>, mut calc_output: ResMut<CalcOutput>| {
                 calc_output.0 = "".into();
             },
         );
+    buttons.add_key("C");
 
     // Text box
     buttons.add::<Element>((
@@ -132,8 +134,8 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                 )),
             ))
             .observe(
-                root,
-                move |_: Trigger<Pointer<Click>>, mut calc_output: ResMut<CalcOutput>| {
+                root_widget,
+                move |_: On<Pointer<Click>>, mut calc_output: ResMut<CalcOutput>| {
                     if button == "=" {
                         if let Ok(result) = Context::<f64>::default().evaluate(&calc_output.0) {
                             calc_output.0 = result.to_string();
@@ -143,11 +145,12 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                     }
                 },
             );
+        buttons.add_key(button);
     }
 
-    commands.entity(root.entity()).insert((
-        WoodpeckerApp,
-        WidgetChildren::default().with_child::<Element>((
+    commands
+        .entity(*root_widget)
+        .insert(WidgetChildren::default().with_child::<Element>((
             Element,
             WoodpeckerStyle {
                 width: Units::Percentage(100.0),
@@ -178,31 +181,31 @@ fn startup(mut commands: Commands, mut ui_context: ResMut<WoodpeckerContext>) {
                 buttons,
                 WidgetRender::Quad,
             )),
-        )),
-    ));
-    ui_context.set_root_widget(root.entity());
+        )));
 }
 
-#[derive(Debug, Resource, PartialEq, Clone)]
+#[derive(Debug, Resource, Reflect, PartialEq, Clone, Default)]
 pub struct CalcOutput(pub String);
 
 #[derive(Widget, Component, Reflect, Clone, Default, PartialEq)]
+#[reflect(Component, DiffableProp, PartialEq)]
 #[auto_update(render)]
-#[props(Output)]
-#[resource(CalcOutput)]
+#[require(WatchedResource<CalcOutput>)]
 pub struct Output;
 
 fn render(
     current_entity: Res<CurrentWidget>,
-    output: Res<CalcOutput>,
+    output: Query<&WatchedResource<CalcOutput>>,
     mut query: Query<&mut WidgetRender>,
 ) {
     let Ok(mut render) = query.get_mut(**current_entity) else {
         return;
     };
+    let Ok(output) = output.get(**current_entity) else {
+        return;
+    };
 
-    match &mut *render {
-        WidgetRender::Text { content, .. } => *content = output.0.clone(),
-        _ => {}
+    if let WidgetRender::Text { content, .. } = &mut *render {
+        *content = output.0 .0.clone()
     }
 }
